@@ -25,17 +25,27 @@
     --shadow-deep: rgba(26,20,16,0.24);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
   body {
     font-family: 'Noto Sans JP', sans-serif;
     background: var(--paper);
     color: var(--ink);
-    min-height: 100vh;
+    min-height: 100dvh;
     background-image: 
       repeating-linear-gradient(0deg, transparent, transparent 31px, var(--border) 31px, var(--border) 32px),
       repeating-linear-gradient(90deg, transparent, transparent 31px, rgba(212,196,168,0.3) 31px, rgba(212,196,168,0.3) 32px);
     background-size: 32px 32px;
   }
-  #root { min-height: 100vh; }
+  #root {
+    min-height: 100dvh;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
 
   /* Topbar */
   .topbar {
@@ -372,12 +382,30 @@
     display: flex; gap: 0.4rem; padding-left: 0.5rem; margin-top: 0.5rem;
   }
 
+  .assign-status-banner {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin-bottom: 1rem;
+    color: #fff;
+    padding: 0.45rem 1rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+  }
+  .assign-status-banner.sel { background: rgba(192,57,43,0.88); }
+  .assign-status-banner.filter { background: rgba(184,134,11,0.88); }
+
   /* ═══════════════════════════════════════
      スマホ対応 (max-width: 768px)
   ═══════════════════════════════════════ */
   @media (max-width: 768px) {
+    html, body, #root { overflow-x: hidden; }
+
     /* ── トップバー ── */
-    .topbar { padding: 0 0.85rem; height: 52px; }
+    .topbar { padding: 0 0.85rem; height: 52px; position: static; }
     .topbar-logo { font-size: 1.05rem; }
     .topbar-nav { margin-left: 0.6rem; gap: 0.2rem; }
     .nav-btn { font-size: 0.73rem; padding: 0.28rem 0.55rem; }
@@ -414,14 +442,21 @@
     .assign-layout { grid-template-columns: 1fr; gap: 0.75rem; }
     .assign-sidebar { position: static; }
     .assign-sidebar-inner { max-height: 220px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    .assign-floor-view { min-height: 480px !important; }
+    .assign-floor-view {
+      min-height: 480px !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      padding: 1rem !important;
+    }
+    .assign-status-banner { position: static; }
     .main { padding-bottom: 2rem; }
 
     /* ── 会場フロア ── */
-    .floor-layout { grid-template-columns: 1fr; height: auto; min-height: calc(100vh - 100px); }
+    .floor-layout { grid-template-columns: 1fr; height: auto; min-height: calc(100dvh - 100px); }
     .floor-panel { display: none; }
     .floor-fab { display: flex !important; }
-    .floor-canvas { min-width: 600px; min-height: 400px; }
+    .floor-canvas-wrap { overflow-x: hidden; }
+    .floor-canvas { min-width: 100%; min-height: 400px; width: 100%; }
 
     /* ── ページタイトル ── */
     .page-title { font-size: 1.15rem; margin-bottom: 1rem; }
@@ -456,7 +491,7 @@
   }
 
   /* ── Floor Map ── */
-  .floor-layout { display: grid; grid-template-columns: 1fr 300px; gap: 0; height: calc(100vh - 56px); overflow: hidden; }
+  .floor-layout { display: grid; grid-template-columns: 1fr 300px; gap: 0; height: calc(100dvh - 56px); overflow: hidden; }
   .floor-canvas-wrap {
     background: #1a1f2e;
     background-image:
@@ -1442,12 +1477,12 @@ function AssignPage({ event, dispatch, notify }) {
             </div>
           )}
           {selName && (
-            <div style={{position:'sticky',top:0,zIndex:10,marginBottom:'1rem',background:'rgba(192,57,43,0.88)',backdropFilter:'blur(4px)',color:'#fff',padding:'0.45rem 1rem',borderRadius:8,fontSize:'0.8rem',fontWeight:600,boxShadow:'0 2px 8px rgba(0,0,0,0.4)'}}>
+            <div className="assign-status-banner sel">
               👆 <b>{selName}</b> を選択中 — 席をクリックして配置・入れ替え
             </div>
           )}
           {filterTag && !selName && (
-            <div style={{position:'sticky',top:0,zIndex:10,marginBottom:'1rem',background:'rgba(184,134,11,0.88)',backdropFilter:'blur(4px)',color:'#fff',padding:'0.45rem 1rem',borderRadius:8,fontSize:'0.8rem',fontWeight:600,boxShadow:'0 2px 8px rgba(0,0,0,0.4)'}}>
+            <div className="assign-status-banner filter">
               ★ 「<b>{filterTag}</b>」ハイライト中
               <span style={{marginLeft:8,opacity:0.85,fontWeight:400}}>{flagHighlightIds ? flagHighlightIds.size : 0}名 — 金色の席が対象者</span>
             </div>
