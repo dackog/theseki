@@ -384,6 +384,16 @@
   .event-sub-btns .btn {
     min-height: 34px;
   }
+<<<<<<< ours
+=======
+  .event-sub-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.32rem;
+    text-align: center;
+  }
+>>>>>>> theirs
 
   .assign-status-banner {
     position: sticky;
@@ -443,6 +453,10 @@
       font-size: 0.82rem;
       padding: 0.52rem 0.8rem;
     }
+<<<<<<< ours
+=======
+    .event-sub-btn { gap: 0.38rem; }
+>>>>>>> theirs
 
     /* ── 参加者管理 ── */
     .attendee-row { grid-template-columns: 1fr; gap: 0.4rem; }
@@ -640,13 +654,20 @@
       width: 100%;
       height: 100%;
       border-left: none;
+<<<<<<< ours
       border-radius: 10px;
       padding: 0.9rem;
+=======
+      padding: 0.9rem;
+      border-radius: 10px;
+      overflow: auto;
+>>>>>>> theirs
       background: #1a1f2e;
       background-image:
         linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
       background-size: 40px 40px;
+<<<<<<< ours
     }
     .floor-panel-header {
 <<<<<<< ours
@@ -662,6 +683,11 @@
     .floor-panel-header {
       background: var(--paper);
 >>>>>>> theirs
+=======
+    }
+    .floor-panel-header {
+      background: var(--paper);
+>>>>>>> theirs
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 0.75rem;
@@ -670,7 +696,13 @@
       margin-top: 0.75rem;
       padding: 0.75rem;
 <<<<<<< ours
+<<<<<<< ours
       background: rgba(250,247,242,0.96);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+>>>>>>> theirs
+=======
+      background: var(--paper);
       border: 1px solid var(--border);
       border-radius: 8px;
 >>>>>>> theirs
@@ -995,9 +1027,15 @@ function EventsPage({ state, dispatch, onSelect, onLayout, onAssign }) {
                 </button>
               </div>
               <div className="event-sub-btns">
+<<<<<<< ours
                 <button className="btn btn-outline btn-sm" onClick={e=>openEdit(ev,e)}>編集</button>
                 <button className="btn btn-outline btn-sm" onClick={e=>dup(ev,e)}>複製</button>
                 <button className="btn btn-danger btn-sm" onClick={e=>del(ev.id,e)}>削除</button>
+=======
+                <button className="btn btn-outline btn-sm event-sub-btn" onClick={e=>openEdit(ev,e)}><span>✏️</span><span>編集</span></button>
+                <button className="btn btn-outline btn-sm event-sub-btn" onClick={e=>dup(ev,e)}><span>📄</span><span>複製</span></button>
+                <button className="btn btn-danger btn-sm event-sub-btn" onClick={e=>del(ev.id,e)}><span>🗑️</span><span>削除</span></button>
+>>>>>>> theirs
               </div>
             </div>
           ))}
