@@ -451,23 +451,7 @@
     .assign-status-banner { position: static; }
     .main { padding-bottom: 2rem; }
 
-    /* ── 会場フロア ── */
-    .floor-layout { grid-template-columns: 1fr; height: auto; min-height: calc(100dvh - 100px); }
-    .floor-canvas-wrap { display: none; }
-    .floor-panel {
-      display: flex;
-      width: 100%;
-      border-left: none;
-      background: transparent;
-    }
-    .floor-panel-header,
-    .floor-panel-body {
-      width: 100%;
-      max-width: 560px;
-      margin: 0 auto;
-    }
     .floor-fab { display: none !important; }
-    .floor-canvas { min-width: 100%; min-height: 400px; width: 100%; }
 
     /* ── ページタイトル ── */
     .page-title { font-size: 1.15rem; margin-bottom: 1rem; }
@@ -618,6 +602,36 @@
   .floor-seat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
   .floor-seat-dot.occ { background: var(--green); }
   .floor-seat-dot.viol { background: var(--accent); }
+
+  @media (max-width: 720px) {
+    .main {
+      max-width: 100%;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+
+    .floor-layout {
+      grid-template-columns: 1fr;
+      height: auto;
+      min-height: calc(100dvh - 100px);
+      justify-items: center;
+    }
+    .floor-panel {
+      display: none;
+      width: 100%;
+      border-left: none;
+      background: transparent;
+    }
+    .floor-canvas-wrap {
+      width: 100%;
+      overflow-x: hidden;
+    }
+    .floor-canvas {
+      min-width: 100%;
+      min-height: 400px;
+      width: 100%;
+    }
+  }
 </style>
 </head>
 <body>
