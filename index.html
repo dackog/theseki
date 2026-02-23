@@ -415,7 +415,14 @@
     html, body, #root { overflow-x: hidden; }
 
     /* ── トップバー ── */
+<<<<<<< ours
     .topbar { padding: 0 0.85rem; height: 52px; position: sticky; top: 0; z-index: 120; }
+=======
+    .topbar { padding: 0 0.85rem; height: 52px; position: static; }
+    .topbar.topbar-subpage {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    }
+>>>>>>> theirs
     .topbar-logo { font-size: 1.05rem; }
     .topbar-nav { margin-left: 0.6rem; gap: 0.2rem; }
     .nav-btn { font-size: 0.73rem; padding: 0.28rem 0.55rem; }
@@ -503,9 +510,30 @@
   }
 
   @media (max-width: 768px) {
+<<<<<<< ours
     .inner-nav-wrap {
       top: 52px;
       z-index: 110;
+=======
+    .inner-nav-wrap.subpage-fixed {
+      position: fixed;
+      top: 52px;
+      left: 0;
+      right: 0;
+      z-index: 190;
+    }
+    .event-subpage-shell {
+      height: calc(100dvh - 52px) !important;
+      margin-top: 52px;
+    }
+    .event-subpage-content {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      padding-top: 96px;
+      background: var(--paper);
+>>>>>>> theirs
     }
   }
 
@@ -657,8 +685,13 @@
       border-left: none;
       padding: 0.9rem;
       border-radius: 10px;
+<<<<<<< ours
       overflow: auto;
       background: var(--paper);
+=======
+      overflow: visible;
+      background: transparent;
+>>>>>>> theirs
       background-image: none;
     }
     .floor-panel-header {
@@ -673,6 +706,13 @@
       background: var(--paper);
       border: 1px solid var(--border);
       border-radius: 8px;
+    }
+    .floor-layout {
+      background: var(--paper);
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 31px, var(--border) 31px, var(--border) 32px),
+        repeating-linear-gradient(90deg, transparent, transparent 31px, rgba(212,196,168,0.3) 31px, rgba(212,196,168,0.3) 32px);
+      background-size: 32px 32px;
     }
   }
 </style>
@@ -2198,7 +2238,7 @@ function App() {
 
   // イベント内サブページ用のブレッドクラム＋タブバー
   const InnerNav = ({ subPage, setSubPage }) => (
-    <div className="inner-nav-wrap" style={{
+    <div className={`inner-nav-wrap ${(subPage==='layout'||subPage==='assign')?'subpage-fixed':''}`} style={{
       background:'var(--paper-warm)', borderBottom:'1px solid var(--border)',
       padding:'0.5rem 1.5rem', display:'flex', alignItems:'center', gap:'1rem',
       flexShrink: 0,
@@ -2225,7 +2265,7 @@ function App() {
 
   return (
     <>
-      <div className="topbar">
+      <div className={`topbar ${(page==='layout'||page==='assign')?'topbar-subpage':''}`}>
         <div className="topbar-logo">The<span>SEKI</span></div>
         <nav className="topbar-nav">
           {navItems.map(n=>(
@@ -2245,9 +2285,9 @@ function App() {
       {page==='events' && <EventsPage state={state} dispatch={dispatch} onSelect={selectEvent} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('layout');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('assign');}}/>}
       {page==='attendees' && currentEvent && <AttendeesPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
       {(page==='layout'||page==='assign') && currentEvent && (
-        <div style={{display:'flex',flexDirection:'column',height:'calc(100vh - 56px)'}}>
+        <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column',height:'calc(100vh - 56px)'}}>
           <InnerNav subPage={page} setSubPage={setPage}/>
-          <div style={{flex:1, overflow: page==='assign' ? 'auto' : 'hidden', minHeight:0, WebkitOverflowScrolling:'touch'}}>
+          <div className="event-subpage-content" style={{minHeight:0, WebkitOverflowScrolling:'touch'}}>
             {page==='layout' && <LayoutPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
             {page==='assign' && <AssignPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
           </div>
