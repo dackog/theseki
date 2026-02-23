@@ -968,19 +968,10 @@ async function downloadFloorPdf({ element, eventName }) {
   const logoY = pageH - 6;
   pdf.setFont('times', 'bold');
   pdf.setFontSize(10);
-<<<<<<< ours
   pdf.setTextColor(26, 20, 16);
   pdf.text('The', 8, logoY);
   pdf.setTextColor(192, 57, 43);
   pdf.text('SEKI', 18, logoY);
-=======
-  const sekiX = pageW - 8 - pdf.getTextWidth('SEKI');
-  const theX = sekiX - pdf.getTextWidth('The ');
-  pdf.setTextColor(26, 20, 16);
-  pdf.text('The ', theX, logoY);
-  pdf.setTextColor(192, 57, 43);
-  pdf.text('SEKI', sekiX, logoY);
->>>>>>> theirs
   const safeName = (eventName || 'seats').replace(/[\/:*?"<>|]/g, '_');
   pdf.save(`${safeName}_seat-layout.pdf`);
 }
