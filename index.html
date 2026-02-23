@@ -792,7 +792,11 @@ function sanitizeEvent(ev) {
   });
   // ngPairs: 両者が存在する場合のみ残す
   const ngPairs = (ev.ngPairs||[]).filter(p=>attendeeIds.has(p.a)&&attendeeIds.has(p.b));
-  return {...ev, assignments, ngPairs};
+  const lockedAttendees = {};
+  Object.entries(ev.lockedAttendees||{}).forEach(([aid,locked])=>{
+    if (locked && attendeeIds.has(aid)) lockedAttendees[aid] = true;
+  });
+  return {...ev, assignments, ngPairs, lockedAttendees};
 }
 
 /** v1 → v2 マイグレーション */
@@ -871,8 +875,12 @@ function parseImportedEvent(text) {
     const [tname,...rest]=sid.split('-'); const newSid=(tableNameMap[tname]||tname)+'-'+rest.join('-');
     newAssign[newSid] = idMap[aid]||null;
   });
+  const newLocked = {};
+  Object.entries(ev.lockedAttendees||{}).forEach(([aid,locked])=>{
+    if (locked && idMap[aid]) newLocked[idMap[aid]] = true;
+  });
   return sanitizeEvent({...ev, id:newId, name:ev.name+' (インポート)', createdAt:now(), updatedAt:now(),
-    tables:newTables, attendees:newAttendees, ngPairs:newNg, assignments:newAssign});
+    tables:newTables, attendees:newAttendees, ngPairs:newNg, assignments:newAssign, lockedAttendees:newLocked});
 }
 
 /** 閲覧用URLハッシュ生成（イベントデータをBase64圧縮） */
@@ -1302,7 +1310,7 @@ function FloorTable({ table, seats, assignments, attendees, violationSeatIds, se
 // AssignFloorTable – 席割り画面用インタラクティブテーブル
 // ============================================================
 function AssignFloorTable({ table, seats, assignments, attendees, violationSeatIds,
-  selectedId, hasViolation, tableViolations, flagHighlightIds,
+  selectedId, hasViolation, tableViolations, flagHighlightIds, lockedAttendees,
   onSeatClick, onUnassign }) {
 
   const N = seats.length;
@@ -1324,8 +1332,11 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
 
   const seatColor = (seat) => {
     const aId = assignments[seat.id];
+    const isLocked = !!(aId && lockedAttendees && lockedAttendees[aId]);
     const isHL  = flagHighlightIds && aId && flagHighlightIds.has(aId);
     const isDim = flagHighlightIds && flagHighlightIds.size > 0 && aId && !flagHighlightIds.has(aId);
+    if (isLocked)
+      return { bg:'radial-gradient(circle at 40% 35%,#8e6d2f,#5f4618)', br:'rgba(255,220,120,0.75)', co:'#fff2c8', op:1, sh:'0 0 0 2px rgba(255,220,120,0.35),0 2px 8px rgba(0,0,0,0.5)' };
     if (violationSeatIds.has(seat.id))
       return { bg:'radial-gradient(circle at 40% 35%,#a04040,#6b1515)', br:'rgba(220,100,100,0.6)', co:'#ffd0d0', op:1, sh:'0 2px 8px rgba(0,0,0,0.5)' };
     if (isHL)
@@ -1366,6 +1377,7 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
       >
         <span style={{pointerEvents:'none'}}>{att ? att.name.slice(0,4) : seat.index}</span>
+        {att && lockedAttendees && lockedAttendees[aId] && <span style={{position:'absolute',left:3,top:2,fontSize:'0.52rem',pointerEvents:'none'}}>🔒</span>}
         {att && (
           <button onClick={e => onUnassign(seat.id, e)}
             style={{position:'absolute',top:1,right:2,background:'none',border:'none',
@@ -1447,6 +1459,7 @@ function AssignPage({ event, dispatch, notify }) {
   const attendees   = event.attendees || [];
   const ngPairs     = event.ngPairs || [];
   const assignments = event.assignments || {};
+  const lockedAttendees = event.lockedAttendees || {};
 
   const [selected,  setSelected]  = useState(null);
   const [filterTag, setFilterTag] = useState('');
@@ -1477,6 +1490,16 @@ function AssignPage({ event, dispatch, notify }) {
     const cur = assignments[seatId];
     if (selected) {
       const prevSeat = Object.keys(assignments).find(s => assignments[s] === selected);
+      const targetLocked = cur ? !!lockedAttendees[cur] : false;
+      const selectedLocked = !!lockedAttendees[selected];
+      if (targetLocked && cur !== selected) {
+        notify('🔒 ロック中の参加者は移動できません','warning');
+        return;
+      }
+      if (selectedLocked && prevSeat && prevSeat !== seatId) {
+        notify('🔒 ロック中の参加者は別席へ移動できません','warning');
+        return;
+      }
       const updates = { [seatId]: selected };
       if (prevSeat && prevSeat !== seatId) updates[prevSeat] = cur || null;
       dispatch({type:'BATCH_ASSIGN', eventId:event.id, updates});
@@ -1488,13 +1511,25 @@ function AssignPage({ event, dispatch, notify }) {
 
   const unassignSeat = (seatId, e) => {
     e.stopPropagation();
+    const cur = assignments[seatId];
+    if (cur && lockedAttendees[cur]) {
+      notify('🔒 ロック中の参加者は解除できません','warning');
+      return;
+    }
     dispatch({type:'ASSIGN', eventId:event.id, seatId, attendeeId:null});
     if (selected && assignments[seatId] === selected) setSelected(null);
   };
 
   const randomAssign = () => {
     const allSeats  = seats.map(s => s.id);
-    const allPeople = [...attendees];
+    const lockedIds = new Set(Object.keys(lockedAttendees).filter(id => lockedAttendees[id]));
+    const lockedSeatByAttendee = {};
+    Object.entries(assignments).forEach(([sid,aid])=>{ if (aid && lockedIds.has(aid)) lockedSeatByAttendee[aid] = sid; });
+    if (Object.keys(lockedSeatByAttendee).length !== lockedIds.size) {
+      notify('🔒 ロック中の参加者は先に座席へ配置してください','warning');
+      return;
+    }
+    const allPeople = attendees.filter(a => !lockedIds.has(a.id));
     const ngSet = new Set(ngPairs.map(p => `${[p.a,p.b].sort().join('|')}`));
     const isNG  = (a,b) => ngSet.has(`${[a,b].sort().join('|')}`);
     const seatTable  = {}; seats.forEach(s => { seatTable[s.id] = s.tableId; });
@@ -1503,7 +1538,7 @@ function AssignPage({ event, dispatch, notify }) {
     for (let t = 0; t < TRIALS; t++) {
       const ppl = [...allPeople];
       for (let i = ppl.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [ppl[i],ppl[j]]=[ppl[j],ppl[i]]; }
-      const assign = {}; let failed = false;
+      const assign = {...Object.fromEntries(Object.entries(lockedSeatByAttendee).map(([aid,sid])=>[sid,aid]))}; let failed = false;
       for (const person of ppl) {
         const eligible = allSeats.filter(sid => {
           if (assign[sid]) return false;
@@ -1539,7 +1574,14 @@ function AssignPage({ event, dispatch, notify }) {
 
   const customAssign = () => {
     const allSeats = seats.map(s => s.id);
-    const allPeople = [...attendees];
+    const lockedIds = new Set(Object.keys(lockedAttendees).filter(id => lockedAttendees[id]));
+    const lockedSeatByAttendee = {};
+    Object.entries(assignments).forEach(([sid,aid])=>{ if (aid && lockedIds.has(aid)) lockedSeatByAttendee[aid] = sid; });
+    if (Object.keys(lockedSeatByAttendee).length !== lockedIds.size) {
+      notify('🔒 ロック中の参加者は先に座席へ配置してください','warning');
+      return;
+    }
+    const allPeople = attendees.filter(a => !lockedIds.has(a.id));
     const ngSet = new Set(ngPairs.map(p => `${[p.a,p.b].sort().join('|')}`));
     const isNG = (a,b) => ngSet.has(`${[a,b].sort().join('|')}`);
     const seatTable = {}; seats.forEach(s => { seatTable[s.id]=s.tableId; });
@@ -1548,7 +1590,7 @@ function AssignPage({ event, dispatch, notify }) {
     for (let t = 0; t < TRIALS; t++) {
       const ppl = [...allPeople];
       for (let i=ppl.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ppl[i],ppl[j]]=[ppl[j],ppl[i]];}
-      const assign={}; let failed=false;
+      const assign={...Object.fromEntries(Object.entries(lockedSeatByAttendee).map(([aid,sid])=>[sid,aid]))}; let failed=false;
       for (const person of ppl) {
         const eligible = allSeats.filter(sid => {
           if (assign[sid]) return false;
@@ -1656,7 +1698,14 @@ function AssignPage({ event, dispatch, notify }) {
               <>
                 <b style={{color:'var(--ink)',display:'block',marginBottom:'0.15rem'}}>👆 {selName} を選択中</b>
                 席をクリックして配置 / 別の席と入れ替え
-                <button onClick={()=>setSelected(null)} style={{display:'block',marginTop:'0.3rem',background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
+                <div style={{display:'flex',gap:'0.35rem',marginTop:'0.3rem',flexWrap:'wrap'}}>
+                  <button onClick={()=>setSelected(null)} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
+                  {lockedAttendees[selected] ? (
+                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false})} style={{background:'rgba(192,57,43,0.08)',border:'1px solid rgba(192,57,43,0.35)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--accent)'}}>🔓 ロック解除</button>
+                  ) : (
+                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true})} style={{background:'rgba(184,134,11,0.1)',border:'1px solid rgba(184,134,11,0.4)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--accent-gold)'}}>🔒 ロック</button>
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -1707,6 +1756,7 @@ function AssignPage({ event, dispatch, notify }) {
                   assignments={assignments} attendees={attendees}
                   violationSeatIds={new Set([...violationSeatIds].filter(id=>tSeats.some(s=>s.id===id)))}
                   selectedId={selected}
+                  lockedAttendees={lockedAttendees}
                   hasViolation={hasV} tableViolations={tViol}
                   flagHighlightIds={flagHighlightIds}
                   onSeatClick={handleSeatClick}
@@ -2151,7 +2201,7 @@ function reducer(state, action) {
 
   switch (action.type) {
     case 'SET_STATE': return action.payload;
-    case 'ADD_EVENT': return {...state, events:[...state.events, sanitizeEvent({...action.payload, tables:[], attendees:[], ngPairs:[], assignments:{}})], currentEventId: action.payload.id };
+    case 'ADD_EVENT': return {...state, events:[...state.events, sanitizeEvent({...action.payload, tables:[], attendees:[], ngPairs:[], assignments:{}, lockedAttendees:{}})], currentEventId: action.payload.id };
     case 'UPDATE_EVENT': return {
       ...state,
       events: state.events.map(e => e.id===action.payload.id
@@ -2166,7 +2216,7 @@ function reducer(state, action) {
       const clone = sanitizeEvent({...src, id:newId, name:src.name+' (コピー)', createdAt:now(), updatedAt:now(),
         tables:src.tables.map(t=>({...t,id:uid(),eventId:newId})),
         attendees:src.attendees.map(a=>({...a,id:uid(),eventId:newId})),
-        ngPairs:[], assignments:{}});
+        ngPairs:[], assignments:{}, lockedAttendees:{}});
       return {...state, events:[...state.events, clone]};
     }
     case 'IMPORT_EVENT': {
@@ -2192,14 +2242,20 @@ function reducer(state, action) {
 
     case 'ADD_ATTENDEE': return updEvent(action.eventId, e=>({...e, attendees:[...(e.attendees||[]), action.payload]}));
     case 'UPDATE_ATTENDEE': return updEvent(action.eventId, e=>({...e, attendees:(e.attendees||[]).map(a=>a.id===action.id?{...a,...action.payload}:a)}));
-    case 'DEL_ATTENDEE': return updEvent(action.eventId, e=>({...e, attendees:(e.attendees||[]).filter(a=>a.id!==action.id), assignments:Object.fromEntries(Object.entries(e.assignments||{}).map(([k,v])=>[k,v===action.id?null:v]))}));
+    case 'DEL_ATTENDEE': return updEvent(action.eventId, e=>({...e, attendees:(e.attendees||[]).filter(a=>a.id!==action.id), assignments:Object.fromEntries(Object.entries(e.assignments||{}).map(([k,v])=>[k,v===action.id?null:v])), lockedAttendees:Object.fromEntries(Object.entries(e.lockedAttendees||{}).filter(([k])=>k!==action.id))}));
 
     case 'ADD_NG': return updEvent(action.eventId, e=>({...e, ngPairs:[...(e.ngPairs||[]), action.payload]}));
     case 'DEL_NG': return updEvent(action.eventId, e=>({...e, ngPairs:(e.ngPairs||[]).filter(p=>p.id!==action.id)}));
 
     case 'ASSIGN': return updEvent(action.eventId, e=>({...e, assignments:{...(e.assignments||{}), [action.seatId]: action.attendeeId}}));
     case 'BATCH_ASSIGN': return updEvent(action.eventId, e=>({...e, assignments:{...(e.assignments||{}), ...action.updates}}));
-    case 'CLEAR_ASSIGN': return updEvent(action.eventId, e=>({...e, assignments:{}}));
+    case 'CLEAR_ASSIGN': return updEvent(action.eventId, e=>({...e, assignments:{}, lockedAttendees:{}}));
+    case 'SET_ATTENDEE_LOCK': return updEvent(action.eventId, e=>({
+      ...e,
+      lockedAttendees: action.locked
+        ? {...(e.lockedAttendees||{}), [action.attendeeId]: true}
+        : Object.fromEntries(Object.entries(e.lockedAttendees||{}).filter(([k])=>k!==action.attendeeId))
+    }));
 
     default: return state;
   }
