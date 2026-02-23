@@ -604,7 +604,7 @@
     overflow: auto; position: relative;
     cursor: default;
   }
-  .floor-canvas { position: relative; min-width: 900px; min-height: 600px; width: 100%; height: 100%; }
+  .floor-canvas { position: relative; width: 1122px; height: 794px; min-width: 1122px; min-height: 794px; }
   .floor-empty {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
     text-align: center; color: rgba(255,255,255,0.2);
@@ -964,6 +964,13 @@ async function downloadFloorPdf({ element, eventName }) {
   const x = (pageW - renderW) / 2;
   const y = (pageH - renderH) / 2;
   pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
+  const logoY = pageH - 6;
+  pdf.setFont('times', 'bold');
+  pdf.setFontSize(10);
+  pdf.setTextColor(26, 20, 16);
+  pdf.text('The', 8, logoY);
+  pdf.setTextColor(192, 57, 43);
+  pdf.text('SEKI', 18, logoY);
   const safeName = (eventName || 'seats').replace(/[\/:*?"<>|]/g, '_');
   pdf.save(`${safeName}_seat-layout.pdf`);
 }
