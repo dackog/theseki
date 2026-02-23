@@ -1701,9 +1701,9 @@ function AssignPage({ event, dispatch, notify }) {
                 <div style={{display:'flex',gap:'0.35rem',marginTop:'0.3rem',flexWrap:'wrap'}}>
                   <button onClick={()=>setSelected(null)} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
                   {lockedAttendees[selected] ? (
-                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false})} style={{background:'#fff',border:'2px solid #1f7a45',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'#1f7a45'}}>✅ 🔓 ロック解除</button>
+                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false})} style={{background:'#fff',border:'2px solid #1f7a45',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'#1f7a45'}}> 🔓 ロック解除</button>
                   ) : (
-                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true})} style={{background:'#fff4f4',border:'2px solid var(--accent)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}>⚠️ 🔒 ロック</button>
+                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true})} style={{background:'#fff4f4',border:'2px solid var(--accent)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}> 🔒 ロック</button>
                   )}
                 </div>
               </>
