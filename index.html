@@ -7,6 +7,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -513,16 +515,9 @@
       background: var(--paper);
     }
     .event-subpage-content {
-<<<<<<< ours
       min-height: auto;
       display: block;
       overflow: visible !important;
-=======
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto !important;
-      -webkit-overflow-scrolling: touch;
->>>>>>> theirs
       background: var(--paper);
     }
   }
@@ -536,11 +531,75 @@
 
   /* ── Floor Map ── */
   .floor-layout { display: grid; grid-template-columns: 1fr 300px; gap: 0; height: calc(100dvh - 56px); overflow: hidden; }
+  .floor-layout {
+    --floor-bg: #1a1f2e;
+    --floor-grid: rgba(255,255,255,0.025);
+    --floor-label-bg: rgba(0,0,0,0.4);
+    --floor-label-color: rgba(255,255,255,0.7);
+    --floor-table-gradient: radial-gradient(circle at 38% 35%, #a0734a, #6b4226 60%, #3d2210);
+    --floor-chair-empty-bg: radial-gradient(circle at 40% 35%, #4a4550, #2a2730);
+    --floor-chair-empty-color: rgba(255,255,255,0.2);
+    --floor-chair-occupied-bg: radial-gradient(circle at 40% 35%, #5a8a6a, #2d5a3d);
+    --floor-chair-occupied-color: #d0f0dc;
+    --floor-panel-bg: var(--paper-warm);
+    --floor-panel-header-bg: var(--paper);
+    --floor-dot-empty: var(--border);
+    --floor-dot-occupied: var(--green);
+    --floor-dot-violation: var(--accent);
+  }
+  .floor-layout.theme-simple {
+    --floor-bg: #f2f2f2;
+    --floor-grid: rgba(20,20,20,0.06);
+    --floor-label-bg: rgba(0,0,0,0.75);
+    --floor-label-color: #fff;
+    --floor-table-gradient: linear-gradient(145deg, #f8f8f8, #d9d9d9 60%, #bdbdbd);
+    --floor-chair-empty-bg: linear-gradient(145deg, #f6f6f6, #d9d9d9);
+    --floor-chair-empty-color: #666;
+    --floor-chair-occupied-bg: linear-gradient(145deg, #444, #101010);
+    --floor-chair-occupied-color: #fff;
+    --floor-panel-bg: #f8f8f8;
+    --floor-panel-header-bg: #fff;
+    --floor-dot-empty: #c7c7c7;
+    --floor-dot-occupied: #222;
+    --floor-dot-violation: #555;
+  }
+  .floor-layout.theme-cute {
+    --floor-bg: #ffe7f4;
+    --floor-grid: rgba(255,255,255,0.5);
+    --floor-label-bg: rgba(226,91,164,0.86);
+    --floor-label-color: #fff;
+    --floor-table-gradient: radial-gradient(circle at 35% 30%, #ffc7e8, #ff89c8 60%, #d9529e);
+    --floor-chair-empty-bg: radial-gradient(circle at 35% 30%, #fff1f8, #ffcce7);
+    --floor-chair-empty-color: #b2548d;
+    --floor-chair-occupied-bg: radial-gradient(circle at 35% 30%, #ff9fdb, #e557a9);
+    --floor-chair-occupied-color: #fff;
+    --floor-panel-bg: #ffeef8;
+    --floor-panel-header-bg: #fff7fc;
+    --floor-dot-empty: #f0bad8;
+    --floor-dot-occupied: #d84f9f;
+    --floor-dot-violation: #b52e78;
+  }
+  .floor-layout.theme-stylish {
+    --floor-bg: #0b1120;
+    --floor-grid: rgba(87,120,199,0.12);
+    --floor-label-bg: rgba(7,10,19,0.9);
+    --floor-label-color: #d5def5;
+    --floor-table-gradient: radial-gradient(circle at 35% 30%, #2c3654, #121a2f 58%, #070b14);
+    --floor-chair-empty-bg: radial-gradient(circle at 35% 30%, #3b4668, #12172a);
+    --floor-chair-empty-color: #9db0de;
+    --floor-chair-occupied-bg: radial-gradient(circle at 35% 30%, #5a74b7, #1c2a4f);
+    --floor-chair-occupied-color: #e9efff;
+    --floor-panel-bg: #131a2d;
+    --floor-panel-header-bg: #1b2540;
+    --floor-dot-empty: #3c4668;
+    --floor-dot-occupied: #6a89d6;
+    --floor-dot-violation: #e05b73;
+  }
   .floor-canvas-wrap {
-    background: #1a1f2e;
+    background: var(--floor-bg);
     background-image:
-      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      linear-gradient(var(--floor-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--floor-grid) 1px, transparent 1px);
     background-size: 40px 40px;
     overflow: auto; position: relative;
     cursor: default;
@@ -564,16 +623,16 @@
   .floor-table-group:active { cursor: grabbing; }
   .floor-table-group.selected .floor-table-top { box-shadow: 0 0 0 3px var(--accent-gold), 0 4px 20px rgba(0,0,0,0.6); }
   .floor-table-label {
-    color: rgba(255,255,255,0.7); font-size: 0.72rem; font-weight: 700;
+    color: var(--floor-label-color); font-size: 0.72rem; font-weight: 700;
     letter-spacing: 0.08em; margin-bottom: 6px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     font-family: 'Noto Serif JP', serif;
-    background: rgba(0,0,0,0.4); padding: 1px 8px; border-radius: 10px;
+    background: var(--floor-label-bg); padding: 1px 8px; border-radius: 10px;
     pointer-events: none;
   }
   /* 丸テーブル天板 */
   .floor-table-top {
     border-radius: 50%;
-    background: radial-gradient(circle at 38% 35%, #a0734a, #6b4226 60%, #3d2210);
+    background: var(--floor-table-gradient);
     box-shadow: 0 6px 24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.15);
     border: 2px solid rgba(255,255,255,0.1);
     position: relative; flex-shrink: 0;
@@ -600,14 +659,14 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.5);
   }
   .floor-chair.empty {
-    background: radial-gradient(circle at 40% 35%, #4a4550, #2a2730);
+    background: var(--floor-chair-empty-bg);
     border: 1.5px solid rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.2);
+    color: var(--floor-chair-empty-color);
   }
   .floor-chair.occupied {
-    background: radial-gradient(circle at 40% 35%, #5a8a6a, #2d5a3d);
+    background: var(--floor-chair-occupied-bg);
     border: 1.5px solid rgba(120,200,140,0.4);
-    color: #d0f0dc;
+    color: var(--floor-chair-occupied-color);
   }
   .floor-chair.violation {
     background: radial-gradient(circle at 40% 35%, #a04040, #6b1515);
@@ -624,7 +683,7 @@
 
   /* 右サイドパネル */
   .floor-panel {
-    background: var(--paper-warm);
+    background: var(--floor-panel-bg);
     border-left: 1px solid var(--border);
     display: flex; flex-direction: column;
     overflow: hidden;
@@ -632,7 +691,7 @@
   .floor-panel-header {
     padding: 1rem 1.25rem 0.75rem;
     border-bottom: 1px solid var(--border);
-    background: var(--paper);
+    background: var(--floor-panel-header-bg);
   }
   .floor-panel-body { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
   .floor-table-item {
@@ -648,9 +707,9 @@
   .floor-edit-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
   .floor-edit-row label { margin: 0; white-space: nowrap; font-size: 0.75rem; }
   .floor-seat-bar { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 0.4rem; }
-  .floor-seat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
-  .floor-seat-dot.occ { background: var(--green); }
-  .floor-seat-dot.viol { background: var(--accent); }
+  .floor-seat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--floor-dot-empty); }
+  .floor-seat-dot.occ { background: var(--floor-dot-occupied); }
+  .floor-seat-dot.viol { background: var(--floor-dot-violation); }
 
   @media (max-width: 720px) {
     .main {
@@ -664,11 +723,7 @@
       height: auto;
       min-height: auto;
       justify-items: center;
-<<<<<<< ours
       overflow: visible;
-=======
-      overflow: hidden;
->>>>>>> theirs
     }
     .floor-canvas-wrap {
       display: none;
@@ -676,12 +731,7 @@
     .floor-panel {
       display: flex;
       width: 100%;
-<<<<<<< ours
       height: auto;
-=======
-      height: 100%;
-      min-height: 0;
->>>>>>> theirs
       border-left: none;
       padding: 0.9rem;
       border-radius: 10px;
@@ -881,6 +931,33 @@ function checkViolations(tables, seats, assignments, ngPairs, attendees) {
     });
   });
   return violations;
+}
+
+async function downloadFloorPdf({ element, eventName }) {
+  if (!element || !window.html2canvas || !window.jspdf?.jsPDF) throw new Error('PDFライブラリの読み込みに失敗しました');
+  const canvas = await window.html2canvas(element, {
+    backgroundColor: '#ffffff',
+    scale: 2,
+    useCORS: true,
+    width: element.scrollWidth,
+    height: element.scrollHeight,
+  });
+  const imgData = canvas.toDataURL('image/png');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 8;
+  const maxW = pageW - margin * 2;
+  const maxH = pageH - margin * 2;
+  const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+  const renderW = canvas.width * ratio;
+  const renderH = canvas.height * ratio;
+  const x = (pageW - renderW) / 2;
+  const y = (pageH - renderH) / 2;
+  pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
+  const safeName = (eventName || 'seats').replace(/[\/:*?"<>|]/g, '_');
+  pdf.save(`${safeName}_seat-layout.pdf`);
 }
 
 // ============================================================
@@ -1698,6 +1775,17 @@ function LayoutPage({ event, dispatch, notify }) {
   const assignedCount = Object.values(assignments).filter(Boolean).length;
 
   const selectedTable = tables.find(t=>t.id===selectedId);
+  const floorDesign = event.floorDesign || 'default';
+  const floorCanvasRef = useRef(null);
+
+  const handlePdfDownload = async () => {
+    try {
+      await downloadFloorPdf({ element: floorCanvasRef.current, eventName: event.name });
+      notify('PDFをダウンロードしました');
+    } catch (e) {
+      notify('PDFの作成に失敗しました', 'error');
+    }
+  };
 
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
@@ -1717,14 +1805,27 @@ function LayoutPage({ event, dispatch, notify }) {
             <span key={i} style={{fontSize:'0.72rem',color:p.c,background:'rgba(255,255,255,0.07)',padding:'2px 10px',borderRadius:20}}>{p.label}</span>
           ))}
         </div>
-        <button className="btn btn-accent btn-sm" style={{marginLeft:'auto'}} onClick={()=>setShowAdd(true)}>＋ 卓を追加</button>
+        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'0.5rem'}}>
+          <select
+            value={floorDesign}
+            onChange={e=>dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'floorDesign', val:e.target.value})}
+            style={{width:'170px'}}
+          >
+            <option value="default">デフォルト</option>
+            <option value="simple">シンプル</option>
+            <option value="cute">かわいい</option>
+            <option value="stylish">スタイリッシュ</option>
+          </select>
+          <button className="btn btn-outline btn-sm" onClick={handlePdfDownload}>PDF</button>
+          <button className="btn btn-accent btn-sm" onClick={()=>setShowAdd(true)}>＋ 卓を追加</button>
+        </div>
       </div>
 
       {/* フロア ＋ サイドパネル */}
-      <div className="floor-layout" style={{flex:1,overflow:'hidden'}}>
+      <div className={`floor-layout theme-${floorDesign}`} style={{flex:1,overflow:'hidden'}}>
         {/* フロアキャンバス */}
         <div className="floor-canvas-wrap" style={{position:'relative'}}>
-          <div className="floor-canvas" onClick={()=>setSelectedId(null)}>
+          <div className="floor-canvas" ref={floorCanvasRef} onClick={()=>setSelectedId(null)}>
             {tables.length===0 && (
               <div className="floor-empty">
                 <div className="floor-empty-icon">🍺</div>
@@ -2061,6 +2162,8 @@ function reducer(state, action) {
       return {...state, events:[...state.events, ev], currentEventId: ev.id};
     }
     case 'SET_CURRENT': return {...state, currentEventId: action.payload};
+
+    case 'UPDATE_EVENT_FIELD': return updEvent(action.eventId, e=>({...e, [action.key]: action.val}));
 
     case 'ADD_TABLE': return updEvent(action.eventId, e=>({...e, tables:[...( e.tables||[]), action.payload]}));
     case 'DEL_TABLE': return updEvent(action.eventId, e=>({...e, tables:(e.tables||[]).filter(t=>t.id!==action.tableId)}));
