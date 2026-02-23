@@ -453,9 +453,20 @@
 
     /* ── 会場フロア ── */
     .floor-layout { grid-template-columns: 1fr; height: auto; min-height: calc(100dvh - 100px); }
-    .floor-panel { display: none; }
-    .floor-fab { display: flex !important; }
-    .floor-canvas-wrap { overflow-x: hidden; }
+    .floor-canvas-wrap { display: none; }
+    .floor-panel {
+      display: flex;
+      width: 100%;
+      border-left: none;
+      background: transparent;
+    }
+    .floor-panel-header,
+    .floor-panel-body {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    .floor-fab { display: none !important; }
     .floor-canvas { min-width: 100%; min-height: 400px; width: 100%; }
 
     /* ── ページタイトル ── */
