@@ -616,20 +616,21 @@
       min-height: calc(100dvh - 100px);
       justify-items: center;
     }
-    .floor-panel {
+    .floor-canvas-wrap {
       display: none;
+    }
+    .floor-panel {
+      display: flex;
       width: 100%;
       border-left: none;
       background: transparent;
     }
-    .floor-canvas-wrap {
-      width: 100%;
-      overflow-x: hidden;
+    .floor-panel-header {
+      background: transparent;
+      padding: 0.75rem 0;
     }
-    .floor-canvas {
-      min-width: 100%;
-      min-height: 400px;
-      width: 100%;
+    .floor-panel-body {
+      padding: 0;
     }
   }
 </style>
@@ -880,7 +881,9 @@ function Modal({ title, onClose, children, footer }) {
 // ============================================================
 function EventsPage({ state, dispatch, onSelect, onLayout, onAssign }) {
   const [showNew, setShowNew] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState({ name: '', datetime: '' });
+  const [editingEventId, setEditingEventId] = useState(null);
 
   const create = () => {
     if (!form.name.trim()) return;
@@ -891,6 +894,22 @@ function EventsPage({ state, dispatch, onSelect, onLayout, onAssign }) {
   const del = (id, e) => {
     e.stopPropagation();
     if (confirm('このイベントを削除しますか？')) dispatch({type:'DELETE_EVENT', payload:id});
+  };
+  const openEdit = (ev, e) => {
+    e.stopPropagation();
+    setEditingEventId(ev.id);
+    setForm({ name: ev.name || '', datetime: ev.datetime || '' });
+    setShowEdit(true);
+  };
+  const saveEdit = () => {
+    if (!form.name.trim() || !editingEventId) return;
+    dispatch({
+      type:'UPDATE_EVENT',
+      payload:{ id: editingEventId, name: form.name.trim(), datetime: form.datetime }
+    });
+    setShowEdit(false);
+    setEditingEventId(null);
+    setForm({name:'',datetime:''});
   };
   const dup = (ev, e) => {
     e.stopPropagation();
@@ -928,6 +947,7 @@ function EventsPage({ state, dispatch, onSelect, onLayout, onAssign }) {
                 </button>
               </div>
               <div className="event-sub-btns">
+                <button className="btn btn-outline btn-sm" onClick={e=>openEdit(ev,e)}>編集</button>
                 <button className="btn btn-outline btn-sm" onClick={e=>dup(ev,e)}>複製</button>
                 <button className="btn btn-danger btn-sm" onClick={e=>del(ev.id,e)}>削除</button>
               </div>
@@ -939,6 +959,13 @@ function EventsPage({ state, dispatch, onSelect, onLayout, onAssign }) {
         <Modal title="新規イベント" onClose={()=>setShowNew(false)}
           footer={<><button className="btn btn-outline" onClick={()=>setShowNew(false)}>キャンセル</button><button className="btn btn-accent" onClick={create}>作成</button></>}>
           <div><label>イベント名 *</label><input type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="例: 2025年度Q2懇親会" autoFocus/></div>
+          <div><label>日時（任意）</label><input type="datetime-local" value={form.datetime} onChange={e=>setForm(f=>({...f,datetime:e.target.value}))}/></div>
+        </Modal>
+      )}
+      {showEdit && (
+        <Modal title="イベント編集" onClose={()=>setShowEdit(false)}
+          footer={<><button className="btn btn-outline" onClick={()=>setShowEdit(false)}>キャンセル</button><button className="btn btn-accent" onClick={saveEdit}>保存</button></>}>
+          <div><label>イベント名 *</label><input type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} autoFocus/></div>
           <div><label>日時（任意）</label><input type="datetime-local" value={form.datetime} onChange={e=>setForm(f=>({...f,datetime:e.target.value}))}/></div>
         </Modal>
       )}
@@ -1932,6 +1959,12 @@ function reducer(state, action) {
   switch (action.type) {
     case 'SET_STATE': return action.payload;
     case 'ADD_EVENT': return {...state, events:[...state.events, sanitizeEvent({...action.payload, tables:[], attendees:[], ngPairs:[], assignments:{}})], currentEventId: action.payload.id };
+    case 'UPDATE_EVENT': return {
+      ...state,
+      events: state.events.map(e => e.id===action.payload.id
+        ? sanitizeEvent({...e, name: action.payload.name, datetime: action.payload.datetime, updatedAt: now()})
+        : e)
+    };
     case 'DELETE_EVENT': return {...state, events:state.events.filter(e=>e.id!==action.payload), currentEventId: state.currentEventId===action.payload?null:state.currentEventId};
     case 'DUPLICATE_EVENT': {
       const src = state.events.find(e=>e.id===action.payload.src.id);
