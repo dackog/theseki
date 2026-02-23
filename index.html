@@ -1776,9 +1776,23 @@ function LayoutPage({ event, dispatch, notify }) {
 
   const selectedTable = tables.find(t=>t.id===selectedId);
   const floorDesign = event.floorDesign || 'default';
+<<<<<<< ours
   const floorCanvasRef = useRef(null);
 
   const handlePdfDownload = async () => {
+=======
+  const [isMobileLayout, setIsMobileLayout] = useState(() => window.innerWidth <= 720);
+  useEffect(() => {
+    const onResize = () => setIsMobileLayout(window.innerWidth <= 720);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const effectiveFloorDesign = isMobileLayout ? 'default' : floorDesign;
+  const floorCanvasRef = useRef(null);
+
+  const handlePdfDownload = async () => {
+    if (isMobileLayout) return;
+>>>>>>> theirs
     try {
       await downloadFloorPdf({ element: floorCanvasRef.current, eventName: event.name });
       notify('PDFをダウンロードしました');
@@ -1806,6 +1820,7 @@ function LayoutPage({ event, dispatch, notify }) {
           ))}
         </div>
         <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'0.5rem'}}>
+<<<<<<< ours
           <select
             value={floorDesign}
             onChange={e=>dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'floorDesign', val:e.target.value})}
@@ -1817,12 +1832,33 @@ function LayoutPage({ event, dispatch, notify }) {
             <option value="stylish">スタイリッシュ</option>
           </select>
           <button className="btn btn-outline btn-sm" onClick={handlePdfDownload}>PDF</button>
+=======
+          {!isMobileLayout && (
+            <>
+              <select
+                value={floorDesign}
+                onChange={e=>dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'floorDesign', val:e.target.value})}
+                style={{width:'170px'}}
+              >
+                <option value="default">デフォルト</option>
+                <option value="simple">シンプル</option>
+                <option value="cute">かわいい</option>
+                <option value="stylish">スタイリッシュ</option>
+              </select>
+              <button className="btn btn-outline btn-sm" onClick={handlePdfDownload}>PDF</button>
+            </>
+          )}
+>>>>>>> theirs
           <button className="btn btn-accent btn-sm" onClick={()=>setShowAdd(true)}>＋ 卓を追加</button>
         </div>
       </div>
 
       {/* フロア ＋ サイドパネル */}
+<<<<<<< ours
       <div className={`floor-layout theme-${floorDesign}`} style={{flex:1,overflow:'hidden'}}>
+=======
+      <div className={`floor-layout theme-${effectiveFloorDesign}`} style={{flex:1,overflow:'hidden'}}>
+>>>>>>> theirs
         {/* フロアキャンバス */}
         <div className="floor-canvas-wrap" style={{position:'relative'}}>
           <div className="floor-canvas" ref={floorCanvasRef} onClick={()=>setSelectedId(null)}>
