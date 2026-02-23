@@ -381,6 +381,9 @@
   .event-sub-btns {
     display: flex; gap: 0.4rem; padding-left: 0.5rem; margin-top: 0.5rem;
   }
+  .event-sub-btns .btn {
+    min-height: 34px;
+  }
 
   .assign-status-banner {
     position: sticky;
@@ -433,6 +436,13 @@
     .event-card-title { font-size: 1rem; }
     .event-action-btns .btn-main { padding: 0.7rem 0.4rem; font-size: 0.8rem; }
     .event-action-btns .btn-main .btn-icon { font-size: 1.2rem; }
+    .event-sub-btns { gap: 0.5rem; }
+    .event-sub-btns .btn {
+      flex: 1;
+      min-height: 42px;
+      font-size: 0.82rem;
+      padding: 0.52rem 0.8rem;
+    }
 
     /* ── 参加者管理 ── */
     .attendee-row { grid-template-columns: 1fr; gap: 0.4rem; }
@@ -623,14 +633,34 @@
       display: flex;
       width: 100%;
       border-left: none;
-      background: transparent;
+      border-radius: 10px;
+      padding: 0.9rem;
+      background: #1a1f2e;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
     }
     .floor-panel-header {
+<<<<<<< ours
       background: transparent;
       padding: 0.75rem 0;
     }
     .floor-panel-body {
       padding: 0;
+=======
+      background: rgba(250,247,242,0.96);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+    }
+    .floor-panel-body {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: rgba(250,247,242,0.96);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+>>>>>>> theirs
     }
   }
 </style>
