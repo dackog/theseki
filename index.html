@@ -1336,11 +1336,7 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
     const isHL  = flagHighlightIds && aId && flagHighlightIds.has(aId);
     const isDim = flagHighlightIds && flagHighlightIds.size > 0 && aId && !flagHighlightIds.has(aId);
     if (isLocked)
-<<<<<<< ours
       return { bg:'radial-gradient(circle at 40% 35%,#8e6d2f,#5f4618)', br:'rgba(255,220,120,0.75)', co:'#fff2c8', op:1, sh:'0 0 0 2px rgba(255,220,120,0.35),0 2px 8px rgba(0,0,0,0.5)' };
-=======
-      return { bg:'linear-gradient(145deg,#d8d8d8,#bdbdbd)', br:'rgba(80,80,80,0.7)', co:'#111', op:1, sh:'0 0 0 2px rgba(180,180,180,0.35),0 2px 8px rgba(0,0,0,0.45)' };
->>>>>>> theirs
     if (violationSeatIds.has(seat.id))
       return { bg:'radial-gradient(circle at 40% 35%,#a04040,#6b1515)', br:'rgba(220,100,100,0.6)', co:'#ffd0d0', op:1, sh:'0 2px 8px rgba(0,0,0,0.5)' };
     if (isHL)
@@ -1705,15 +1701,9 @@ function AssignPage({ event, dispatch, notify }) {
                 <div style={{display:'flex',gap:'0.35rem',marginTop:'0.3rem',flexWrap:'wrap'}}>
                   <button onClick={()=>setSelected(null)} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
                   {lockedAttendees[selected] ? (
-<<<<<<< ours
                     <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false})} style={{background:'rgba(192,57,43,0.08)',border:'1px solid rgba(192,57,43,0.35)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--accent)'}}>🔓 ロック解除</button>
                   ) : (
                     <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true})} style={{background:'rgba(184,134,11,0.1)',border:'1px solid rgba(184,134,11,0.4)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--accent-gold)'}}>🔒 ロック</button>
-=======
-                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false})} style={{display:'inline-flex',alignItems:'center',gap:4,background:'linear-gradient(145deg,#ffe7e3,#ffcbc2)',border:'1px solid rgba(192,57,43,0.55)',borderRadius:6,padding:'0.22rem 0.62rem',cursor:'pointer',fontSize:'0.73rem',fontWeight:700,color:'#7e1f12',boxShadow:'0 1px 4px rgba(0,0,0,0.12)'}}>🔓 ロック解除</button>
-                  ) : (
-                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true})} style={{display:'inline-flex',alignItems:'center',gap:4,background:'linear-gradient(145deg,#f2f2f2,#d9d9d9)',border:'1px solid rgba(90,90,90,0.55)',borderRadius:6,padding:'0.22rem 0.62rem',cursor:'pointer',fontSize:'0.73rem',fontWeight:700,color:'#111',boxShadow:'0 1px 4px rgba(0,0,0,0.12)'}}>🔒 ロック</button>
->>>>>>> theirs
                   )}
                 </div>
               </>
@@ -2478,7 +2468,12 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+const rootEl = document.getElementById('root');
+if (ReactDOM.createRoot) {
+  ReactDOM.createRoot(rootEl).render(<App/>);
+} else {
+  ReactDOM.render(<App/>, rootEl);
+}
 </script>
 </body>
 </html>
