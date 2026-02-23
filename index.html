@@ -513,9 +513,16 @@
       background: var(--paper);
     }
     .event-subpage-content {
+<<<<<<< ours
       min-height: auto;
       display: block;
       overflow: visible !important;
+=======
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+>>>>>>> theirs
       background: var(--paper);
     }
   }
@@ -657,7 +664,11 @@
       height: auto;
       min-height: auto;
       justify-items: center;
+<<<<<<< ours
       overflow: visible;
+=======
+      overflow: hidden;
+>>>>>>> theirs
     }
     .floor-canvas-wrap {
       display: none;
@@ -665,11 +676,16 @@
     .floor-panel {
       display: flex;
       width: 100%;
+<<<<<<< ours
       height: auto;
+=======
+      height: 100%;
+      min-height: 0;
+>>>>>>> theirs
       border-left: none;
       padding: 0.9rem;
       border-radius: 10px;
-      overflow: visible;
+      overflow: hidden;
       background: transparent;
       background-image: none;
     }
@@ -685,6 +701,9 @@
       background: var(--paper);
       border: 1px solid var(--border);
       border-radius: 8px;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .floor-layout {
       background: var(--paper);
