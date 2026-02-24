@@ -1474,6 +1474,8 @@ function AssignPage({ event, dispatch, notify }) {
   const [search,    setSearch]    = useState('');
 
   const seats       = useMemo(() => generateSeats(tables.map(t => ({...t,eventId:event.id}))), [tables,event.id]);
+  const totalSeats  = seats.length;
+  const assignedCount = Object.values(assignments).filter(Boolean).length;
   const assignedIds = new Set(Object.values(assignments).filter(Boolean));
   const unassigned  = attendees.filter(a => !assignedIds.has(a.id));
   const allTags     = [...new Set(attendees.flatMap(a => a.flags))];
@@ -1643,7 +1645,16 @@ function AssignPage({ event, dispatch, notify }) {
   return (
     <div className="main">
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.75rem',flexWrap:'wrap',gap:'0.5rem'}}>
-        <div className="page-title" style={{marginBottom:0}}>席割り</div>
+        <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexWrap:'wrap'}}>
+          <div className="page-title" style={{marginBottom:0}}>席割り</div>
+          {[
+            {label:`卓数: ${tables.length}`, c:'rgba(255,255,255,0.5)'},
+            {label:`総席: ${totalSeats}`, c:'rgba(255,255,255,0.5)'},
+            {label:`割当: ${assignedCount}/${totalSeats}`, c:'#4caf82'},
+          ].map((p,i)=>(
+            <span key={i} style={{fontSize:'0.72rem',color:p.c,background:'rgba(255,255,255,0.07)',padding:'2px 10px',borderRadius:20}}>{p.label}</span>
+          ))}
+        </div>
         <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
           <button className="btn btn-outline btn-sm" onClick={randomAssign}>🎲 ランダム配置</button>
           <button className="btn btn-green btn-sm" onClick={customAssign}>✨ カスタム配置</button>
