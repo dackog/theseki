@@ -1648,8 +1648,8 @@ function AssignPage({ event, dispatch, notify }) {
         <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexWrap:'wrap'}}>
           <div className="page-title" style={{marginBottom:0}}>席割り</div>
           {[
-            {label:`卓数: ${tables.length}`, c:'rgba(255,255,255,0.5)'},
-            {label:`総席: ${totalSeats}`, c:'rgba(255,255,255,0.5)'},
+            {label:`卓数: ${tables.length}`, c:'#000'},
+            {label:`総席: ${totalSeats}`, c:'#000'},
             {label:`割当: ${assignedCount}/${totalSeats}`, c:'#4caf82'},
           ].map((p,i)=>(
             <span key={i} style={{fontSize:'0.72rem',color:p.c,background:'rgba(255,255,255,0.07)',padding:'2px 10px',borderRadius:20}}>{p.label}</span>
@@ -1874,8 +1874,8 @@ function LayoutPage({ event, dispatch, notify }) {
       }}>
         <div style={{display:'flex',gap:'0.4rem'}}>
           {[
-            {label:`卓数: ${tables.length}`, c:'rgba(255,255,255,0.5)'},
-            {label:`総席: ${totalSeats}`, c:'rgba(255,255,255,0.5)'},
+            {label:`卓数: ${tables.length}`, c:'#000'},
+            {label:`総席: ${totalSeats}`, c:'#000'},
             {label:`割当: ${assignedCount}/${totalSeats}`, c:'#4caf82'},
             violations.length>0 && {label:`NG違反: ${violations.length}件`, c:'var(--accent)'},
           ].filter(Boolean).map((p,i)=>(
