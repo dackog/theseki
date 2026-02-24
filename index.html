@@ -410,6 +410,89 @@
   .assign-status-banner.sel { background: rgba(192,57,43,0.88); }
   .assign-status-banner.filter { background: rgba(184,134,11,0.88); }
 
+  /* ═══════════════════════════════════════════════════
+     レイアウトヘルパー & 再利用可能ユーティリティ
+  ═══════════════════════════════════════════════════ */
+
+  /* Page header row: title on left, action buttons on right */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;
+  }
+  .page-header > .page-title { margin-bottom: 0; }
+
+  /* Stat chip — small pill label used in dark toolbars */
+  .stat-chip {
+    font-size: 0.72rem;
+    background: rgba(255,255,255,0.07);
+    padding: 2px 10px; border-radius: 20px;
+  }
+
+  /* LayoutPage floor toolbar */
+  .floor-toolbar {
+    background: var(--ink);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 0.5rem 1.25rem;
+    display: flex; align-items: center; gap: 1rem;
+    flex-shrink: 0;
+  }
+  .floor-toolbar-stats { display: flex; gap: 0.4rem; }
+  .floor-toolbar-actions { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
+
+  /* AssignPage — dark grid floor canvas */
+  .assign-floor-canvas {
+    background: #1a1f2e;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    border-radius: 10px; overflow: auto; min-height: 420px;
+    padding: 1.5rem; position: relative;
+  }
+  .assign-floor-canvas-inner {
+    display: flex; flex-wrap: wrap;
+    gap: 2.5rem; align-items: flex-start; justify-content: center;
+  }
+
+  /* AssignPage — unassigned attendee scroll list */
+  .assign-attendee-list {
+    display: flex; flex-direction: column;
+    gap: 0.35rem; max-height: 48vh; overflow-y: auto;
+  }
+
+  /* AssignPage — selection state hint box in sidebar */
+  .selection-hint {
+    margin-top: 0.75rem; padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: 0.75rem; color: var(--ink-light); line-height: 1.75;
+    background: var(--paper-warm);
+  }
+  .selection-hint.has-selection { background: var(--accent-light); }
+
+  /* ViewPage — read-only mode banner */
+  .view-banner {
+    background: var(--accent-light); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.75rem 1.25rem;
+    margin-bottom: 1.5rem; font-size: 0.84rem; color: var(--ink-light);
+  }
+
+  /* Topbar — auto-save status indicator */
+  .topbar-status { font-size: 0.72rem; transition: color 0.3s; min-width: 56px; }
+
+  /* Attendee row action buttons */
+  .attendee-row-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+  /* Inner navigation bar (breadcrumb + tab switcher) */
+  .inner-nav-wrap {
+    position: sticky;
+    top: 0; z-index: 90;
+    background: var(--paper-warm);
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1.5rem;
+    display: flex; align-items: center; gap: 1rem;
+    flex-shrink: 0;
+  }
+
   /* ═══════════════════════════════════════
      スマホ対応 (max-width: 768px)
   ═══════════════════════════════════════ */
@@ -496,19 +579,9 @@
     input[type=text], input[type=number], input[type=datetime-local], select, textarea {
       font-size: 16px; /* iOS zoom防止 */
     }
-  }
 
-  .inner-nav-wrap {
-    position: sticky;
-    top: 0;
-    z-index: 90;
-  }
-
-  @media (max-width: 768px) {
-    .inner-nav-wrap {
-      top: 52px;
-      z-index: 110;
-    }
+    /* ── サブページシェル ── */
+    .inner-nav-wrap { top: 52px; z-index: 110; }
     .event-subpage-shell {
       min-height: calc(100dvh - 56px) !important;
       height: auto !important;
@@ -1092,8 +1165,8 @@ function EventsPage({ state, dispatch, onSelect, onLayout, onAssign }) {
 
   return (
     <div className="main">
-      <div className="flex items-center justify-between mb-3">
-        <div className="page-title" style={{marginBottom:0}}>イベント一覧</div>
+      <div className="page-header">
+        <div className="page-title">イベント一覧</div>
         <button className="btn btn-accent" onClick={()=>setShowNew(true)}>＋ 新規イベント</button>
       </div>
       {state.events.length === 0 ? (
@@ -1644,15 +1717,15 @@ function AssignPage({ event, dispatch, notify }) {
 
   return (
     <div className="main">
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.75rem',flexWrap:'wrap',gap:'0.5rem'}}>
+      <div className="page-header">
         <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexWrap:'wrap'}}>
-          <div className="page-title" style={{marginBottom:0}}>席割り</div>
+          <div className="page-title">席割り</div>
           {[
             {label:`卓数: ${tables.length}`, c:'#000'},
             {label:`総席: ${totalSeats}`, c:'#000'},
             {label:`割当: ${assignedCount}/${totalSeats}`, c:'#4caf82'},
           ].map((p,i)=>(
-            <span key={i} style={{fontSize:'0.72rem',color:p.c,background:'rgba(255,255,255,0.07)',padding:'2px 10px',borderRadius:20}}>{p.label}</span>
+            <span key={i} className="stat-chip" style={{color:p.c}}>{p.label}</span>
           ))}
         </div>
         <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
@@ -1692,7 +1765,7 @@ function AssignPage({ event, dispatch, notify }) {
                   ★ 「{filterTag}」をハイライト中 — 金色の席が対象者
                 </div>
               )}
-              <div style={{display:'flex',flexDirection:'column',gap:'0.35rem',maxHeight:'48vh',overflowY:'auto'}}>
+              <div className="assign-attendee-list">
                 {filteredUnassigned.length===0 && <div className="text-sm text-muted" style={{padding:'0.5rem 0'}}>全員割当済</div>}
                 {filteredUnassigned.map(a=>{
                   const isHL = filterTag && a.flags.includes(filterTag);
@@ -1710,9 +1783,7 @@ function AssignPage({ event, dispatch, notify }) {
               </div>
             </div>
           </div>
-          <div style={{marginTop:'0.75rem',padding:'0.65rem 0.9rem',
-            background: selName ? 'var(--accent-light)' : 'var(--paper-warm)',
-            border:'1px solid var(--border)',borderRadius:'6px',fontSize:'0.75rem',color:'var(--ink-light)',lineHeight:1.75}}>
+          <div className={`selection-hint ${selName ? 'has-selection' : ''}`}>
             {selName ? (
               <>
                 <b style={{color:'var(--ink)',display:'block',marginBottom:'0.15rem'}}>👆 {selName} を選択中</b>
@@ -1738,13 +1809,7 @@ function AssignPage({ event, dispatch, notify }) {
           </div>
         </div>
 
-        <div className="assign-floor-view" style={{
-          background:'#1a1f2e',
-          backgroundImage:'linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px)',
-          backgroundSize:'40px 40px',
-          borderRadius:10, overflow:'auto', minHeight:420, padding:'1.5rem',
-          position:'relative',
-        }}
+        <div className="assign-floor-view assign-floor-canvas"
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}
         >
           {tables.length===0 && (
@@ -1764,7 +1829,7 @@ function AssignPage({ event, dispatch, notify }) {
               <span style={{marginLeft:8,opacity:0.85,fontWeight:400}}>{flagHighlightIds ? flagHighlightIds.size : 0}名 — 金色の席が対象者</span>
             </div>
           )}
-          <div style={{display:'flex',flexWrap:'wrap',gap:'2.5rem',alignItems:'flex-start',justifyContent:'center'}}>
+          <div className="assign-floor-canvas-inner">
             {tables.map(table => {
               const tSeats = seats.filter(s=>s.tableId===table.id);
               const hasV   = violationTableIds.has(table.id);
@@ -1867,22 +1932,18 @@ function LayoutPage({ event, dispatch, notify }) {
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
       {/* ツールバー */}
-      <div style={{
-        background:'var(--ink)', borderBottom:'1px solid rgba(255,255,255,0.08)',
-        padding:'0.5rem 1.25rem', display:'flex', alignItems:'center', gap:'1rem',
-        flexShrink:0,
-      }}>
-        <div style={{display:'flex',gap:'0.4rem'}}>
+      <div className="floor-toolbar">
+        <div className="floor-toolbar-stats">
           {[
             {label:`卓数: ${tables.length}`, c:'#000'},
             {label:`総席: ${totalSeats}`, c:'#000'},
             {label:`割当: ${assignedCount}/${totalSeats}`, c:'#4caf82'},
             violations.length>0 && {label:`NG違反: ${violations.length}件`, c:'var(--accent)'},
           ].filter(Boolean).map((p,i)=>(
-            <span key={i} style={{fontSize:'0.72rem',color:p.c,background:'rgba(255,255,255,0.07)',padding:'2px 10px',borderRadius:20}}>{p.label}</span>
+            <span key={i} className="stat-chip" style={{color:p.c}}>{p.label}</span>
           ))}
         </div>
-        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'0.5rem'}}>
+        <div className="floor-toolbar-actions">
           {!isMobileLayout && (
             <>
               <select
@@ -2124,8 +2185,8 @@ function AttendeesPage({ event, dispatch, notify }) {
 
   return (
     <div className="main">
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.75rem',flexWrap:'wrap',gap:'0.5rem'}}>
-        <div className="page-title" style={{marginBottom:0}}>参加者管理</div>
+      <div className="page-header">
+        <div className="page-title">参加者管理</div>
         <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
           <label className="btn btn-outline btn-sm" style={{cursor:'pointer'}}>
             📥 インポート<input type="file" accept=".csv" onChange={importCSV} style={{display:'none'}}/>
@@ -2292,7 +2353,7 @@ function ViewPage({ event }) {
 
   return (
     <div className="main">
-      <div style={{background:'var(--accent-light)',border:'1px solid var(--border)',borderRadius:'8px',padding:'0.75rem 1.25rem',marginBottom:'1.5rem',fontSize:'0.84rem',color:'var(--ink-light)'}}>
+      <div className="view-banner">
         👁 閲覧専用モード — <b style={{color:'var(--ink)'}}>{event.name}</b>
         {event.datetime && <span style={{marginLeft:'1rem'}}>📅 {event.datetime}</span>}
       </div>
@@ -2426,11 +2487,7 @@ function App() {
 
   // イベント内サブページ用のブレッドクラム＋タブバー
   const InnerNav = ({ subPage, setSubPage }) => (
-    <div className={`inner-nav-wrap ${(subPage==='layout'||subPage==='assign')?'subpage-fixed':''}`} style={{
-      background:'var(--paper-warm)', borderBottom:'1px solid var(--border)',
-      padding:'0.5rem 1.5rem', display:'flex', alignItems:'center', gap:'1rem',
-      flexShrink: 0,
-    }}>
+    <div className={`inner-nav-wrap ${(subPage==='layout'||subPage==='assign')?'subpage-fixed':''}`}>
       <button className="btn btn-ghost btn-sm inner-nav-back" onClick={()=>setPage('events')}
         style={{color:'var(--ink-light)',padding:'0.3rem 0.5rem',whiteSpace:'nowrap'}}>
         ← 一覧
@@ -2461,7 +2518,7 @@ function App() {
           ))}
         </nav>
         <div className="topbar-actions-desktop" style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'0.75rem'}}>
-          <span style={{fontSize:'0.72rem',color:statusColor,transition:'color 0.3s',minWidth:56}}>{statusLabel}</span>
+          <span className="topbar-status" style={{color:statusColor}}>{statusLabel}</span>
           <label className="btn btn-ghost btn-sm" style={{cursor:'pointer',color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>
             📂 復元<input type="file" accept=".json" onChange={handleImportJSON} style={{display:'none'}}/>
           </label>
