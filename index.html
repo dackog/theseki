@@ -1898,6 +1898,19 @@ function LayoutPage({ event, dispatch, notify }) {
       notify('卓を削除しました');
     }
   };
+  const duplicateTable = (table) => {
+    const copy = {
+      ...table,
+      id: uid(),
+      name: `${table.name} (コピー)`,
+      order: tables.length,
+      posX: (table.posX || 80) + 40,
+      posY: (table.posY || 80) + 40,
+    };
+    dispatch({type:'ADD_TABLE', eventId:event.id, payload:copy});
+    setSelectedId(copy.id);
+    notify('卓を複製しました');
+  };
   const updateTable = (tid, key, val) => dispatch({type:'UPDATE_TABLE', eventId:event.id, tableId:tid, key, val});
   const handleDrag = useCallback((tid, x, y) => updateTable(tid,'posX',x) || dispatch({type:'UPDATE_TABLE',eventId:event.id,tableId:tid,key:'posY',val:y}), [event.id]);
   // posXとposYを同時更新するアクションが必要なので専用ディスパッチ
@@ -2058,6 +2071,7 @@ function LayoutPage({ event, dispatch, notify }) {
                           {violations.filter(v=>v.tableId===t.id).map((v,i)=><div key={i}>NG: {v.aName} × {v.bName}</div>)}
                         </div>
                       )}
+                      <button className="btn btn-outline btn-sm w-full" style={{marginTop:'0.6rem'}} onClick={()=>duplicateTable(t)}>この卓を複製</button>
                       <button className="btn btn-danger btn-sm w-full" style={{marginTop:'0.6rem'}} onClick={()=>delTable(t.id)}>この卓を削除</button>
                     </div>
                   )}
