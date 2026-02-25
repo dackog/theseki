@@ -914,7 +914,8 @@ function sanitizeEvent(ev) {
   Object.entries(ev.lockedAttendees||{}).forEach(([aid,locked])=>{
     if (locked && attendeeIds.has(aid)) lockedAttendees[aid] = true;
   });
-  return {...ev, assignments, ngPairs, lockedAttendees};
+  const customRule = ev.customRule === 'gather' ? 'gather' : 'disperse';
+  return {...ev, assignments, ngPairs, lockedAttendees, customRule};
 }
 
 /** v1 → v2 マイグレーション */
@@ -1589,6 +1590,12 @@ function AssignPage({ event, dispatch, notify }) {
   const [selected,  setSelected]  = useState(null);
   const [filterTag, setFilterTag] = useState('');
   const [search,    setSearch]    = useState('');
+  const [customRuleModalOpen, setCustomRuleModalOpen] = useState(false);
+  const [customRuleDraft, setCustomRuleDraft] = useState(event.customRule || 'disperse');
+
+  useEffect(() => {
+    setCustomRuleDraft(event.customRule || 'disperse');
+  }, [event.customRule]);
 
   const seats       = useMemo(() => generateSeats(tables.map(t => ({...t,eventId:event.id}))), [tables,event.id]);
   const totalSeats  = seats.length;
@@ -1709,6 +1716,8 @@ function AssignPage({ event, dispatch, notify }) {
       return;
     }
     const allPeople = attendees.filter(a => !lockedIds.has(a.id));
+    const availableSeatCount = Math.max(allSeats.length - Object.keys(lockedSeatByAttendee).length, 0);
+    const currentRule = event.customRule || 'disperse';
     const ngSet = new Set(ngPairs.map(p => `${[p.a,p.b].sort().join('|')}`));
     const isNG = (a,b) => ngSet.has(`${[a,b].sort().join('|')}`);
     const seatTable = {}; seats.forEach(s => { seatTable[s.id]=s.tableId; });
@@ -1717,8 +1726,9 @@ function AssignPage({ event, dispatch, notify }) {
     for (let t = 0; t < TRIALS; t++) {
       const ppl = [...allPeople];
       for (let i=ppl.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ppl[i],ppl[j]]=[ppl[j],ppl[i]];}
+      const seatTargets = ppl.slice(0, availableSeatCount);
       const assign={...Object.fromEntries(Object.entries(lockedSeatByAttendee).map(([aid,sid])=>[sid,aid]))}; let failed=false;
-      for (const person of ppl) {
+      for (const person of seatTargets) {
         const eligible = allSeats.filter(sid => {
           if (assign[sid]) return false;
           const mates = (tableSeats[seatTable[sid]]||[]).filter(s=>assign[s]).map(s=>assign[s]);
@@ -1732,15 +1742,21 @@ function AssignPage({ event, dispatch, notify }) {
       tables.forEach(tab=>{
         const tp=(tableSeats[tab.id]||[]).map(s=>assign[s]).filter(Boolean).map(id=>allPeople.find(p=>p.id===id)).filter(Boolean);
         const fc={}; tp.forEach(p=>p.flags.forEach(f=>{fc[f]=(fc[f]||0)+1;}));
-        Object.values(fc).forEach(c=>{score-=(c-1);});
+        Object.values(fc).forEach(c=>{ score += currentRule === 'gather' ? (c-1) : -(c-1); });
       });
       if (score>bestScore){bestScore=score;best=assign;}
     }
     if (!best){notify('同卓NGを満たす配置が見つかりませんでした','error');return;}
     const updates={}; seats.forEach(s=>{updates[s.id]=best[s.id]||null;});
     dispatch({type:'BATCH_ASSIGN',eventId:event.id,updates});
-    notify('✨ カスタム配置しました（NG回避＋フラグ分散）','success');
+    notify(`✨ カスタム配置しました（NG回避＋フラグ${currentRule === 'gather' ? '集約' : '分散'}）`,'success');
     setSelected(null);
+  };
+
+  const saveCustomRule = () => {
+    dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'customRule', val:customRuleDraft});
+    setCustomRuleModalOpen(false);
+    notify(`カスタム設定を保存しました（フラグ${customRuleDraft === 'gather' ? '集約' : '分散'}）`, 'success');
   };
 
   const clearAll = () => {
@@ -1775,9 +1791,25 @@ function AssignPage({ event, dispatch, notify }) {
         <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
           <button className="btn btn-outline btn-sm" onClick={randomAssign}>🎲 ランダム配置</button>
           <button className="btn btn-green btn-sm" onClick={customAssign}>✨ カスタム配置</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setCustomRuleModalOpen(true)}>⚙️ カスタム設定</button>
           <button className="btn btn-danger btn-sm" onClick={clearAll}>全解除</button>
         </div>
       </div>
+
+      {customRuleModalOpen && (
+        <Modal title="カスタム設定" onClose={()=>setCustomRuleModalOpen(false)}
+          footer={<><button className="btn btn-outline" onClick={()=>setCustomRuleModalOpen(false)}>キャンセル</button><button className="btn btn-accent" onClick={saveCustomRule}>保存</button></>}>
+          <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>カスタム配置のフラグルールを選択してください。</div>
+          <label style={{display:'flex',alignItems:'center',gap:'0.45rem',marginBottom:'0.5rem',cursor:'pointer'}}>
+            <input type="radio" name="customRule" value="disperse" checked={customRuleDraft==='disperse'} onChange={e=>setCustomRuleDraft(e.target.value)} />
+            <span>① 参加者管理で設定したフラグを分散させる</span>
+          </label>
+          <label style={{display:'flex',alignItems:'center',gap:'0.45rem',cursor:'pointer'}}>
+            <input type="radio" name="customRule" value="gather" checked={customRuleDraft==='gather'} onChange={e=>setCustomRuleDraft(e.target.value)} />
+            <span>② 参加者管理で設定したフラグを同じ卓に集める</span>
+          </label>
+        </Modal>
+      )}
 
       {violations.length > 0 && (
         <div className="violation-banner" style={{marginBottom:'1rem'}}>
