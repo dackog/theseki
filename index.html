@@ -644,7 +644,9 @@
   }
 
   /* ── Floor Map ── */
-  .floor-layout { display: grid; grid-template-columns: 1fr 300px; gap: 0; height: calc(100dvh - 56px); overflow: hidden; }
+  .floor-layout-shell { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .floor-layout { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 0; flex: 1; min-height: 0; overflow: hidden; }
+  .floor-layout.panel-collapsed { grid-template-columns: minmax(0,1fr); }
   .floor-layout {
     --floor-bg: #1a1f2e;
     --floor-grid: rgba(255,255,255,0.025);
@@ -719,6 +721,7 @@
     overflow: auto; position: relative;
     cursor: default;
   }
+  .floor-canvas-region { min-width: 0; min-height: 0; overflow: auto; padding: 0.75rem; }
   .floor-canvas { position: relative; width: 1122px; height: 794px; min-width: 1122px; min-height: 794px; }
   .floor-empty {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
@@ -803,6 +806,8 @@
     display: flex; flex-direction: column;
     overflow: hidden;
   }
+  .floor-panel.hidden { display: none; }
+  .floor-panel-toggle { display: none; border: 1px solid var(--border); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9); border-radius: 6px; padding: 0.3rem 0.55rem; cursor: pointer; }
   .floor-panel-header {
     padding: 1rem 1.25rem 0.75rem;
     border-bottom: 1px solid var(--border);
@@ -828,6 +833,16 @@
   .floor-seat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--floor-dot-empty); }
   .floor-seat-dot.occ { background: var(--floor-dot-occupied); }
   .floor-seat-dot.viol { background: var(--floor-dot-violation); }
+  .floor-object { position: absolute; min-width: 52px; padding: 0.22rem 0.45rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.38); background: rgba(0,0,0,0.52); color: #fff; font-size: 0.72rem; user-select: none; cursor: grab; display: inline-flex; align-items: center; gap: 0.3rem; z-index: 4; }
+  .floor-object button { border: none; background: rgba(255,255,255,0.15); color: #fff; border-radius: 4px; font-size: 0.68rem; line-height: 1; padding: 0.08rem 0.22rem; cursor: pointer; }
+  .pdf-setting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .pdf-setting-grid label { font-size: 0.85rem; margin: 0; }
+  .pdf-object-toolbar { display:flex; flex-wrap:wrap; gap:0.5rem; }
+  .pdf-preview { border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: #fafafa; max-height: 42dvh; padding: 0.5rem; }
+
+  @media (max-width: 1200px), (max-height: 820px) {
+    .floor-panel-toggle { display: inline-flex; align-items:center; }
+  }
 
   @media (max-width: 720px) {
     .main {
@@ -846,6 +861,8 @@
     .floor-canvas-wrap {
       display: none;
     }
+    .floor-canvas-region { overflow: visible; padding: 0; }
+    .floor-panel-toggle { display: none !important; }
     .floor-panel {
       display: flex;
       width: 100%;
@@ -893,6 +910,14 @@ const { useState, useEffect, useCallback, useRef, useMemo } = React;
 // ============================================================
 const LS_KEY = 'theseki_v2';
 const SCHEMA_VERSION = 2;
+const PDF_SETTINGS_KEY = 'theseki_pdf_settings_v1';
+const DEFAULT_PDF_SETTINGS = {
+  orientation: 'landscape',
+  fitMode: 'cover',
+  showLogo: true,
+  logoSize: 'medium',
+  marginMm: 0,
+};
 
 /** データ整合性クリーニング: 孤立assignment・NG等を自動除去 */
 function sanitizeEvent(ev) {
@@ -1061,8 +1086,18 @@ function checkViolations(tables, seats, assignments, ngPairs, attendees) {
   return violations;
 }
 
-async function downloadFloorPdf({ element, eventName }) {
+async function downloadFloorPdf({ element, eventName, settings, floorObjects=[] }) {
   if (!element || !window.html2canvas || !window.jspdf?.jsPDF) throw new Error('PDFライブラリの読み込みに失敗しました');
+
+  const opts = {
+    orientation: settings?.orientation === 'portrait' ? 'portrait' : 'landscape',
+    fitMode: settings?.fitMode === 'contain' ? 'contain' : 'cover',
+    marginMm: Number.isFinite(settings?.marginMm) ? Math.max(0, settings.marginMm) : 0,
+    showLogo: settings?.showLogo !== false,
+    logoSize: settings?.logoSize || 'medium',
+  };
+  const logoSizePxMap = { small: 80, medium: 120, large: 160 };
+  const logoSizePx = logoSizePxMap[opts.logoSize] || logoSizePxMap.medium;
 
   const sourceWrap = element.closest('.floor-canvas-wrap');
   const sourceLayout = element.closest('.floor-layout');
@@ -1076,12 +1111,8 @@ async function downloadFloorPdf({ element, eventName }) {
     zIndex: '-1',
   });
 
-  const pagePxW = 1684;
-  const pagePxH = 1191;
-  const leftRightMargin = 56;
-  const topMargin = 24;
-  const bottomMargin = 40;
-  const logoReservedH = 72;
+  const pagePxW = opts.orientation === 'portrait' ? 1191 : 1684;
+  const pagePxH = opts.orientation === 'portrait' ? 1684 : 1191;
 
   const page = document.createElement('div');
   page.id = 'pdf-layout';
@@ -1093,26 +1124,6 @@ async function downloadFloorPdf({ element, eventName }) {
     background: '#ffffff',
   });
 
-  const logoRoot = document.createElement('div');
-  Object.assign(logoRoot.style, {
-    position: 'absolute',
-    left: '24px',
-    top: '16px',
-    zIndex: '3',
-  });
-  const topbarLogo = document.querySelector('.topbar-logo');
-  if (topbarLogo) {
-    const logoClone = topbarLogo.cloneNode(true);
-    logoClone.style.margin = '0';
-    logoClone.style.transform = 'scale(1.05)';
-    logoClone.style.transformOrigin = 'top left';
-    logoClone.style.color = '#1a1410';
-    const logoAccent = logoClone.querySelector('span');
-    if (logoAccent) logoAccent.style.color = '#c0392b';
-    logoRoot.appendChild(logoClone);
-  }
-  page.appendChild(logoRoot);
-
   const floorFrame = document.createElement('div');
   floorFrame.className = 'floor-canvas-wrap';
   const sourceWrapStyles = sourceWrap ? window.getComputedStyle(sourceWrap) : null;
@@ -1123,6 +1134,7 @@ async function downloadFloorPdf({ element, eventName }) {
     height: `${sourceHeight}px`,
     margin: '0',
     overflow: 'hidden',
+    position: 'relative',
     backgroundColor: sourceWrapStyles?.backgroundColor || '#1a1f2e',
     backgroundImage: sourceWrapStyles?.backgroundImage || 'none',
     backgroundSize: sourceWrapStyles?.backgroundSize || 'auto',
@@ -1138,25 +1150,53 @@ async function downloadFloorPdf({ element, eventName }) {
   }
   floorFrame.appendChild(element.cloneNode(true));
 
+  floorObjects.forEach((obj) => {
+    const node = document.createElement('div');
+    node.className = 'floor-object';
+    node.textContent = `${obj.icon || '📍'} ${obj.label || 'オブジェクト'}`;
+    Object.assign(node.style, {
+      left: `${Math.max(0, obj.x || 0)}px`,
+      top: `${Math.max(0, obj.y || 0)}px`,
+      transform: 'none',
+    });
+    floorFrame.appendChild(node);
+  });
+
   const contentSlot = document.createElement('div');
-  const availableW = pagePxW - leftRightMargin * 2;
-  const availableH = pagePxH - topMargin - logoReservedH - bottomMargin;
-  const baseW = Math.max(floorFrame.scrollWidth, floorFrame.offsetWidth);
-  const baseH = Math.max(floorFrame.scrollHeight, floorFrame.offsetHeight);
-  const scale = Math.min(availableW / baseW, availableH / baseH);
-  const renderW = baseW * scale;
-  const renderH = baseH * scale;
   Object.assign(contentSlot.style, {
     position: 'absolute',
-    left: `${leftRightMargin + (availableW - renderW) / 2}px`,
-    top: `${topMargin + logoReservedH + (availableH - renderH) / 2}px`,
-    width: `${baseW}px`,
-    height: `${baseH}px`,
-    transform: `scale(${scale})`,
-    transformOrigin: 'top left',
+    inset: '0',
   });
   contentSlot.appendChild(floorFrame);
   page.appendChild(contentSlot);
+
+  if (opts.showLogo) {
+    const logoRoot = document.createElement('div');
+    Object.assign(logoRoot.style, {
+      position: 'absolute',
+      left: '16px',
+      top: '12px',
+      zIndex: '5',
+      transformOrigin: 'top left',
+      transform: `scale(${Math.max(0.6, logoSizePx / 120)})`,
+    });
+    const topbarLogo = document.querySelector('.topbar-logo');
+    if (topbarLogo) {
+      const logoClone = topbarLogo.cloneNode(true);
+      logoClone.style.margin = '0';
+      logoClone.style.color = '#1a1410';
+      const logoAccent = logoClone.querySelector('span');
+      if (logoAccent) logoAccent.style.color = '#c0392b';
+      logoRoot.appendChild(logoClone);
+    } else {
+      logoRoot.textContent = 'The SEKI';
+      logoRoot.style.fontSize = '24px';
+      logoRoot.style.fontWeight = '700';
+      logoRoot.style.color = '#1a1410';
+    }
+    page.appendChild(logoRoot);
+  }
+
   pdfHost.appendChild(page);
   document.body.appendChild(pdfHost);
 
@@ -1171,10 +1211,23 @@ async function downloadFloorPdf({ element, eventName }) {
     });
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pdf = new jsPDF({ orientation: opts.orientation, unit: 'mm', format: 'a4' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
-    pdf.addImage(imgData, 'PNG', 0, 0, pageW, pageH);
+    const targetW = Math.max(0, pageW - opts.marginMm * 2);
+    const targetH = Math.max(0, pageH - opts.marginMm * 2);
+    const imgW = canvas.width;
+    const imgH = canvas.height;
+
+    const scale = opts.fitMode === 'cover'
+      ? Math.max(targetW / imgW, targetH / imgH)
+      : Math.min(targetW / imgW, targetH / imgH);
+    const drawW = imgW * scale;
+    const drawH = imgH * scale;
+    const offsetX = (targetW - drawW) / 2;
+    const offsetY = (targetH - drawH) / 2;
+
+    pdf.addImage(imgData, 'PNG', opts.marginMm + offsetX, opts.marginMm + offsetY, drawW, drawH);
     const safeName = (eventName || 'seats').replace(/[\/:*?"<>|]/g, '_');
     pdf.save(`${safeName}_seat-layout.pdf`);
   } finally {
@@ -2088,6 +2141,29 @@ function LayoutPage({ event, dispatch, notify }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newTable, setNewTable] = useState({ name:'', seatCount:6, shape:'rect' });
   const [selectedId, setSelectedId] = useState(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfSettings, setPdfSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem(PDF_SETTINGS_KEY);
+      return raw ? { ...DEFAULT_PDF_SETTINGS, ...JSON.parse(raw) } : DEFAULT_PDF_SETTINGS;
+    } catch {
+      return DEFAULT_PDF_SETTINGS;
+    }
+  });
+  const [floorObjects, setFloorObjects] = useState(() => event.floorObjects || []);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!showPdfModal) return;
+    const onKey = (e) => { if (e.key === 'Enter') handlePdfDownload(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showPdfModal, pdfSettings, floorObjects]);
+
+  useEffect(() => { setFloorObjects(event.floorObjects || []); }, [event.id, event.floorObjects]);
+  useEffect(() => {
+    dispatch({ type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'floorObjects', val: floorObjects });
+  }, [floorObjects]);
 
   const tables = event.tables || [];
   const seats = useMemo(()=>generateSeats(tables.map(t=>({...t,eventId:event.id}))), [tables, event.id]);
@@ -2095,7 +2171,6 @@ function LayoutPage({ event, dispatch, notify }) {
   const attendees = event.attendees || [];
   const ngPairs = event.ngPairs || [];
 
-  // NG違反
   const violations = useMemo(()=>checkViolations(tables, seats, assignments, ngPairs, attendees), [tables, seats, assignments, ngPairs, attendees]);
   const violationSeatIds = useMemo(()=>{
     const s = new Set();
@@ -2109,7 +2184,6 @@ function LayoutPage({ event, dispatch, notify }) {
 
   const addTable = () => {
     const name = newTable.name.trim() || `T${tables.length+1}`;
-    // 新しい卓の初期位置: 既存卓の右隣あたりに自動配置
     const cols = Math.ceil(Math.sqrt(tables.length+1));
     const idx = tables.length;
     const posX = 80 + (idx % cols) * 260;
@@ -2128,43 +2202,55 @@ function LayoutPage({ event, dispatch, notify }) {
     }
   };
   const duplicateTable = (table) => {
-    const copy = {
-      ...table,
-      id: uid(),
-      name: `${table.name} (コピー)`,
-      order: tables.length,
-      posX: (table.posX || 80) + 40,
-      posY: (table.posY || 80) + 40,
-    };
+    const copy = { ...table, id: uid(), name: `${table.name} (コピー)`, order: tables.length, posX: (table.posX || 80) + 40, posY: (table.posY || 80) + 40 };
     dispatch({type:'ADD_TABLE', eventId:event.id, payload:copy});
     setSelectedId(copy.id);
     notify('卓を複製しました');
   };
   const updateTable = (tid, key, val) => dispatch({type:'UPDATE_TABLE', eventId:event.id, tableId:tid, key, val});
-  const handleDrag = useCallback((tid, x, y) => updateTable(tid,'posX',x) || dispatch({type:'UPDATE_TABLE',eventId:event.id,tableId:tid,key:'posY',val:y}), [event.id]);
-  // posXとposYを同時更新するアクションが必要なので専用ディスパッチ
   const handleDragPos = useCallback((tid, x, y) => {
     dispatch({type:'MOVE_TABLE_POS', eventId:event.id, tableId:tid, posX:x, posY:y});
   }, [event.id, dispatch]);
 
   const totalSeats = tables.reduce((s,t)=>s+t.seatCount,0);
   const assignedCount = Object.values(assignments).filter(Boolean).length;
-
-  const selectedTable = tables.find(t=>t.id===selectedId);
   const floorDesign = event.floorDesign || 'default';
   const [isMobileLayout, setIsMobileLayout] = useState(() => window.innerWidth <= 720);
+  const [isCompactPc, setIsCompactPc] = useState(() => window.innerWidth <= 1200 || window.innerHeight <= 820);
   useEffect(() => {
-    const onResize = () => setIsMobileLayout(window.innerWidth <= 720);
+    const onResize = () => {
+      setIsMobileLayout(window.innerWidth <= 720);
+      setIsCompactPc(window.innerWidth <= 1200 || window.innerHeight <= 820);
+    };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
   const effectiveFloorDesign = isMobileLayout ? 'default' : floorDesign;
   const floorCanvasRef = useRef(null);
 
+  const addObject = (type) => {
+    const base = type === 'stage' ? { icon:'🎤', label:'ステージ' } : { icon:'🚪', label:'出入口' };
+    setFloorObjects(prev => ([...prev, { id: uid(), type, ...base, x: 80 + prev.length * 26, y: 70 + prev.length * 20 }]));
+  };
+  const moveObject = (id, x, y) => setFloorObjects(prev => prev.map(o => o.id===id ? { ...o, x: Math.max(0,x), y: Math.max(0,y) } : o));
+
+  const startObjectDrag = (obj, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX - (obj.x || 0);
+    const startY = e.clientY - (obj.y || 0);
+    const move = (me) => moveObject(obj.id, me.clientX - startX, me.clientY - startY);
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
   const handlePdfDownload = async () => {
     if (isMobileLayout) return;
     try {
-      await downloadFloorPdf({ element: floorCanvasRef.current, eventName: event.name });
+      localStorage.setItem(PDF_SETTINGS_KEY, JSON.stringify(pdfSettings));
+      await downloadFloorPdf({ element: floorCanvasRef.current, eventName: event.name, settings: pdfSettings, floorObjects });
+      setShowPdfModal(false);
       notify('PDFをダウンロードしました');
     } catch (e) {
       notify('PDFの作成に失敗しました', 'error');
@@ -2172,8 +2258,7 @@ function LayoutPage({ event, dispatch, notify }) {
   };
 
   return (
-    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
-      {/* ツールバー */}
+    <div className="floor-layout-shell">
       <div className="floor-toolbar">
         <div className="floor-toolbar-stats">
           {[
@@ -2181,125 +2266,68 @@ function LayoutPage({ event, dispatch, notify }) {
             {label:`総席: ${totalSeats}`, c:'rgba(255,255,255,0.75)'},
             {label:`割当: ${assignedCount}/${totalSeats}`, c:'#6dcea0'},
             violations.length>0 && {label:`NG違反: ${violations.length}件`, c:'#f08080'},
-          ].filter(Boolean).map((p,i)=>(
-            <span key={i} className="stat-chip" style={{color:p.c}}>{p.label}</span>
-          ))}
+          ].filter(Boolean).map((p,i)=>(<span key={i} className="stat-chip" style={{color:p.c}}>{p.label}</span>))}
         </div>
         <div className="floor-toolbar-actions">
           {!isMobileLayout && (
             <>
-              <select
-                value={floorDesign}
-                onChange={e=>dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'floorDesign', val:e.target.value})}
-                style={{width:'170px'}}
-              >
+              {isCompactPc && (
+                <button className="floor-panel-toggle" onClick={()=>setPanelCollapsed(v=>!v)}>{panelCollapsed?'卓一覧を表示':'卓一覧を隠す'}</button>
+              )}
+              <select value={floorDesign} onChange={e=>dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'floorDesign', val:e.target.value})} style={{width:'170px'}}>
                 <option value="default">デフォルト</option>
                 <option value="simple">シンプル</option>
                 <option value="cute">かわいい</option>
                 <option value="stylish">スタイリッシュ</option>
               </select>
-              <button className="btn btn-outline btn-sm" onClick={handlePdfDownload}>PDF</button>
+              <button className="btn btn-outline btn-sm" onClick={()=>setShowPdfModal(true)}>PDF</button>
             </>
           )}
           <button className="btn btn-accent btn-sm" onClick={()=>setShowAdd(true)}>＋ 卓を追加</button>
         </div>
       </div>
 
-      {/* フロア ＋ サイドパネル */}
-      <div className={`floor-layout theme-${effectiveFloorDesign}`} style={{flex:1,overflow:'hidden'}}>
-        {/* フロアキャンバス */}
-        <div className="floor-canvas-wrap" style={{position:'relative'}}>
-          <div className="floor-canvas" ref={floorCanvasRef} onClick={()=>setSelectedId(null)}>
-            {tables.length===0 && (
-              <div className="floor-empty">
-                <div className="floor-empty-icon">🍺</div>
-                <div className="floor-empty-text">「＋ 卓を追加」から<br/>テーブルを配置しましょう</div>
-              </div>
-            )}
-            {tables.map(t => {
-              const tableSeats = seats.filter(s=>s.tableId===t.id);
-              return (
-                <FloorTable key={t.id}
-                  table={t}
-                  seats={tableSeats}
-                  assignments={assignments}
-                  attendees={attendees}
-                  violationSeatIds={violationSeatIds}
-                  selected={selectedId===t.id}
-                  onSelect={setSelectedId}
-                  onDragEnd={handleDragPos}
-                />
-              );
-            })}
+      <div className={`floor-layout theme-${effectiveFloorDesign} ${panelCollapsed && isCompactPc ? 'panel-collapsed' : ''}`}>
+        <div className="floor-canvas-region">
+          <div className="floor-canvas-wrap" style={{position:'relative'}}>
+            <div className="floor-canvas" ref={floorCanvasRef} onClick={()=>setSelectedId(null)}>
+              {tables.length===0 && (<div className="floor-empty"><div className="floor-empty-icon">🍺</div><div className="floor-empty-text">「＋ 卓を追加」から<br/>テーブルを配置しましょう</div></div>)}
+              {tables.map(t => {
+                const tableSeats = seats.filter(s=>s.tableId===t.id);
+                return <FloorTable key={t.id} table={t} seats={tableSeats} assignments={assignments} attendees={attendees} violationSeatIds={violationSeatIds} selected={selectedId===t.id} onSelect={setSelectedId} onDragEnd={handleDragPos}/>;
+              })}
+              {floorObjects.map(obj => (
+                <div key={obj.id} className="floor-object" style={{left:obj.x, top:obj.y}} onMouseDown={e=>startObjectDrag(obj,e)}>
+                  <span>{obj.icon} {obj.label}</span>
+                  <button onClick={e=>{e.stopPropagation(); setFloorObjects(prev=>prev.filter(x=>x.id!==obj.id));}}>×</button>
+                </div>
+              ))}
+            </div>
           </div>
-          {/* スマホ用FAB */}
-          <button className="floor-fab" onClick={()=>setShowAdd(true)}
-            style={{display:'none',position:'absolute',bottom:'1.25rem',right:'1.25rem',
-              background:'var(--accent)',color:'#fff',border:'none',borderRadius:'50%',
-              width:52,height:52,fontSize:'1.5rem',boxShadow:'0 4px 16px rgba(0,0,0,0.4)',
-              cursor:'pointer',zIndex:10,alignItems:'center',justifyContent:'center'}}>
-            ＋
-          </button>
         </div>
 
-        {/* 右サイドパネル */}
-        <div className="floor-panel">
+        <div className={`floor-panel ${panelCollapsed && isCompactPc ? 'hidden' : ''}`}>
           <div className="floor-panel-header">
             <div style={{fontFamily:"'Noto Serif JP',serif",fontWeight:700,fontSize:'0.9rem',color:'var(--ink)',marginBottom:'0.5rem'}}>卓一覧</div>
             <button className="btn btn-accent btn-sm w-full" onClick={()=>setShowAdd(true)}>＋ 卓を追加</button>
           </div>
           <div className="floor-panel-body">
             {tables.length===0 && <div className="text-sm text-muted" style={{textAlign:'center',padding:'1rem 0'}}>卓がありません</div>}
-            {tables.map((t,idx) => {
+            {tables.map((t) => {
               const tSeats = seats.filter(s=>s.tableId===t.id);
               const occCount = tSeats.filter(s=>assignments[s.id]).length;
               const hasViol = violations.some(v=>v.tableId===t.id);
               const isActive = selectedId===t.id;
               return (
                 <div key={t.id} className={`floor-table-item ${isActive?'active':''}`} onClick={()=>setSelectedId(t.id)}>
-                  <div className="floor-table-item-head">
-                    <span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span>
-                    <span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span>
-                  </div>
-                  {/* 席ドット */}
-                  <div className="floor-seat-bar">
-                    {tSeats.map(s => {
-                      const viol = violationSeatIds.has(s.id);
-                      const occ = !!assignments[s.id];
-                      return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>;
-                    })}
-                  </div>
-                  {/* 選択時：編集フォーム */}
+                  <div className="floor-table-item-head"><span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span><span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span></div>
+                  <div className="floor-seat-bar">{tSeats.map(s => { const viol = violationSeatIds.has(s.id); const occ = !!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}</div>
                   {isActive && (
                     <div onClick={e=>e.stopPropagation()}>
-                      <div className="floor-edit-row" style={{marginTop:'0.6rem'}}>
-                        <label>卓名</label>
-                        <input type="text" value={t.name} onChange={e=>updateTable(t.id,'name',e.target.value)} style={{flex:1}}/>
-                      </div>
-                      <div className="floor-edit-row">
-                        <label>座席数</label>
-                        <input type="number" min="1" max="30" value={t.seatCount}
-                          onChange={e=>updateTable(t.id,'seatCount',parseInt(e.target.value)||1)}
-                          style={{width:60}}/>
-                      </div>
-                      <div className="floor-edit-row">
-                        <label>形状</label>
-                        <div style={{display:'flex',gap:'0.4rem',flex:1}}>
-                          {[{v:'rect',icon:'⬛',label:'四角'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(
-                            <button key={s.v}
-                              className={`btn btn-sm ${(t.shape||'rect')===s.v?'btn-primary':'btn-outline'}`}
-                              style={{flex:1,gap:'0.25rem'}}
-                              onClick={()=>updateTable(t.id,'shape',s.v)}>
-                              {s.icon} {s.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      {hasViol && (
-                        <div style={{marginTop:'0.5rem',fontSize:'0.73rem',color:'var(--accent)',background:'#fde8e8',borderRadius:5,padding:'0.3rem 0.5rem'}}>
-                          {violations.filter(v=>v.tableId===t.id).map((v,i)=><div key={i}>NG: {v.aName} × {v.bName}</div>)}
-                        </div>
-                      )}
+                      <div className="floor-edit-row" style={{marginTop:'0.6rem'}}><label>卓名</label><input type="text" value={t.name} onChange={e=>updateTable(t.id,'name',e.target.value)} style={{flex:1}}/></div>
+                      <div className="floor-edit-row"><label>座席数</label><input type="number" min="1" max="30" value={t.seatCount} onChange={e=>updateTable(t.id,'seatCount',parseInt(e.target.value)||1)} style={{width:60}}/></div>
+                      <div className="floor-edit-row"><label>形状</label><div style={{display:'flex',gap:'0.4rem',flex:1}}>{[{v:'rect',icon:'⬛',label:'四角'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn btn-sm ${(t.shape||'rect')===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,gap:'0.25rem'}} onClick={()=>updateTable(t.id,'shape',s.v)}>{s.icon} {s.label}</button>))}</div></div>
+                      {hasViol && <div style={{marginTop:'0.5rem',fontSize:'0.73rem',color:'var(--accent)',background:'#fde8e8',borderRadius:5,padding:'0.3rem 0.5rem'}}>{violations.filter(v=>v.tableId===t.id).map((v,i)=><div key={i}>NG: {v.aName} × {v.bName}</div>)}</div>}
                       <button className="btn btn-outline btn-sm w-full" style={{marginTop:'0.6rem'}} onClick={()=>duplicateTable(t)}>この卓を複製</button>
                       <button className="btn btn-danger btn-sm w-full" style={{marginTop:'0.6rem'}} onClick={()=>delTable(t.id)}>この卓を削除</button>
                     </div>
@@ -2312,24 +2340,24 @@ function LayoutPage({ event, dispatch, notify }) {
       </div>
 
       {showAdd && (
-        <Modal title="卓を追加" onClose={()=>setShowAdd(false)}
-          footer={<><button className="btn btn-outline" onClick={()=>setShowAdd(false)}>キャンセル</button><button className="btn btn-accent" onClick={addTable}>追加</button></>}>
+        <Modal title="卓を追加" onClose={()=>setShowAdd(false)} footer={<><button className="btn btn-outline" onClick={()=>setShowAdd(false)}>キャンセル</button><button className="btn btn-accent" onClick={addTable}>追加</button></>}>
           <div><label>卓名（省略時: 自動採番）</label><input type="text" value={newTable.name} onChange={e=>setNewTable(f=>({...f,name:e.target.value}))} placeholder={`T${tables.length+1}`} autoFocus/></div>
           <div><label>座席数</label><input type="number" min="1" max="30" value={newTable.seatCount} onChange={e=>setNewTable(f=>({...f,seatCount:parseInt(e.target.value)||1}))}/></div>
-          <div>
-            <label>テーブル形状</label>
-            <div style={{display:'flex',gap:'0.75rem',marginTop:'0.25rem'}}>
-              {[{v:'rect',icon:'⬛',label:'四角（デフォルト）'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(
-                <button key={s.v}
-                  className={`btn ${newTable.shape===s.v?'btn-primary':'btn-outline'}`}
-                  style={{flex:1,flexDirection:'column',gap:'0.3rem',padding:'0.75rem 0.5rem',fontSize:'0.82rem'}}
-                  onClick={()=>setNewTable(f=>({...f,shape:s.v}))}>
-                  <span style={{fontSize:'1.5rem'}}>{s.icon}</span>
-                  {s.label}
-                </button>
-              ))}
-            </div>
+          <div><label>テーブル形状</label><div style={{display:'flex',gap:'0.75rem',marginTop:'0.25rem'}}>{[{v:'rect',icon:'⬛',label:'四角（デフォルト）'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn ${newTable.shape===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,flexDirection:'column',gap:'0.3rem',padding:'0.75rem 0.5rem',fontSize:'0.82rem'}} onClick={()=>setNewTable(f=>({...f,shape:s.v}))}><span style={{fontSize:'1.5rem'}}>{s.icon}</span>{s.label}</button>))}</div></div>
+        </Modal>
+      )}
+
+      {showPdfModal && (
+        <Modal title="PDF生成" onClose={()=>setShowPdfModal(false)} footer={<><button className="btn btn-outline" onClick={()=>setShowPdfModal(false)}>キャンセル</button><button className="btn btn-accent" onClick={handlePdfDownload}>PDF生成</button></>}>
+          <div className="pdf-setting-grid">
+            <div><label>用紙向き</label><select value={pdfSettings.orientation} onChange={e=>setPdfSettings(v=>({...v, orientation:e.target.value}))}><option value="portrait">縦</option><option value="landscape">横</option></select></div>
+            <div><label>フィット方式</label><select value={pdfSettings.fitMode} onChange={e=>setPdfSettings(v=>({...v, fitMode:e.target.value}))}><option value="cover">余白ゼロで全面（cover）</option><option value="contain">全体表示（contain）</option></select></div>
+            <div><label>ロゴ表示</label><select value={pdfSettings.showLogo ? 'on' : 'off'} onChange={e=>setPdfSettings(v=>({...v, showLogo:e.target.value==='on'}))}><option value="on">ON</option><option value="off">OFF</option></select></div>
+            <div><label>ロゴサイズ</label><select value={pdfSettings.logoSize} onChange={e=>setPdfSettings(v=>({...v, logoSize:e.target.value}))}><option value="small">小</option><option value="medium">中</option><option value="large">大</option></select></div>
           </div>
+          <div><label>余白(mm)</label><input type="number" min="0" max="20" step="1" value={pdfSettings.marginMm} onChange={e=>setPdfSettings(v=>({...v, marginMm: parseInt(e.target.value,10) || 0}))}/></div>
+          <div><label>出入口/ステージ配置</label><div className="pdf-object-toolbar"><button className="btn btn-outline btn-sm" onClick={()=>addObject('entrance')}>＋ 出入口</button><button className="btn btn-outline btn-sm" onClick={()=>addObject('stage')}>＋ ステージ</button></div></div>
+          <div className="text-sm text-muted">アイテムは会場上でドラッグ移動できます。配置は保持されます。</div>
         </Modal>
       )}
     </div>
