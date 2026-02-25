@@ -914,8 +914,11 @@ const PDF_SETTINGS_KEY = 'theseki_pdf_settings_v1';
 const DEFAULT_PDF_SETTINGS = {
   orientation: 'landscape',
   fitMode: 'cover',
+<<<<<<< ours
   showLogo: true,
   logoSize: 'medium',
+=======
+>>>>>>> theirs
   marginMm: 0,
 };
 
@@ -1093,11 +1096,15 @@ async function downloadFloorPdf({ element, eventName, settings, floorObjects=[] 
     orientation: settings?.orientation === 'portrait' ? 'portrait' : 'landscape',
     fitMode: settings?.fitMode === 'contain' ? 'contain' : 'cover',
     marginMm: Number.isFinite(settings?.marginMm) ? Math.max(0, settings.marginMm) : 0,
+<<<<<<< ours
     showLogo: settings?.showLogo !== false,
     logoSize: settings?.logoSize || 'medium',
   };
   const logoSizePxMap = { small: 80, medium: 120, large: 160 };
   const logoSizePx = logoSizePxMap[opts.logoSize] || logoSizePxMap.medium;
+=======
+  };
+>>>>>>> theirs
 
   const sourceWrap = element.closest('.floor-canvas-wrap');
   const sourceLayout = element.closest('.floor-layout');
@@ -1111,6 +1118,7 @@ async function downloadFloorPdf({ element, eventName, settings, floorObjects=[] 
     zIndex: '-1',
   });
 
+<<<<<<< ours
   const pagePxW = opts.orientation === 'portrait' ? 1191 : 1684;
   const pagePxH = opts.orientation === 'portrait' ? 1684 : 1191;
 
@@ -1124,6 +1132,8 @@ async function downloadFloorPdf({ element, eventName, settings, floorObjects=[] 
     background: '#ffffff',
   });
 
+=======
+>>>>>>> theirs
   const floorFrame = document.createElement('div');
   floorFrame.className = 'floor-canvas-wrap';
   const sourceWrapStyles = sourceWrap ? window.getComputedStyle(sourceWrap) : null;
@@ -1160,6 +1170,7 @@ async function downloadFloorPdf({ element, eventName, settings, floorObjects=[] 
       transform: 'none',
     });
     floorFrame.appendChild(node);
+<<<<<<< ours
   });
 
   const contentSlot = document.createElement('div');
@@ -1198,16 +1209,21 @@ async function downloadFloorPdf({ element, eventName, settings, floorObjects=[] 
   }
 
   pdfHost.appendChild(page);
+=======
+  });
+
+  pdfHost.appendChild(floorFrame);
+>>>>>>> theirs
   document.body.appendChild(pdfHost);
 
   try {
     if (document.fonts?.ready) await document.fonts.ready;
-    const canvas = await window.html2canvas(page, {
-      backgroundColor: '#ffffff',
+    const canvas = await window.html2canvas(floorFrame, {
+      backgroundColor: null,
       scale: 2,
       useCORS: true,
-      width: pagePxW,
-      height: pagePxH,
+      width: sourceWidth,
+      height: sourceHeight,
     });
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
@@ -2352,11 +2368,17 @@ function LayoutPage({ event, dispatch, notify }) {
           <div className="pdf-setting-grid">
             <div><label>用紙向き</label><select value={pdfSettings.orientation} onChange={e=>setPdfSettings(v=>({...v, orientation:e.target.value}))}><option value="portrait">縦</option><option value="landscape">横</option></select></div>
             <div><label>フィット方式</label><select value={pdfSettings.fitMode} onChange={e=>setPdfSettings(v=>({...v, fitMode:e.target.value}))}><option value="cover">余白ゼロで全面（cover）</option><option value="contain">全体表示（contain）</option></select></div>
+<<<<<<< ours
             <div><label>ロゴ表示</label><select value={pdfSettings.showLogo ? 'on' : 'off'} onChange={e=>setPdfSettings(v=>({...v, showLogo:e.target.value==='on'}))}><option value="on">ON</option><option value="off">OFF</option></select></div>
             <div><label>ロゴサイズ</label><select value={pdfSettings.logoSize} onChange={e=>setPdfSettings(v=>({...v, logoSize:e.target.value}))}><option value="small">小</option><option value="medium">中</option><option value="large">大</option></select></div>
           </div>
           <div><label>余白(mm)</label><input type="number" min="0" max="20" step="1" value={pdfSettings.marginMm} onChange={e=>setPdfSettings(v=>({...v, marginMm: parseInt(e.target.value,10) || 0}))}/></div>
           <div><label>出入口/ステージ配置</label><div className="pdf-object-toolbar"><button className="btn btn-outline btn-sm" onClick={()=>addObject('entrance')}>＋ 出入口</button><button className="btn btn-outline btn-sm" onClick={()=>addObject('stage')}>＋ ステージ</button></div></div>
+=======
+          </div>
+          <div><label>余白(mm)</label><input type="number" min="0" max="20" step="1" value={pdfSettings.marginMm} onChange={e=>setPdfSettings(v=>({...v, marginMm: parseInt(e.target.value,10) || 0}))}/></div>
+          <div><label>会場デザイン</label><div className="pdf-object-toolbar"><button className="btn btn-outline btn-sm" onClick={()=>addObject('entrance')}>＋ 出入口</button><button className="btn btn-outline btn-sm" onClick={()=>addObject('stage')}>＋ ステージ</button></div></div>
+>>>>>>> theirs
           <div className="text-sm text-muted">アイテムは会場上でドラッグ移動できます。配置は保持されます。</div>
         </Modal>
       )}
