@@ -915,7 +915,8 @@ function sanitizeEvent(ev) {
     if (locked && attendeeIds.has(aid)) lockedAttendees[aid] = true;
   });
   const customRule = ev.customRule === 'gather' ? 'gather' : 'disperse';
-  return {...ev, assignments, ngPairs, lockedAttendees, customRule};
+  const customGatherFlags = [...new Set((ev.customGatherFlags||[]).filter(f=>typeof f === 'string' && f.trim()))].slice(0,4);
+  return {...ev, assignments, ngPairs, lockedAttendees, customRule, customGatherFlags};
 }
 
 /** v1 → v2 マイグレーション */
@@ -1592,10 +1593,12 @@ function AssignPage({ event, dispatch, notify }) {
   const [search,    setSearch]    = useState('');
   const [customRuleModalOpen, setCustomRuleModalOpen] = useState(false);
   const [customRuleDraft, setCustomRuleDraft] = useState(event.customRule || 'disperse');
+  const [customGatherFlagsDraft, setCustomGatherFlagsDraft] = useState((event.customGatherFlags || []).slice(0,4));
 
   useEffect(() => {
     setCustomRuleDraft(event.customRule || 'disperse');
-  }, [event.customRule]);
+    setCustomGatherFlagsDraft((event.customGatherFlags || []).slice(0,4));
+  }, [event.customRule, event.customGatherFlags]);
 
   const seats       = useMemo(() => generateSeats(tables.map(t => ({...t,eventId:event.id}))), [tables,event.id]);
   const totalSeats  = seats.length;
@@ -1718,6 +1721,8 @@ function AssignPage({ event, dispatch, notify }) {
     const allPeople = attendees.filter(a => !lockedIds.has(a.id));
     const availableSeatCount = Math.max(allSeats.length - Object.keys(lockedSeatByAttendee).length, 0);
     const currentRule = event.customRule || 'disperse';
+    const selectedGatherFlags = (event.customGatherFlags || []).slice(0,4);
+    const scoreFlags = selectedGatherFlags.length > 0 ? selectedGatherFlags : [...new Set(allPeople.flatMap(p => p.flags || []))];
     const ngSet = new Set(ngPairs.map(p => `${[p.a,p.b].sort().join('|')}`));
     const isNG = (a,b) => ngSet.has(`${[a,b].sort().join('|')}`);
     const seatTable = {}; seats.forEach(s => { seatTable[s.id]=s.tableId; });
@@ -1741,7 +1746,7 @@ function AssignPage({ event, dispatch, notify }) {
       let score=0;
       tables.forEach(tab=>{
         const tp=(tableSeats[tab.id]||[]).map(s=>assign[s]).filter(Boolean).map(id=>allPeople.find(p=>p.id===id)).filter(Boolean);
-        const fc={}; tp.forEach(p=>p.flags.forEach(f=>{fc[f]=(fc[f]||0)+1;}));
+        const fc={}; tp.forEach(p=>(p.flags||[]).forEach(f=>{ if (scoreFlags.includes(f)) fc[f]=(fc[f]||0)+1; }));
         Object.values(fc).forEach(c=>{ score += currentRule === 'gather' ? (c-1) : -(c-1); });
       });
       if (score>bestScore){bestScore=score;best=assign;}
@@ -1755,8 +1760,21 @@ function AssignPage({ event, dispatch, notify }) {
 
   const saveCustomRule = () => {
     dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'customRule', val:customRuleDraft});
+    dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'customGatherFlags', val:customGatherFlagsDraft.slice(0,4)});
     setCustomRuleModalOpen(false);
-    notify(`カスタム設定を保存しました（フラグ${customRuleDraft === 'gather' ? '集約' : '分散'}）`, 'success');
+    const gatherSuffix = customRuleDraft === 'gather' ? ` / 対象フラグ${customGatherFlagsDraft.length}件` : '';
+    notify(`カスタム設定を保存しました（フラグ${customRuleDraft === 'gather' ? '集約' : '分散'}${gatherSuffix}）`, 'success');
+  };
+
+  const toggleGatherFlag = (flag) => {
+    setCustomGatherFlagsDraft(prev => {
+      if (prev.includes(flag)) return prev.filter(f => f !== flag);
+      if (prev.length >= 4) {
+        notify('同卓に集めるフラグは最大4つまで選択できます','warning');
+        return prev;
+      }
+      return [...prev, flag];
+    });
   };
 
   const clearAll = () => {
@@ -1808,6 +1826,29 @@ function AssignPage({ event, dispatch, notify }) {
             <input type="radio" name="customRule" value="gather" checked={customRuleDraft==='gather'} onChange={e=>setCustomRuleDraft(e.target.value)} />
             <span>② 参加者管理で設定したフラグを同じ卓に集める</span>
           </label>
+          {customRuleDraft==='gather' && (
+            <div style={{marginTop:'0.75rem',padding:'0.7rem',border:'1px solid var(--border)',borderRadius:8,background:'rgba(255,255,255,0.6)'}}>
+              <div className="text-sm" style={{fontWeight:700,marginBottom:'0.35rem'}}>同卓に集める対象フラグ（最大4つ）</div>
+              <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>参加者についている全フラグから選択できます。</div>
+              {allTags.length===0 ? (
+                <div className="text-sm text-muted">参加者フラグがまだありません。</div>
+              ) : (
+                <div style={{display:'flex',flexDirection:'column',gap:'0.35rem',maxHeight:180,overflowY:'auto'}}>
+                  {allTags.map(flag => {
+                    const checked = customGatherFlagsDraft.includes(flag);
+                    const disabled = !checked && customGatherFlagsDraft.length >= 4;
+                    return (
+                      <label key={flag} style={{display:'flex',alignItems:'center',gap:'0.45rem',cursor:disabled?'not-allowed':'pointer',opacity:disabled?0.55:1}}>
+                        <input type="checkbox" checked={checked} disabled={disabled} onChange={()=>toggleGatherFlag(flag)} />
+                        <span>{flag}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="text-sm text-muted" style={{marginTop:'0.55rem'}}>{customGatherFlagsDraft.length}/4 選択中</div>
+            </div>
+          )}
         </Modal>
       )}
 
