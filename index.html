@@ -1723,11 +1723,8 @@ function AssignPage({ event, dispatch, notify }) {
     const currentRule = event.customRule || 'disperse';
     const selectedGatherFlags = (event.customGatherFlags || []).slice(0,4);
     const scoreFlags = selectedGatherFlags.length > 0 ? selectedGatherFlags : [...new Set(allPeople.flatMap(p => p.flags || []))];
-<<<<<<< ours
-=======
     const scoreFlagSet = new Set(scoreFlags);
     const hasTargetFlag = (person) => (person.flags || []).some(f => scoreFlagSet.has(f));
->>>>>>> theirs
     const ngSet = new Set(ngPairs.map(p => `${[p.a,p.b].sort().join('|')}`));
     const isNG = (a,b) => ngSet.has(`${[a,b].sort().join('|')}`);
     const seatTable = {}; seats.forEach(s => { seatTable[s.id]=s.tableId; });
