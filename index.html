@@ -1063,36 +1063,124 @@ function checkViolations(tables, seats, assignments, ngPairs, attendees) {
 
 async function downloadFloorPdf({ element, eventName }) {
   if (!element || !window.html2canvas || !window.jspdf?.jsPDF) throw new Error('PDFライブラリの読み込みに失敗しました');
-  const canvas = await window.html2canvas(element, {
-    backgroundColor: '#ffffff',
-    scale: 2,
-    useCORS: true,
-    width: element.scrollWidth,
-    height: element.scrollHeight,
+
+  const sourceWrap = element.closest('.floor-canvas-wrap');
+  const sourceLayout = element.closest('.floor-layout');
+  const pdfHost = document.createElement('div');
+  pdfHost.setAttribute('aria-hidden', 'true');
+  Object.assign(pdfHost.style, {
+    position: 'fixed',
+    left: '-100000px',
+    top: '0',
+    pointerEvents: 'none',
+    zIndex: '-1',
   });
-  const imgData = canvas.toDataURL('image/png');
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
-  const margin = 8;
-  const maxW = pageW - margin * 2;
-  const maxH = pageH - margin * 2;
-  const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
-  const renderW = canvas.width * ratio;
-  const renderH = canvas.height * ratio;
-  const x = (pageW - renderW) / 2;
-  const y = (pageH - renderH) / 2;
-  pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
-  const logoY = pageH - 6;
-  pdf.setFont('times', 'bold');
-  pdf.setFontSize(10);
-  pdf.setTextColor(26, 20, 16);
-  pdf.text('The', 8, logoY);
-  pdf.setTextColor(192, 57, 43);
-  pdf.text('SEKI', 18, logoY);
-  const safeName = (eventName || 'seats').replace(/[\/:*?"<>|]/g, '_');
-  pdf.save(`${safeName}_seat-layout.pdf`);
+
+  const pagePxW = 1684;
+  const pagePxH = 1191;
+  const leftRightMargin = 56;
+  const topMargin = 24;
+  const bottomMargin = 40;
+  const logoReservedH = 72;
+
+  const page = document.createElement('div');
+  page.id = 'pdf-layout';
+  Object.assign(page.style, {
+    width: `${pagePxW}px`,
+    height: `${pagePxH}px`,
+    position: 'relative',
+    overflow: 'hidden',
+    background: '#ffffff',
+  });
+
+  const logoRoot = document.createElement('div');
+  Object.assign(logoRoot.style, {
+    position: 'absolute',
+    left: '24px',
+    top: '16px',
+    zIndex: '3',
+  });
+  const topbarLogo = document.querySelector('.topbar-logo');
+  if (topbarLogo) {
+    const logoClone = topbarLogo.cloneNode(true);
+    logoClone.style.margin = '0';
+    logoClone.style.transform = 'scale(1.05)';
+    logoClone.style.transformOrigin = 'top left';
+    logoClone.style.color = '#1a1410';
+    const logoAccent = logoClone.querySelector('span');
+    if (logoAccent) logoAccent.style.color = '#c0392b';
+    logoRoot.appendChild(logoClone);
+  }
+  page.appendChild(logoRoot);
+
+  const floorFrame = document.createElement('div');
+  floorFrame.className = 'floor-canvas-wrap';
+  const sourceWrapStyles = sourceWrap ? window.getComputedStyle(sourceWrap) : null;
+  const sourceWidth = element.scrollWidth || element.offsetWidth || 1122;
+  const sourceHeight = element.scrollHeight || element.offsetHeight || 794;
+  Object.assign(floorFrame.style, {
+    width: `${sourceWidth}px`,
+    height: `${sourceHeight}px`,
+    margin: '0',
+    overflow: 'hidden',
+    backgroundColor: sourceWrapStyles?.backgroundColor || '#1a1f2e',
+    backgroundImage: sourceWrapStyles?.backgroundImage || 'none',
+    backgroundSize: sourceWrapStyles?.backgroundSize || 'auto',
+  });
+  if (sourceLayout) {
+    const layoutStyles = window.getComputedStyle(sourceLayout);
+    for (let i = 0; i < layoutStyles.length; i++) {
+      const prop = layoutStyles[i];
+      if (prop.startsWith('--floor-')) {
+        floorFrame.style.setProperty(prop, layoutStyles.getPropertyValue(prop));
+      }
+    }
+  }
+  floorFrame.appendChild(element.cloneNode(true));
+
+  const contentSlot = document.createElement('div');
+  const availableW = pagePxW - leftRightMargin * 2;
+  const availableH = pagePxH - topMargin - logoReservedH - bottomMargin;
+  const baseW = Math.max(floorFrame.scrollWidth, floorFrame.offsetWidth);
+  const baseH = Math.max(floorFrame.scrollHeight, floorFrame.offsetHeight);
+  const scale = Math.min(availableW / baseW, availableH / baseH);
+  const renderW = baseW * scale;
+  const renderH = baseH * scale;
+  Object.assign(contentSlot.style, {
+    position: 'absolute',
+    left: `${leftRightMargin + (availableW - renderW) / 2}px`,
+    top: `${topMargin + logoReservedH + (availableH - renderH) / 2}px`,
+    width: `${baseW}px`,
+    height: `${baseH}px`,
+    transform: `scale(${scale})`,
+    transformOrigin: 'top left',
+  });
+  contentSlot.appendChild(floorFrame);
+  page.appendChild(contentSlot);
+  pdfHost.appendChild(page);
+  document.body.appendChild(pdfHost);
+
+  try {
+    if (document.fonts?.ready) await document.fonts.ready;
+    const canvas = await window.html2canvas(page, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      width: pagePxW,
+      height: pagePxH,
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    pdf.addImage(imgData, 'PNG', 0, 0, pageW, pageH);
+    const safeName = (eventName || 'seats').replace(/[\/:*?"<>|]/g, '_');
+    pdf.save(`${safeName}_seat-layout.pdf`);
+  } finally {
+    if (pdfHost.parentNode) pdfHost.parentNode.removeChild(pdfHost);
+  }
+  return;
 }
 
 // ============================================================
