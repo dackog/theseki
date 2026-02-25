@@ -1723,6 +1723,11 @@ function AssignPage({ event, dispatch, notify }) {
     const currentRule = event.customRule || 'disperse';
     const selectedGatherFlags = (event.customGatherFlags || []).slice(0,4);
     const scoreFlags = selectedGatherFlags.length > 0 ? selectedGatherFlags : [...new Set(allPeople.flatMap(p => p.flags || []))];
+<<<<<<< ours
+=======
+    const scoreFlagSet = new Set(scoreFlags);
+    const hasTargetFlag = (person) => (person.flags || []).some(f => scoreFlagSet.has(f));
+>>>>>>> theirs
     const ngSet = new Set(ngPairs.map(p => `${[p.a,p.b].sort().join('|')}`));
     const isNG = (a,b) => ngSet.has(`${[a,b].sort().join('|')}`);
     const seatTable = {}; seats.forEach(s => { seatTable[s.id]=s.tableId; });
@@ -1732,6 +1737,9 @@ function AssignPage({ event, dispatch, notify }) {
       const ppl = [...allPeople];
       for (let i=ppl.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ppl[i],ppl[j]]=[ppl[j],ppl[i]];}
       const seatTargets = ppl.slice(0, availableSeatCount);
+      if (currentRule === 'gather' && scoreFlags.length > 0) {
+        seatTargets.sort((a,b) => Number(hasTargetFlag(b)) - Number(hasTargetFlag(a)));
+      }
       const assign={...Object.fromEntries(Object.entries(lockedSeatByAttendee).map(([aid,sid])=>[sid,aid]))}; let failed=false;
       for (const person of seatTargets) {
         const eligible = allSeats.filter(sid => {
@@ -1740,7 +1748,26 @@ function AssignPage({ event, dispatch, notify }) {
           return !mates.some(m=>isNG(m,person.id));
         });
         if (!eligible.length){failed=true;break;}
-        assign[eligible[Math.floor(Math.random()*eligible.length)]]=person.id;
+        let chosenSeat = eligible[Math.floor(Math.random()*eligible.length)];
+        if (currentRule === 'gather' && scoreFlags.length > 0 && hasTargetFlag(person)) {
+          let bestSeatScore = -Infinity;
+          let bestSeats = [];
+          eligible.forEach(sid => {
+            const tid = seatTable[sid];
+            const tSeats = tableSeats[tid] || [];
+            const targetMates = tSeats.filter(s => assign[s]).map(s => allPeople.find(p=>p.id===assign[s])).filter(Boolean).filter(p=>hasTargetFlag(p)).length;
+            const freeSeats = tSeats.filter(s => !assign[s]).length;
+            const seatScore = targetMates * 100 + freeSeats;
+            if (seatScore > bestSeatScore) {
+              bestSeatScore = seatScore;
+              bestSeats = [sid];
+            } else if (seatScore === bestSeatScore) {
+              bestSeats.push(sid);
+            }
+          });
+          chosenSeat = bestSeats[Math.floor(Math.random()*bestSeats.length)];
+        }
+        assign[chosenSeat]=person.id;
       }
       if (failed) continue;
       let score=0;
