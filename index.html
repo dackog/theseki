@@ -1078,10 +1078,17 @@ async function downloadFloorPdf({ element, eventName }) {
 
   const pagePxW = 1684;
   const pagePxH = 1191;
+<<<<<<< ours
   const leftRightMargin = 56;
   const topMargin = 24;
   const bottomMargin = 40;
   const logoReservedH = 72;
+=======
+  const leftRightMargin = 0;
+  const topMargin = 0;
+  const bottomMargin = 0;
+  const logoReservedH = 0;
+>>>>>>> theirs
 
   const page = document.createElement('div');
   page.id = 'pdf-layout';
@@ -1148,8 +1155,13 @@ async function downloadFloorPdf({ element, eventName }) {
   const renderH = baseH * scale;
   Object.assign(contentSlot.style, {
     position: 'absolute',
+<<<<<<< ours
     left: `${leftRightMargin + (availableW - renderW) / 2}px`,
     top: `${topMargin + logoReservedH + (availableH - renderH) / 2}px`,
+=======
+    left: `${(availableW - renderW) / 2}px`,
+    top: `${(availableH - renderH) / 2}px`,
+>>>>>>> theirs
     width: `${baseW}px`,
     height: `${baseH}px`,
     transform: `scale(${scale})`,
