@@ -1742,11 +1742,7 @@ function AssignPage({ event, dispatch, notify }) {
       tables.forEach(tab=>{
         const tp=(tableSeats[tab.id]||[]).map(s=>assign[s]).filter(Boolean).map(id=>allPeople.find(p=>p.id===id)).filter(Boolean);
         const fc={}; tp.forEach(p=>p.flags.forEach(f=>{fc[f]=(fc[f]||0)+1;}));
-<<<<<<< ours
         Object.values(fc).forEach(c=>{ score += currentRule === 'gather' ? (c-1) : -(c-1); });
-=======
-        Object.values(fc).forEach(c=>{ score += currentRule === 'gather' ? (c*c-c) : -(c-1); });
->>>>>>> theirs
       });
       if (score>bestScore){bestScore=score;best=assign;}
     }
@@ -1806,19 +1802,11 @@ function AssignPage({ event, dispatch, notify }) {
           <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>カスタム配置のフラグルールを選択してください。</div>
           <label style={{display:'flex',alignItems:'center',gap:'0.45rem',marginBottom:'0.5rem',cursor:'pointer'}}>
             <input type="radio" name="customRule" value="disperse" checked={customRuleDraft==='disperse'} onChange={e=>setCustomRuleDraft(e.target.value)} />
-<<<<<<< ours
             <span>① 参加者管理で設定したフラグを分散させる</span>
           </label>
           <label style={{display:'flex',alignItems:'center',gap:'0.45rem',cursor:'pointer'}}>
             <input type="radio" name="customRule" value="gather" checked={customRuleDraft==='gather'} onChange={e=>setCustomRuleDraft(e.target.value)} />
             <span>② 参加者管理で設定したフラグを同じ卓に集める</span>
-=======
-            <span>参加者管理で設定したフラグを分散させる</span>
-          </label>
-          <label style={{display:'flex',alignItems:'center',gap:'0.45rem',cursor:'pointer'}}>
-            <input type="radio" name="customRule" value="gather" checked={customRuleDraft==='gather'} onChange={e=>setCustomRuleDraft(e.target.value)} />
-            <span>参加者管理で設定したフラグを同じ卓に集める</span>
->>>>>>> theirs
           </label>
         </Modal>
       )}
