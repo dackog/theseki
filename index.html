@@ -1049,7 +1049,27 @@ function sanitizeEvent(ev) {
   });
   const customRule = ev.customRule === 'gather' ? 'gather' : 'disperse';
   const customGatherFlags = [...new Set((ev.customGatherFlags||[]).filter(f=>typeof f === 'string' && f.trim()))].slice(0,4);
-  return {...ev, assignments, ngPairs, lockedAttendees, customRule, customGatherFlags};
+  const customRules = Array.isArray(ev.customRules)
+    ? ev.customRules
+      .filter(r => r && typeof r.flag === 'string' && r.flag.trim() && (r.mode === 'distribute' || r.mode === 'gather'))
+      .map(r => ({ flag: r.flag.trim(), mode: r.mode }))
+      .slice(0,4)
+    : customGatherFlags.map(flag => ({ flag, mode: customRule === 'gather' ? 'gather' : 'distribute' }));
+  return {...ev, assignments, ngPairs, lockedAttendees, customRule, customGatherFlags, customRules};
+}
+
+function getFlagRulesFromLegacy(customRule, customGatherFlags) {
+  const flags = [...new Set((customGatherFlags||[]).filter(f=>typeof f === 'string' && f.trim()))].slice(0,4);
+  const mode = customRule === 'gather' ? 'gather' : 'distribute';
+  return flags.map(flag => ({ flag, mode }));
+}
+
+function normalizeFlagRules(rules, customRule, customGatherFlags) {
+  const base = Array.isArray(rules) ? rules : getFlagRulesFromLegacy(customRule, customGatherFlags);
+  return [...new Map(base
+    .filter(r => r && typeof r.flag === 'string' && r.flag.trim() && (r.mode === 'distribute' || r.mode === 'gather'))
+    .map(r => [`${r.flag.trim()}__${r.mode}`, { flag: r.flag.trim(), mode: r.mode }]))
+    .values()].slice(0,4);
 }
 
 /** v1 → v2 マイグレーション */
@@ -1842,11 +1862,15 @@ function AssignPage({ event, dispatch, notify }) {
   const [customRuleModalOpen, setCustomRuleModalOpen] = useState(false);
   const [customRuleDraft, setCustomRuleDraft] = useState(event.customRule || 'disperse');
   const [customGatherFlagsDraft, setCustomGatherFlagsDraft] = useState((event.customGatherFlags || []).slice(0,4));
+  const [customRulesDraft, setCustomRulesDraft] = useState(normalizeFlagRules(event.customRules, event.customRule, event.customGatherFlags));
+  const [customRulesError, setCustomRulesError] = useState('');
 
   useEffect(() => {
     setCustomRuleDraft(event.customRule || 'disperse');
     setCustomGatherFlagsDraft((event.customGatherFlags || []).slice(0,4));
-  }, [event.customRule, event.customGatherFlags]);
+    setCustomRulesDraft(normalizeFlagRules(event.customRules, event.customRule, event.customGatherFlags));
+    setCustomRulesError('');
+  }, [event.customRule, event.customGatherFlags, event.customRules]);
 
   const seats       = useMemo(() => generateSeats(tables.map(t => ({...t,eventId:event.id}))), [tables,event.id]);
   const totalSeats  = seats.length;
@@ -1970,7 +1994,11 @@ function AssignPage({ event, dispatch, notify }) {
     const availableSeatCount = Math.max(allSeats.length - Object.keys(lockedSeatByAttendee).length, 0);
     const currentRule = event.customRule || 'disperse';
     const selectedGatherFlags = (event.customGatherFlags || []).slice(0,4);
-    const scoreFlags = selectedGatherFlags.length > 0 ? selectedGatherFlags : [...new Set(allPeople.flatMap(p => p.flags || []))];
+    const effectiveRules = normalizeFlagRules(event.customRules, event.customRule, event.customGatherFlags);
+    const gatherFlagsByRule = effectiveRules.filter(r => r.mode === 'gather').map(r => r.flag);
+    const scoreFlags = gatherFlagsByRule.length > 0
+      ? gatherFlagsByRule
+      : (selectedGatherFlags.length > 0 ? selectedGatherFlags : [...new Set(allPeople.flatMap(p => p.flags || []))]);
     const scoreFlagSet = new Set(scoreFlags);
     const hasTargetFlag = (person) => (person.flags || []).some(f => scoreFlagSet.has(f));
     const ngSet = new Set(ngPairs.map(p => `${[p.a,p.b].sort().join('|')}`));
@@ -2031,21 +2059,33 @@ function AssignPage({ event, dispatch, notify }) {
   };
 
   const saveCustomRule = () => {
-    dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'customRule', val:customRuleDraft});
-    dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'customGatherFlags', val:customGatherFlagsDraft.slice(0,4)});
+    const finalRules = normalizeFlagRules(customRulesDraft, customRuleDraft, customGatherFlagsDraft);
+    const gatherFlags = finalRules.filter(r => r.mode === 'gather').map(r => r.flag).slice(0,4);
+    const hasDistribute = finalRules.some(r => r.mode === 'distribute');
+    const hasGather = gatherFlags.length > 0;
+    const legacyRule = hasGather && !hasDistribute ? 'gather' : 'disperse';
+    dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'customRule', val:legacyRule});
+    dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'customGatherFlags', val:gatherFlags});
+    dispatch({type:'UPDATE_EVENT_FIELD', eventId:event.id, key:'customRules', val:finalRules});
     setCustomRuleModalOpen(false);
-    const gatherSuffix = customRuleDraft === 'gather' ? ` / 対象フラグ${customGatherFlagsDraft.length}件` : '';
-    notify(`カスタム設定を保存しました（フラグ${customRuleDraft === 'gather' ? '集約' : '分散'}${gatherSuffix}）`, 'success');
+    const gatherSuffix = legacyRule === 'gather' ? ` / 対象フラグ${gatherFlags.length}件` : '';
+    notify(`カスタム設定を保存しました（フラグ${legacyRule === 'gather' ? '集約' : '分散'}${gatherSuffix}）`, 'success');
   };
 
-  const toggleGatherFlag = (flag) => {
-    setCustomGatherFlagsDraft(prev => {
-      if (prev.includes(flag)) return prev.filter(f => f !== flag);
-      if (prev.length >= 4) {
-        notify('同卓に集めるフラグは最大4つまで選択できます','warning');
-        return prev;
+  const upsertRuleDraft = (flag, mode, checked) => {
+    setCustomRulesDraft(prev => {
+      const list = normalizeFlagRules(prev, customRuleDraft, customGatherFlagsDraft).filter(r => r.flag !== flag || r.mode !== mode);
+      if (!checked) return list;
+      if (list.some(r => r.flag === flag && r.mode !== mode)) {
+        setCustomRulesError(`「${flag}」は分散と集約を同時に選択できません。`);
+        return list;
       }
-      return [...prev, flag];
+      if (list.length >= 4) {
+        notify('対象フラグは最大4つまで選択できます','warning');
+        return list;
+      }
+      setCustomRulesError('');
+      return [...list, { flag, mode }];
     });
   };
 
@@ -2089,38 +2129,50 @@ function AssignPage({ event, dispatch, notify }) {
       {customRuleModalOpen && (
         <Modal title="カスタム設定" onClose={()=>setCustomRuleModalOpen(false)}
           footer={<><button className="btn btn-outline" onClick={()=>setCustomRuleModalOpen(false)}>キャンセル</button><button className="btn btn-accent" onClick={saveCustomRule}>保存</button></>}>
-          <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>カスタム配置のフラグルールを選択してください。</div>
-          <label style={{display:'flex',alignItems:'center',gap:'0.45rem',marginBottom:'0.5rem',cursor:'pointer'}}>
-            <input type="radio" name="customRule" value="disperse" checked={customRuleDraft==='disperse'} onChange={e=>setCustomRuleDraft(e.target.value)} />
-            <span>① 参加者管理で設定したフラグを分散させる</span>
-          </label>
-          <label style={{display:'flex',alignItems:'center',gap:'0.45rem',cursor:'pointer'}}>
-            <input type="radio" name="customRule" value="gather" checked={customRuleDraft==='gather'} onChange={e=>setCustomRuleDraft(e.target.value)} />
-            <span>② 参加者管理で設定したフラグを同じ卓に集める</span>
-          </label>
-          {customRuleDraft==='gather' && (
-            <div style={{marginTop:'0.75rem',padding:'0.7rem',border:'1px solid var(--border)',borderRadius:8,background:'rgba(255,255,255,0.6)'}}>
-              <div className="text-sm" style={{fontWeight:700,marginBottom:'0.35rem'}}>同卓に集める対象フラグ（最大4つ）</div>
-              <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>参加者についている全フラグから選択できます。</div>
-              {allTags.length===0 ? (
-                <div className="text-sm text-muted">参加者フラグがまだありません。</div>
-              ) : (
-                <div style={{display:'flex',flexDirection:'column',gap:'0.35rem',maxHeight:180,overflowY:'auto'}}>
-                  {allTags.map(flag => {
-                    const checked = customGatherFlagsDraft.includes(flag);
-                    const disabled = !checked && customGatherFlagsDraft.length >= 4;
+          <div className="text-sm" style={{fontWeight:700,marginBottom:'0.25rem'}}>Flag-based Placement Rules</div>
+          <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>You can configure distribute or gather behavior per flag.</div>
+          <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>※ 既存の保存データ（global rule + flags）との後方互換を維持するため、保存時に旧形式も併記します。</div>
+          <div style={{border:'1px solid var(--border)',borderRadius:8,background:'rgba(255,255,255,0.6)',overflow:'hidden'}}>
+            <table style={{width:'100%',borderCollapse:'collapse'}}>
+              <thead>
+                <tr style={{background:'var(--paper-dark)'}}>
+                  <th style={{textAlign:'left',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Flag Name</th>
+                  <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Distribute</th>
+                  <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Gather</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allTags.length===0 ? (
+                  <tr>
+                    <td colSpan={3} className="text-sm text-muted" style={{padding:'0.75rem'}}>参加者フラグがまだありません。</td>
+                  </tr>
+                ) : (
+                  allTags.map(flag => {
+                    const distributeChecked = customRulesDraft.some(r => r.flag === flag && r.mode === 'distribute');
+                    const gatherChecked = customRulesDraft.some(r => r.flag === flag && r.mode === 'gather');
+                    const selectedCount = customRulesDraft.length;
+                    const distributeDisabled = !distributeChecked && selectedCount >= 4;
+                    const gatherDisabled = !gatherChecked && selectedCount >= 4;
                     return (
-                      <label key={flag} style={{display:'flex',alignItems:'center',gap:'0.45rem',cursor:disabled?'not-allowed':'pointer',opacity:disabled?0.55:1}}>
-                        <input type="checkbox" checked={checked} disabled={disabled} onChange={()=>toggleGatherFlag(flag)} />
-                        <span>{flag}</span>
-                      </label>
+                      <tr key={flag} style={{borderTop:'1px solid var(--border)'}}>
+                        <td style={{padding:'0.5rem 0.6rem',fontSize:'0.85rem'}}>{flag}</td>
+                        <td style={{padding:'0.5rem 0.6rem',textAlign:'center'}}>
+                          <input type="checkbox" checked={distributeChecked} disabled={distributeDisabled}
+                            onChange={e=>upsertRuleDraft(flag, 'distribute', e.target.checked)} />
+                        </td>
+                        <td style={{padding:'0.5rem 0.6rem',textAlign:'center'}}>
+                          <input type="checkbox" checked={gatherChecked} disabled={gatherDisabled}
+                            onChange={e=>upsertRuleDraft(flag, 'gather', e.target.checked)} />
+                        </td>
+                      </tr>
                     );
-                  })}
-                </div>
-              )}
-              <div className="text-sm text-muted" style={{marginTop:'0.55rem'}}>{customGatherFlagsDraft.length}/4 選択中</div>
-            </div>
-          )}
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="text-sm text-muted" style={{marginTop:'0.5rem'}}>{customRulesDraft.length}/4 選択中</div>
+          {customRulesError && <div className="text-sm" style={{color:'var(--danger)',marginTop:'0.35rem'}}>{customRulesError}</div>}
         </Modal>
       )}
 
