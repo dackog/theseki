@@ -67,20 +67,6 @@
     display: flex;
     flex-direction: column;
   }
-  .app-footer {
-    margin-top: auto;
-    width: 100%;
-    max-width: 100%;
-    padding: 0.35rem 1rem calc(0.35rem + env(safe-area-inset-bottom));
-    text-align: center;
-    font-size: 0.68rem;
-    line-height: 1.3;
-    color: rgba(26, 20, 16, 0.58);
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
   #app-copyright {
     position: fixed;
     left: 0;
@@ -2815,7 +2801,6 @@ function App() {
           <nav className="topbar-nav"><span className="nav-btn active">座席表 閲覧</span></nav>
         </div>
         <ViewPage event={sharedEvent}/>
-        <footer className="app-footer">©DaC Kogure</footer>
       </div>
     );
   }
@@ -2955,7 +2940,6 @@ function App() {
       )}
 
       {note && <div className={`notification ${note.type}`}>{note.msg}</div>}
-      <footer className="app-footer">©DaC Kogure</footer>
     </div>
   );
 }
