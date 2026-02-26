@@ -2227,6 +2227,8 @@ function AssignPage({ event, dispatch, notify }) {
 function LayoutPage({ event, dispatch, notify }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newTable, setNewTable] = useState({ name:'', seatCount:6, shape:'rect' });
+  const [editingSeatCounts, setEditingSeatCounts] = useState({});
+  const [newTableSeatCountInput, setNewTableSeatCountInput] = useState('6');
   const [selectedId, setSelectedId] = useState(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfSettings, setPdfSettings] = useState(() => {
@@ -2270,14 +2272,16 @@ function LayoutPage({ event, dispatch, notify }) {
   }, [violations, seats, assignments]);
 
   const addTable = () => {
+    const parsedSeatCount = parseInt(newTableSeatCountInput, 10);
+    const seatCount = Number.isFinite(parsedSeatCount) ? Math.max(1, Math.min(30, parsedSeatCount)) : 6;
     const name = newTable.name.trim() || `T${tables.length+1}`;
     const cols = Math.ceil(Math.sqrt(tables.length+1));
     const idx = tables.length;
     const posX = 80 + (idx % cols) * 260;
     const posY = 80 + Math.floor(idx / cols) * 260;
-    const t = { id:uid(), eventId:event.id, name, seatCount:Math.max(1,newTable.seatCount||6), shape: newTable.shape||'rect', order:tables.length, posX, posY };
+    const t = { id:uid(), eventId:event.id, name, seatCount, shape: newTable.shape||'rect', order:tables.length, posX, posY };
     dispatch({type:'ADD_TABLE', eventId:event.id, payload:t});
-    setShowAdd(false); setNewTable({name:'',seatCount:6,shape:'rect'});
+    setShowAdd(false); setNewTable({name:'',seatCount:6,shape:'rect'}); setNewTableSeatCountInput('6');
     setSelectedId(t.id);
     notify('卓を追加しました');
   };
@@ -2295,6 +2299,24 @@ function LayoutPage({ event, dispatch, notify }) {
     notify('卓を複製しました');
   };
   const updateTable = (tid, key, val) => dispatch({type:'UPDATE_TABLE', eventId:event.id, tableId:tid, key, val});
+  const commitTableSeatCount = (tableId, fallbackSeatCount) => {
+    const raw = editingSeatCounts[tableId];
+    if (raw === undefined) return;
+    const parsed = parseInt(raw, 10);
+    const nextSeatCount = Number.isFinite(parsed) ? Math.max(1, Math.min(30, parsed)) : Math.max(1, fallbackSeatCount || 1);
+    updateTable(tableId, 'seatCount', nextSeatCount);
+    setEditingSeatCounts(prev => {
+      const next = { ...prev };
+      delete next[tableId];
+      return next;
+    });
+  };
+  const commitNewTableSeatCount = () => {
+    const parsed = parseInt(newTableSeatCountInput, 10);
+    const nextSeatCount = Number.isFinite(parsed) ? Math.max(1, Math.min(30, parsed)) : 6;
+    setNewTable(f => ({ ...f, seatCount: nextSeatCount }));
+    setNewTableSeatCountInput(String(nextSeatCount));
+  };
   const handleDragPos = useCallback((tid, x, y) => {
     dispatch({type:'MOVE_TABLE_POS', eventId:event.id, tableId:tid, posX:x, posY:y});
   }, [event.id, dispatch]);
@@ -2412,7 +2434,7 @@ function LayoutPage({ event, dispatch, notify }) {
                   {isActive && (
                     <div onClick={e=>e.stopPropagation()}>
                       <div className="floor-edit-row" style={{marginTop:'0.6rem'}}><label>卓名</label><input type="text" value={t.name} onChange={e=>updateTable(t.id,'name',e.target.value)} style={{flex:1}}/></div>
-                      <div className="floor-edit-row"><label>座席数</label><input type="number" min="1" max="30" value={t.seatCount} onChange={e=>updateTable(t.id,'seatCount',parseInt(e.target.value)||1)} style={{width:60}}/></div>
+                      <div className="floor-edit-row"><label>座席数</label><input type="number" min="1" max="30" value={editingSeatCounts[t.id] ?? String(t.seatCount)} onFocus={e=>e.target.select()} onChange={e=>setEditingSeatCounts(prev=>({...prev,[t.id]:e.target.value}))} onBlur={()=>commitTableSeatCount(t.id,t.seatCount)} onKeyDown={e=>{ if (e.key==='Enter') { commitTableSeatCount(t.id,t.seatCount); e.target.blur(); } }} style={{width:60}}/></div>
                       <div className="floor-edit-row"><label>形状</label><div style={{display:'flex',gap:'0.4rem',flex:1}}>{[{v:'rect',icon:'⬛',label:'四角'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn btn-sm ${(t.shape||'rect')===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,gap:'0.25rem'}} onClick={()=>updateTable(t.id,'shape',s.v)}>{s.icon} {s.label}</button>))}</div></div>
                       {hasViol && <div style={{marginTop:'0.5rem',fontSize:'0.73rem',color:'var(--accent)',background:'#fde8e8',borderRadius:5,padding:'0.3rem 0.5rem'}}>{violations.filter(v=>v.tableId===t.id).map((v,i)=><div key={i}>NG: {v.aName} × {v.bName}</div>)}</div>}
                       <button className="btn btn-outline btn-sm w-full" style={{marginTop:'0.6rem'}} onClick={()=>duplicateTable(t)}>この卓を複製</button>
@@ -2429,7 +2451,7 @@ function LayoutPage({ event, dispatch, notify }) {
       {showAdd && (
         <Modal title="卓を追加" onClose={()=>setShowAdd(false)} footer={<><button className="btn btn-outline" onClick={()=>setShowAdd(false)}>キャンセル</button><button className="btn btn-accent" onClick={addTable}>追加</button></>}>
           <div><label>卓名（省略時: 自動採番）</label><input type="text" value={newTable.name} onChange={e=>setNewTable(f=>({...f,name:e.target.value}))} placeholder={`T${tables.length+1}`} autoFocus/></div>
-          <div><label>座席数</label><input type="number" min="1" max="30" value={newTable.seatCount} onChange={e=>setNewTable(f=>({...f,seatCount:parseInt(e.target.value)||1}))}/></div>
+          <div><label>座席数</label><input type="number" min="1" max="30" value={newTableSeatCountInput} onFocus={e=>e.target.select()} onChange={e=>setNewTableSeatCountInput(e.target.value)} onBlur={commitNewTableSeatCount} onKeyDown={e=>{ if (e.key==='Enter') { commitNewTableSeatCount(); e.target.blur(); } }}/></div>
           <div><label>テーブル形状</label><div style={{display:'flex',gap:'0.75rem',marginTop:'0.25rem'}}>{[{v:'rect',icon:'⬛',label:'四角（デフォルト）'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn ${newTable.shape===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,flexDirection:'column',gap:'0.3rem',padding:'0.75rem 0.5rem',fontSize:'0.82rem'}} onClick={()=>setNewTable(f=>({...f,shape:s.v}))}><span style={{fontSize:'1.5rem'}}>{s.icon}</span>{s.label}</button>))}</div></div>
         </Modal>
       )}
