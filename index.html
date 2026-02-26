@@ -408,6 +408,19 @@
     background: rgba(201,53,53,0.12); border: 1px solid rgba(201,53,53,0.4); color: #8b1a1a;
     border-radius: 6px; padding: 0.4rem 0.55rem; font-size: 0.78rem;
   }
+  .custom-rule-modal .modal-body {
+    overflow-x: auto;
+  }
+  .custom-rule-table-panel { position: relative; z-index: 1; }
+  .custom-rule-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.6);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+  }
+  .custom-rule-table { width: 100%; border-collapse: collapse; }
 
   /* Misc */
   .page-title {
@@ -725,6 +738,19 @@
       overflow: visible !important;
       flex: none !important;
       background: var(--paper);
+    }
+
+    .custom-rule-modal .modal-header,
+    .custom-rule-modal .modal-footer,
+    .custom-rule-modal .rule-conflict-banner {
+      position: relative;
+      z-index: auto;
+    }
+    .custom-rule-modal .custom-rule-table th,
+    .custom-rule-modal .custom-rule-table td {
+      position: static !important;
+      left: auto !important;
+      right: auto !important;
     }
   }
 
@@ -1449,7 +1475,7 @@ function TagInput({ tags, onChange, placeholder="タグを入力してEnter" }) 
 // ============================================================
 // Modal
 // ============================================================
-function Modal({ title, onClose, children, footer }) {
+function Modal({ title, onClose, children, footer, modalClassName='' }) {
   useEffect(() => {
     const esc = e => { if(e.key==='Escape') onClose(); };
     window.addEventListener('keydown', esc);
@@ -1463,7 +1489,7 @@ function Modal({ title, onClose, children, footer }) {
   }, []);
   return (
     <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal">
+      <div className={`modal ${modalClassName}`.trim()}>
         <div className="modal-header">
           <div className="modal-title">{title}</div>
           <button className="modal-close" onClick={onClose}>×</button>
@@ -2188,16 +2214,17 @@ function AssignPage({ event, dispatch, notify }) {
       </div>
 
       {customRuleModalOpen && (
-        <Modal title="カスタム設定" onClose={()=>setCustomRuleModalOpen(false)}
+        <Modal title="カスタム設定" modalClassName="custom-rule-modal" onClose={()=>setCustomRuleModalOpen(false)}
           footer={<><button className="btn btn-outline" onClick={()=>setCustomRuleModalOpen(false)}>キャンセル</button><button className="btn btn-accent" onClick={saveCustomRule}>保存</button></>}>
+          <div className="custom-rule-table-panel">
           <div className="text-sm" style={{fontWeight:700,marginBottom:'0.25rem'}}>フラグ別 配置ルール設定</div>
           <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>フラグごとに「分散」または「同卓」を設定できます。</div>
           <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>※ 既存の保存データ（全体ルール + 対象フラグ）との後方互換を維持するため、保存時に旧形式も併記します。</div>
           {ruleConflictBanner && (
             <div className="rule-conflict-banner" role="status" aria-live="polite">{ruleConflictBanner}</div>
           )}
-          <div style={{border:'1px solid var(--border)',borderRadius:8,background:'rgba(255,255,255,0.6)',overflow:'hidden'}}>
-            <table style={{width:'100%',borderCollapse:'collapse'}}>
+          <div className="custom-rule-table-wrap">
+            <table className="custom-rule-table">
               <thead>
                 <tr style={{background:'var(--paper-dark)'}}>
                   <th style={{textAlign:'left',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>フラグ名</th>
@@ -2265,6 +2292,7 @@ function AssignPage({ event, dispatch, notify }) {
           </div>
           <div className="text-sm text-muted" style={{marginTop:'0.5rem'}}>{customRulesDraft.length}/4 選択中</div>
           {customRulesError && <div className="text-sm" style={{color:'var(--danger)',marginTop:'0.35rem'}}>{customRulesError}</div>}
+          </div>
         </Modal>
       )}
 
