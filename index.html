@@ -1881,19 +1881,13 @@ function AssignPage({ event, dispatch, notify }) {
   const [customGatherFlagsDraft, setCustomGatherFlagsDraft] = useState((event.customGatherFlags || []).slice(0,4));
   const [customRulesDraft, setCustomRulesDraft] = useState(normalizeFlagRules(event.customRules, event.customRule, event.customGatherFlags));
   const [customRulesError, setCustomRulesError] = useState('');
-<<<<<<< ours
-=======
   const [activeRuleTooltip, setActiveRuleTooltip] = useState('');
->>>>>>> theirs
 
   useEffect(() => {
     setCustomRuleDraft(event.customRule || 'disperse');
     setCustomGatherFlagsDraft((event.customGatherFlags || []).slice(0,4));
     setCustomRulesDraft(normalizeFlagRules(event.customRules, event.customRule, event.customGatherFlags));
     setCustomRulesError('');
-<<<<<<< ours
-  }, [event.customRule, event.customGatherFlags, event.customRules]);
-=======
     setActiveRuleTooltip('');
   }, [event.customRule, event.customGatherFlags, event.customRules]);
 
@@ -1903,7 +1897,6 @@ function AssignPage({ event, dispatch, notify }) {
     document.addEventListener('click', closeTooltip);
     return () => document.removeEventListener('click', closeTooltip);
   }, [activeRuleTooltip]);
->>>>>>> theirs
 
   const seats       = useMemo(() => generateSeats(tables.map(t => ({...t,eventId:event.id}))), [tables,event.id]);
   const totalSeats  = seats.length;
@@ -2112,19 +2105,11 @@ function AssignPage({ event, dispatch, notify }) {
       if (list.some(r => r.flag === flag && r.mode !== mode)) {
         setCustomRulesError(`「${flag}」は分散と集約を同時に選択できません。`);
         return list;
-<<<<<<< ours
       }
       if (list.length >= 4) {
         notify('対象フラグは最大4つまで選択できます','warning');
         return list;
       }
-=======
-      }
-      if (list.length >= 4) {
-        notify('対象フラグは最大4つまで選択できます','warning');
-        return list;
-      }
->>>>>>> theirs
       setCustomRulesError('');
       return [...list, { flag, mode }];
     });
@@ -2170,24 +2155,13 @@ function AssignPage({ event, dispatch, notify }) {
       {customRuleModalOpen && (
         <Modal title="カスタム設定" onClose={()=>setCustomRuleModalOpen(false)}
           footer={<><button className="btn btn-outline" onClick={()=>setCustomRuleModalOpen(false)}>キャンセル</button><button className="btn btn-accent" onClick={saveCustomRule}>保存</button></>}>
-<<<<<<< ours
-          <div className="text-sm" style={{fontWeight:700,marginBottom:'0.25rem'}}>Flag-based Placement Rules</div>
-          <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>You can configure distribute or gather behavior per flag.</div>
-          <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>※ 既存の保存データ（global rule + flags）との後方互換を維持するため、保存時に旧形式も併記します。</div>
-=======
           <div className="text-sm" style={{fontWeight:700,marginBottom:'0.25rem'}}>フラグ別 配置ルール設定</div>
           <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>フラグごとに「分散」または「同卓」を設定できます。</div>
           <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>※ 既存の保存データ（全体ルール + 対象フラグ）との後方互換を維持するため、保存時に旧形式も併記します。</div>
->>>>>>> theirs
           <div style={{border:'1px solid var(--border)',borderRadius:8,background:'rgba(255,255,255,0.6)',overflow:'hidden'}}>
             <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead>
                 <tr style={{background:'var(--paper-dark)'}}>
-<<<<<<< ours
-                  <th style={{textAlign:'left',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Flag Name</th>
-                  <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Distribute</th>
-                  <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Gather</th>
-=======
                   <th style={{textAlign:'left',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>フラグ名</th>
                   <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>
                     <span className="rule-header-wrap">
@@ -2215,7 +2189,6 @@ function AssignPage({ event, dispatch, notify }) {
                       )}
                     </span>
                   </th>
->>>>>>> theirs
                 </tr>
               </thead>
               <tbody>
