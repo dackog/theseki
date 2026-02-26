@@ -354,17 +354,20 @@
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   .modal {
     background: var(--paper);
-    border-radius: var(--radius-lg); min-width: 380px; max-width: 520px; width: 100%;
+    border-radius: var(--radius-lg); min-width: 380px; max-width: 520px; width: min(100%, 520px);
     box-shadow: 0 24px 64px var(--shadow-deep);
     border: 1px solid var(--border);
     animation: slideUp 0.2s ease;
-    max-height: 90vh; overflow-y: auto;
+    max-height: 90vh; max-height: 90dvh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
   }
   @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   .modal-header {
     padding: 1.25rem 1.5rem 1rem;
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 2; background: var(--paper);
   }
   .modal-title { font-family: 'Noto Serif JP', serif; font-size: 1.1rem; font-weight: 700; }
   .modal-close {
@@ -373,8 +376,14 @@
     border-radius: var(--radius-sm); transition: color 0.1s, background 0.1s;
   }
   .modal-close:hover { color: var(--ink); background: var(--paper-dark); }
-  .modal-body { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
-  .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: 0.75rem; justify-content: flex-end; }
+  .modal-body {
+    padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem;
+    overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; min-height: 0;
+  }
+  .modal-footer {
+    padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); display: flex; gap: 0.75rem; justify-content: flex-end;
+    position: sticky; bottom: 0; z-index: 2; background: var(--paper);
+  }
 
   .rule-header-wrap { position: relative; display: inline-flex; align-items: center; gap: 0.28rem; }
   .rule-help-btn {
@@ -393,14 +402,21 @@
   }
   .rule-tooltip.align-right { left: auto; right: 0; transform: translateY(8px); }
 <<<<<<< ours
+<<<<<<< ours
 =======
   .rule-conflict-row { background: rgba(201,53,53,0.08); box-shadow: inset 0 0 0 1px rgba(201,53,53,0.35); }
   .rule-conflict-inline { color: var(--danger); font-size: 0.72rem; margin-left: 0.4rem; white-space: nowrap; }
+=======
+  .rule-conflict-row { background: rgba(201,53,53,0.08); box-shadow: inset 0 0 0 1px rgba(201,53,53,0.35); }
+>>>>>>> theirs
   .rule-conflict-banner {
     position: sticky; top: 0; z-index: 30; margin-bottom: 0.5rem;
     background: rgba(201,53,53,0.12); border: 1px solid rgba(201,53,53,0.4); color: #8b1a1a;
     border-radius: 6px; padding: 0.4rem 0.55rem; font-size: 0.78rem;
   }
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 
   /* Misc */
@@ -1449,6 +1465,12 @@ function Modal({ title, onClose, children, footer }) {
     window.addEventListener('keydown', esc);
     return () => window.removeEventListener('keydown', esc);
   }, [onClose]);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
   return (
     <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
@@ -2180,7 +2202,10 @@ function AssignPage({ event, dispatch, notify }) {
           footer={<><button className="btn btn-outline" onClick={()=>setCustomRuleModalOpen(false)}>キャンセル</button><button className="btn btn-accent" onClick={saveCustomRule}>保存</button></>}>
           <div className="text-sm" style={{fontWeight:700,marginBottom:'0.25rem'}}>フラグ別 配置ルール設定</div>
           <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>フラグごとに「分散」または「同卓」を設定できます。</div>
+<<<<<<< ours
           <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>※ 既存の保存データ（全体ルール + 対象フラグ）との後方互換を維持するため、保存時に旧形式も併記します。</div>
+=======
+>>>>>>> theirs
           {ruleConflictBanner && (
             <div className="rule-conflict-banner" role="status" aria-live="polite">{ruleConflictBanner}</div>
           )}
