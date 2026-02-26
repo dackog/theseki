@@ -376,6 +376,23 @@
   .modal-body { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
   .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: 0.75rem; justify-content: flex-end; }
 
+  .rule-header-wrap { position: relative; display: inline-flex; align-items: center; gap: 0.28rem; }
+  .rule-help-btn {
+    width: 1rem; height: 1rem; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--paper); color: var(--ink-light); font-size: 0.68rem; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .rule-help-btn:focus-visible { outline: 2px solid rgba(74,63,53,0.35); outline-offset: 1px; }
+  .rule-tooltip {
+    position: absolute; bottom: calc(100% + 0.35rem); left: 50%; transform: translateX(-50%);
+    min-width: 170px; max-width: 220px; width: max-content;
+    padding: 0.45rem 0.55rem; border-radius: 6px; border: 1px solid var(--border);
+    background: rgba(255,252,246,0.98); color: var(--ink); font-size: 0.73rem; line-height: 1.45;
+    box-shadow: 0 6px 18px rgba(26,20,16,0.14); text-align: left; z-index: 5;
+    pointer-events: none;
+  }
+  .rule-tooltip.align-right { left: auto; right: 0; transform: none; }
+
   /* Misc */
   .page-title {
     font-family: 'Noto Serif JP', serif;
@@ -1864,13 +1881,29 @@ function AssignPage({ event, dispatch, notify }) {
   const [customGatherFlagsDraft, setCustomGatherFlagsDraft] = useState((event.customGatherFlags || []).slice(0,4));
   const [customRulesDraft, setCustomRulesDraft] = useState(normalizeFlagRules(event.customRules, event.customRule, event.customGatherFlags));
   const [customRulesError, setCustomRulesError] = useState('');
+<<<<<<< ours
+=======
+  const [activeRuleTooltip, setActiveRuleTooltip] = useState('');
+>>>>>>> theirs
 
   useEffect(() => {
     setCustomRuleDraft(event.customRule || 'disperse');
     setCustomGatherFlagsDraft((event.customGatherFlags || []).slice(0,4));
     setCustomRulesDraft(normalizeFlagRules(event.customRules, event.customRule, event.customGatherFlags));
     setCustomRulesError('');
+<<<<<<< ours
   }, [event.customRule, event.customGatherFlags, event.customRules]);
+=======
+    setActiveRuleTooltip('');
+  }, [event.customRule, event.customGatherFlags, event.customRules]);
+
+  useEffect(() => {
+    if (!activeRuleTooltip) return;
+    const closeTooltip = () => setActiveRuleTooltip('');
+    document.addEventListener('click', closeTooltip);
+    return () => document.removeEventListener('click', closeTooltip);
+  }, [activeRuleTooltip]);
+>>>>>>> theirs
 
   const seats       = useMemo(() => generateSeats(tables.map(t => ({...t,eventId:event.id}))), [tables,event.id]);
   const totalSeats  = seats.length;
@@ -2079,11 +2112,19 @@ function AssignPage({ event, dispatch, notify }) {
       if (list.some(r => r.flag === flag && r.mode !== mode)) {
         setCustomRulesError(`「${flag}」は分散と集約を同時に選択できません。`);
         return list;
+<<<<<<< ours
       }
       if (list.length >= 4) {
         notify('対象フラグは最大4つまで選択できます','warning');
         return list;
       }
+=======
+      }
+      if (list.length >= 4) {
+        notify('対象フラグは最大4つまで選択できます','warning');
+        return list;
+      }
+>>>>>>> theirs
       setCustomRulesError('');
       return [...list, { flag, mode }];
     });
@@ -2129,16 +2170,52 @@ function AssignPage({ event, dispatch, notify }) {
       {customRuleModalOpen && (
         <Modal title="カスタム設定" onClose={()=>setCustomRuleModalOpen(false)}
           footer={<><button className="btn btn-outline" onClick={()=>setCustomRuleModalOpen(false)}>キャンセル</button><button className="btn btn-accent" onClick={saveCustomRule}>保存</button></>}>
+<<<<<<< ours
           <div className="text-sm" style={{fontWeight:700,marginBottom:'0.25rem'}}>Flag-based Placement Rules</div>
           <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>You can configure distribute or gather behavior per flag.</div>
           <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>※ 既存の保存データ（global rule + flags）との後方互換を維持するため、保存時に旧形式も併記します。</div>
+=======
+          <div className="text-sm" style={{fontWeight:700,marginBottom:'0.25rem'}}>フラグ別 配置ルール設定</div>
+          <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>フラグごとに「分散」または「同卓」を設定できます。</div>
+          <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>※ 既存の保存データ（全体ルール + 対象フラグ）との後方互換を維持するため、保存時に旧形式も併記します。</div>
+>>>>>>> theirs
           <div style={{border:'1px solid var(--border)',borderRadius:8,background:'rgba(255,255,255,0.6)',overflow:'hidden'}}>
             <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead>
                 <tr style={{background:'var(--paper-dark)'}}>
+<<<<<<< ours
                   <th style={{textAlign:'left',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Flag Name</th>
                   <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Distribute</th>
                   <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>Gather</th>
+=======
+                  <th style={{textAlign:'left',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>フラグ名</th>
+                  <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>
+                    <span className="rule-header-wrap">
+                      <span>分散</span>
+                      <button type="button" className="rule-help-btn" aria-label="分散の説明" aria-controls="tooltip-distribute"
+                        aria-describedby="tooltip-distribute" aria-expanded={activeRuleTooltip==='distribute'}
+                        onMouseEnter={()=>setActiveRuleTooltip('distribute')} onMouseLeave={()=>setActiveRuleTooltip('')}
+                        onFocus={()=>setActiveRuleTooltip('distribute')} onBlur={()=>setActiveRuleTooltip('')}
+                        onClick={e=>{e.stopPropagation();setActiveRuleTooltip(prev=>prev==='distribute'?'':'distribute');}}>？</button>
+                      {activeRuleTooltip==='distribute' && (
+                        <span id="tooltip-distribute" role="tooltip" className="rule-tooltip">同じフラグの人が、できるだけ別の卓に分かれるように配置します。</span>
+                      )}
+                    </span>
+                  </th>
+                  <th style={{textAlign:'center',padding:'0.55rem 0.6rem',fontSize:'0.8rem'}}>
+                    <span className="rule-header-wrap">
+                      <span>同卓</span>
+                      <button type="button" className="rule-help-btn" aria-label="同卓の説明" aria-controls="tooltip-gather"
+                        aria-describedby="tooltip-gather" aria-expanded={activeRuleTooltip==='gather'}
+                        onMouseEnter={()=>setActiveRuleTooltip('gather')} onMouseLeave={()=>setActiveRuleTooltip('')}
+                        onFocus={()=>setActiveRuleTooltip('gather')} onBlur={()=>setActiveRuleTooltip('')}
+                        onClick={e=>{e.stopPropagation();setActiveRuleTooltip(prev=>prev==='gather'?'':'gather');}}>？</button>
+                      {activeRuleTooltip==='gather' && (
+                        <span id="tooltip-gather" role="tooltip" className="rule-tooltip align-right">同じフラグの人を、できるだけ同じ卓にまとめて配置します。</span>
+                      )}
+                    </span>
+                  </th>
+>>>>>>> theirs
                 </tr>
               </thead>
               <tbody>
