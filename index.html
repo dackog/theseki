@@ -384,14 +384,14 @@
   }
   .rule-help-btn:focus-visible { outline: 2px solid rgba(74,63,53,0.35); outline-offset: 1px; }
   .rule-tooltip {
-    position: absolute; bottom: calc(100% + 0.35rem); left: 50%; transform: translateX(-50%);
-    min-width: 170px; max-width: 220px; width: max-content;
+    position: absolute; top: 100%; bottom: auto; left: 50%; transform: translate(-50%, 8px);
+    min-width: 170px; max-width: min(220px, calc(100vw - 4rem)); width: max-content;
     padding: 0.45rem 0.55rem; border-radius: 6px; border: 1px solid var(--border);
     background: rgba(255,252,246,0.98); color: var(--ink); font-size: 0.73rem; line-height: 1.45;
-    box-shadow: 0 6px 18px rgba(26,20,16,0.14); text-align: left; z-index: 5;
+    box-shadow: 0 6px 18px rgba(26,20,16,0.14); text-align: left; z-index: 20;
     pointer-events: none;
   }
-  .rule-tooltip.align-right { left: auto; right: 0; transform: none; }
+  .rule-tooltip.align-right { left: auto; right: 0; transform: translateY(8px); }
 
   /* Misc */
   .page-title {
