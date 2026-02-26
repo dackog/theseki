@@ -62,11 +62,14 @@
     max-width: 100%;
     overflow-x: hidden;
   }
+<<<<<<< ours
   .app-shell {
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
   }
+=======
+>>>>>>> theirs
   #app-copyright {
     position: fixed;
     left: 0;
@@ -2795,13 +2798,17 @@ function App() {
   const sharedEvent = useMemo(() => loadSharedEvent(), []);
   if (sharedEvent) {
     return (
-      <div className="app-shell">
+      <>
         <div className="topbar">
           <div className="topbar-logo">The<span>SEKI</span></div>
           <nav className="topbar-nav"><span className="nav-btn active">座席表 閲覧</span></nav>
         </div>
         <ViewPage event={sharedEvent}/>
+<<<<<<< ours
       </div>
+=======
+      </>
+>>>>>>> theirs
     );
   }
 
@@ -2909,7 +2916,7 @@ function App() {
   );
 
   return (
-    <div className="app-shell">
+    <>
       <div className={`topbar ${(page==='layout'||page==='assign')?'topbar-subpage':''}`}>
         <div className="topbar-logo">The<span>SEKI</span></div>
         <nav className="topbar-nav">
@@ -2940,7 +2947,11 @@ function App() {
       )}
 
       {note && <div className={`notification ${note.type}`}>{note.msg}</div>}
+<<<<<<< ours
     </div>
+=======
+    </>
+>>>>>>> theirs
   );
 }
 
