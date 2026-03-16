@@ -224,12 +224,10 @@
     border-radius: var(--radius-md);
     box-shadow: 0 2px 8px var(--shadow);
     padding: 1.25rem;
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: default;
+    transition: box-shadow 0.18s ease;
     position: relative;
     overflow: hidden;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
   }
   .event-card::before {
     content: '';
@@ -237,7 +235,7 @@
     width: 4px; height: 100%;
     background: var(--accent);
   }
-  .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--shadow-deep); }
+  .event-card:hover { box-shadow: 0 4px 16px var(--shadow-deep); }
   .event-card-title { font-family: 'Noto Serif JP', serif; font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; padding-left: 0.5rem; }
   .event-card-meta { font-size: 0.75rem; color: var(--ink-light); padding-left: 0.5rem; }
   .event-card-actions { display: flex; gap: 0.5rem; margin-top: 1rem; padding-left: 0.5rem; }
@@ -1344,7 +1342,7 @@ function Modal({ title, onClose, children, footer, modalClassName='' }) {
 // ============================================================
 // EventsPage
 // ============================================================
-function EventsPage({ state, dispatch, onSelect, onLayout, onAssign }) {
+function EventsPage({ state, dispatch, onLayout, onAssign }) {
   const [showNew, setShowNew] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState({ name: '', datetime: '' });
@@ -1397,18 +1395,18 @@ function EventsPage({ state, dispatch, onSelect, onLayout, onAssign }) {
       ) : (
         <div className="events-grid">
           {state.events.map(ev => (
-            <div key={ev.id} className="event-card" onClick={()=>onSelect(ev.id)}>
+            <div key={ev.id} className="event-card">
               <div className="event-card-title">{ev.name}</div>
               <div className="event-card-meta">
                 {ev.datetime ? `📅 ${ev.datetime}` : '日時未設定'}
                 <br/>更新: {fmtDate(ev.updatedAt)}
               </div>
               <div className="event-action-btns">
-                <button className="btn-main layout" onClick={e=>{e.stopPropagation();onLayout(ev.id);}}>
-                  <span className="btn-icon">🪑</span>会場・座席表
+                <button className="btn-main layout" onClick={()=>onLayout(ev.id)}>
+                  <span className="btn-icon">🪑</span>座席・席割
                 </button>
-                <button className="btn-main assign" onClick={e=>{e.stopPropagation();onAssign(ev.id);}}>
-                  <span className="btn-icon">🎲</span>席割り
+                <button className="btn-main assign" onClick={()=>onAssign(ev.id)}>
+                  <span className="btn-icon">👥</span>参加者
                 </button>
               </div>
               <div className="event-sub-btns">
@@ -2774,11 +2772,6 @@ function App() {
   const dispatch = useCallback((action) => dispatch_(action), []);
   const currentEvent = state.events.find(e=>e.id===state.currentEventId);
 
-  const selectEvent = (id) => {
-    dispatch({type:'SET_CURRENT', payload:id});
-    setPage('attendees');
-  };
-
   // JSONバックアップ
   const handleExportJSON = () => {
     if (!currentEvent) return;
@@ -2816,17 +2809,12 @@ function App() {
     }
   };
 
-  const navItems = [
-    {id:'events', label:'イベント一覧'},
-    ...(currentEvent ? [{id:'attendees', label:'参加者管理'}] : []),
-  ];
-
   const statusColor = saveStatus==='error'?'var(--accent)': saveStatus==='saving'?'var(--accent-gold)':'#4caf82';
   const statusLabel = saveStatus==='error'?'保存エラー ⚠️': saveStatus==='saving'?'保存中…':'保存済 ✓';
 
   // イベント内サブページ用のブレッドクラム＋タブバー
   const InnerNav = ({ subPage, setSubPage }) => (
-    <div className={`inner-nav-wrap ${(subPage==='layout'||subPage==='assign')?'subpage-fixed':''}`}>
+    <div className={`inner-nav-wrap ${(subPage==='layout'||subPage==='assign'||subPage==='attendees')?'subpage-fixed':''}`}>
       <button className="btn btn-ghost btn-sm inner-nav-back" onClick={()=>setPage('events')}
         style={{color:'var(--ink-light)',padding:'0.3rem 0.5rem',whiteSpace:'nowrap'}}>
         ← 一覧
@@ -2836,7 +2824,7 @@ function App() {
         {currentEvent?.name}
       </span>
       <div className="inner-nav-tabs" style={{marginLeft:'auto',display:'flex',gap:'0.4rem'}}>
-        {[{id:'layout',label:'🪑 会場'},{id:'assign',label:'🎲 席割り'}].map(t=>(
+        {[{id:'layout',label:'卓一覧'},{id:'assign',label:'席割'},{id:'attendees',label:'参加者'}].map(t=>(
           <button key={t.id}
             className={`btn btn-sm ${subPage===t.id?'btn-primary':'btn-outline'}`}
             onClick={()=>setSubPage(t.id)}>
@@ -2849,13 +2837,8 @@ function App() {
 
   return (
     <>
-      <div className={`topbar ${(page==='layout'||page==='assign')?'topbar-subpage':''}`}>
+      <div className={`topbar ${(page==='layout'||page==='assign'||page==='attendees')?'topbar-subpage':''}`}>
         <div className="topbar-logo">The<span>SEKI</span></div>
-        <nav className="topbar-nav">
-          {navItems.map(n=>(
-            <button key={n.id} className={`nav-btn ${page===n.id?'active':''}`} onClick={()=>setPage(n.id)}>{n.label}</button>
-          ))}
-        </nav>
         <div className="topbar-actions-desktop" style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'0.75rem'}}>
           <span className="topbar-status" style={{color:statusColor}}>{statusLabel}</span>
           <label className="btn btn-ghost btn-sm" style={{cursor:'pointer',color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>
@@ -2866,14 +2849,14 @@ function App() {
         </div>
       </div>
 
-      {page==='events' && <EventsPage state={state} dispatch={dispatch} onSelect={selectEvent} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('layout');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('assign');}}/>}
-      {page==='attendees' && currentEvent && <AttendeesPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
-      {(page==='layout'||page==='assign') && currentEvent && (
+      {page==='events' && <EventsPage state={state} dispatch={dispatch} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('layout');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>}
+      {(page==='layout'||page==='assign'||page==='attendees') && currentEvent && (
         <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column',height:'calc(100dvh - 52px)'}}>
           <InnerNav subPage={page} setSubPage={setPage}/>
           <div className="event-subpage-content" style={{minHeight:0, WebkitOverflowScrolling:'touch'}}>
             {page==='layout' && <LayoutPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
             {page==='assign' && <AssignPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
+            {page==='attendees' && <AttendeesPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
           </div>
         </div>
       )}
