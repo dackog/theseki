@@ -1610,7 +1610,7 @@ function FloorTable({ table, seats, assignments, attendees, violationSeatIds, se
 // ============================================================
 function AssignFloorTable({ table, seats, assignments, attendees, violationSeatIds,
   selectedId, hasViolation, tableViolations, flagHighlightIds, lockedAttendees,
-  onSeatClick, onUnassign, onDragDrop }) {
+  onSeatClick, onUnassign, onDragDrop, onDragCancel }) {
 
   const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
   const [draggingSeatId, setDraggingSeatId] = useState(null);
@@ -1635,13 +1635,22 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
 
   const seatColor = (seat) => {
     const aId = assignments[seat.id];
-    const isLocked = !!(aId && lockedAttendees && lockedAttendees[aId]);
-    const isHL  = flagHighlightIds && aId && flagHighlightIds.has(aId);
-    const isDim = flagHighlightIds && flagHighlightIds.size > 0 && aId && !flagHighlightIds.has(aId);
+    const isLocked        = !!(aId && lockedAttendees && lockedAttendees[aId]);
+    const isHL            = !!(flagHighlightIds && aId && flagHighlightIds.has(aId));
+    const isDim           = !!(flagHighlightIds && flagHighlightIds.size > 0 && aId && !flagHighlightIds.has(aId));
+    const isSelected      = !!(aId && selectedId && aId === selectedId);
+    const isDraggingThis  = draggingSeatId === seat.id;
+    const isDropTarget    = dropTargetSeatId === seat.id;
     if (isLocked)
       return { bg:'#d9d9d9', br:'#8a8a8a', co:'#111', op:1, sh:'0 0 0 2px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.35)' };
+    if (isDraggingThis)
+      return { bg:'radial-gradient(circle at 40% 35%,#5a8a6a,#2d5a3d)', br:'rgba(255,255,255,0.8)', co:'#d0f0dc', op:0.38, sh:'0 0 0 2px rgba(255,255,255,0.35),0 2px 8px rgba(0,0,0,0.5)' };
+    if (isDropTarget)
+      return { bg:'radial-gradient(circle at 40% 35%,#2a5a78,#0d3354)', br:'#60c8ff', co:'#e0f6ff', op:1, sh:'0 0 0 3px rgba(96,200,255,0.6),0 2px 8px rgba(0,0,0,0.5)' };
     if (violationSeatIds.has(seat.id))
       return { bg:'radial-gradient(circle at 40% 35%,#a04040,#6b1515)', br:'rgba(220,100,100,0.6)', co:'#ffd0d0', op:1, sh:'0 2px 8px rgba(0,0,0,0.5)' };
+    if (isSelected)
+      return { bg:'radial-gradient(circle at 40% 35%,#3a6a8a,#163d5c)', br:'rgba(80,200,255,0.95)', co:'#e0f4ff', op:1, sh:'0 0 0 3px rgba(80,200,255,0.5),0 2px 8px rgba(0,0,0,0.5)' };
     if (isHL)
       return { bg:'radial-gradient(circle at 40% 35%,#b8860b,#7a5800)', br:'rgba(255,220,60,0.9)', co:'#fff8c0', op:1, sh:'0 0 0 3px rgba(255,220,60,0.45),0 2px 8px rgba(0,0,0,0.5)' };
     if (aId)
@@ -1656,7 +1665,6 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
     const att = aId ? attendees.find(a => a.id === aId) : null;
     const sc  = seatColor(seat);
     const isDragging = draggingSeatId === seat.id;
-    const isDropTarget = dropTargetSeatId === seat.id;
     const canDrag = !isTouch && !!aId && !(lockedAttendees && lockedAttendees[aId]);
 
     const handleDragStart = (e) => {
@@ -1667,6 +1675,7 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
     const handleDragEnd = () => {
       setDraggingSeatId(null);
       setDropTargetSeatId(null);
+      onDragCancel && onDragCancel();
     };
     const handleDragOver = (e) => {
       if (!draggingSeatId || draggingSeatId === seat.id) return;
@@ -1700,10 +1709,10 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
           width: w, height: h,
           borderRadius: radius !== undefined ? radius : '50%',
           background: sc.bg,
-          border: isDropTarget ? '2px solid #60c8ff' : `2px solid ${sc.br}`,
-          boxShadow: isDropTarget ? '0 0 0 3px rgba(96,200,255,0.55), 0 2px 8px rgba(0,0,0,0.5)' : sc.sh,
+          border: `2px solid ${sc.br}`,
+          boxShadow: sc.sh,
           color: sc.co,
-          opacity: isDragging ? 0.35 : sc.op,
+          opacity: sc.op,
           display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
           cursor: canDrag ? 'grab' : 'pointer',
           fontSize: w > 42 ? '0.65rem' : '0.55rem',
@@ -2253,9 +2262,9 @@ function AssignPage({ event, dispatch, notify }) {
                 <div style={{display:'flex',gap:'0.35rem',marginTop:'0.3rem',flexWrap:'wrap'}}>
                   <button onClick={()=>setSelected(null)} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
                   {lockedAttendees[selected] ? (
-                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false})} style={{background:'#fff',border:'2px solid #1f7a45',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'#1f7a45'}}> 🔓 ロック解除</button>
+                    <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false});setSelected(null);}} style={{background:'#fff',border:'2px solid #1f7a45',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'#1f7a45'}}> 🔓 ロック解除</button>
                   ) : (
-                    <button onClick={()=>dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true})} style={{background:'#fff4f4',border:'2px solid var(--accent)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}> 🔒 ロック</button>
+                    <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true});setSelected(null);}} style={{background:'#fff4f4',border:'2px solid var(--accent)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}> 🔒 ロック</button>
                   )}
                 </div>
               </>
@@ -2308,6 +2317,7 @@ function AssignPage({ event, dispatch, notify }) {
                   onSeatClick={handleSeatClick}
                   onUnassign={unassignSeat}
                   onDragDrop={handleDragDrop}
+                  onDragCancel={() => setSelected(null)}
                 />
               );
             })}
