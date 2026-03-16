@@ -301,6 +301,7 @@
   }
   .attendee-item:hover { background: var(--accent-light); border-color: var(--accent); }
   .attendee-item.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .attendee-item.dragging { opacity: 0.4; outline: 2px dashed var(--accent); outline-offset: 2px; }
   .attendee-item .item-flags { display: flex; gap: 0.25rem; flex-wrap: wrap; }
   .table-assign-card {
     background: var(--paper);
@@ -1609,7 +1610,11 @@ function FloorTable({ table, seats, assignments, attendees, violationSeatIds, se
 // ============================================================
 function AssignFloorTable({ table, seats, assignments, attendees, violationSeatIds,
   selectedId, hasViolation, tableViolations, flagHighlightIds, lockedAttendees,
-  onSeatClick, onUnassign }) {
+  onSeatClick, onUnassign, onDragDrop }) {
+
+  const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+  const [draggingSeatId, setDraggingSeatId] = useState(null);
+  const [dropTargetSeatId, setDropTargetSeatId] = useState(null);
 
   const N = seats.length;
   const shape = table.shape || 'rect';
@@ -1650,28 +1655,64 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
     const aId = assignments[seat.id];
     const att = aId ? attendees.find(a => a.id === aId) : null;
     const sc  = seatColor(seat);
+    const isDragging = draggingSeatId === seat.id;
+    const isDropTarget = dropTargetSeatId === seat.id;
+    const canDrag = !isTouch && !!aId && !(lockedAttendees && lockedAttendees[aId]);
+
+    const handleDragStart = (e) => {
+      if (!canDrag) { e.preventDefault(); return; }
+      // Let browser capture the element as drag image before we update state
+      requestAnimationFrame(() => setDraggingSeatId(seat.id));
+    };
+    const handleDragEnd = () => {
+      setDraggingSeatId(null);
+      setDropTargetSeatId(null);
+    };
+    const handleDragOver = (e) => {
+      if (!draggingSeatId || draggingSeatId === seat.id) return;
+      e.preventDefault();
+      setDropTargetSeatId(seat.id);
+    };
+    const handleDragLeave = () => {
+      if (dropTargetSeatId === seat.id) setDropTargetSeatId(null);
+    };
+    const handleDrop = (e) => {
+      e.preventDefault();
+      if (draggingSeatId && draggingSeatId !== seat.id) {
+        onDragDrop(draggingSeatId, seat.id);
+      }
+      setDraggingSeatId(null);
+      setDropTargetSeatId(null);
+    };
+
     return (
       <div
+        draggable={canDrag}
         onClick={() => onSeatClick(seat.id)}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         title={att ? att.name : seat.id}
         style={{
           position:'absolute', ...posStyle,
           width: w, height: h,
           borderRadius: radius !== undefined ? radius : '50%',
           background: sc.bg,
-          border: `2px solid ${sc.br}`,
-          boxShadow: sc.sh,
+          border: isDropTarget ? '2px solid #60c8ff' : `2px solid ${sc.br}`,
+          boxShadow: isDropTarget ? '0 0 0 3px rgba(96,200,255,0.55), 0 2px 8px rgba(0,0,0,0.5)' : sc.sh,
           color: sc.co,
-          opacity: sc.op,
+          opacity: isDragging ? 0.35 : sc.op,
           display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-          cursor: 'pointer',
+          cursor: canDrag ? 'grab' : 'pointer',
           fontSize: w > 42 ? '0.65rem' : '0.55rem',
           fontWeight: 600, textAlign:'center',
           transition:'transform 0.12s, opacity 0.2s, box-shadow 0.2s',
           userSelect:'none', overflow:'hidden', padding: 2, lineHeight: 1.2,
           animation: violationSeatIds.has(seat.id) ? 'pulseRed 1.5s ease-in-out infinite' : 'none',
         }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.12)'; }}
+        onMouseEnter={e => { if (!isDragging) e.currentTarget.style.transform = 'scale(1.12)'; }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
       >
         <span style={{pointerEvents:'none'}}>{att ? att.name.slice(0,4) : seat.index}</span>
@@ -1810,6 +1851,29 @@ function AssignPage({ event, dispatch, notify }) {
     if (!filterTag) return null;
     return new Set(attendees.filter(a => a.flags.includes(filterTag)).map(a => a.id));
   }, [filterTag, attendees]);
+
+  // Outside-click clears selection
+  const assignLayoutRef = React.useRef(null);
+  useEffect(() => {
+    const handler = (e) => {
+      if (assignLayoutRef.current && !assignLayoutRef.current.contains(e.target)) {
+        setSelected(null);
+      }
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, []);
+
+  const handleDragDrop = (srcSeatId, tgtSeatId) => {
+    const srcAtt = assignments[srcSeatId];
+    const tgtAtt = assignments[tgtSeatId];
+    if (!srcAtt) return;
+    if (lockedAttendees[srcAtt]) { notify('🔒 ロック中の参加者は移動できません','warning'); return; }
+    if (tgtAtt && lockedAttendees[tgtAtt]) { notify('🔒 ロック中の参加者は移動できません','warning'); return; }
+    const updates = { [tgtSeatId]: srcAtt, [srcSeatId]: tgtAtt || null };
+    dispatch({ type:'BATCH_ASSIGN', eventId:event.id, updates });
+    setSelected(null);
+  };
 
   const handleSeatClick = (seatId) => {
     const cur = assignments[seatId];
@@ -2139,7 +2203,7 @@ function AssignPage({ event, dispatch, notify }) {
         </div>
       )}
 
-      <div className="assign-layout">
+      <div className="assign-layout" ref={assignLayoutRef}>
         <div className="assign-sidebar">
           <div className="card">
             <div className="card-header">
@@ -2243,6 +2307,7 @@ function AssignPage({ event, dispatch, notify }) {
                   flagHighlightIds={flagHighlightIds}
                   onSeatClick={handleSeatClick}
                   onUnassign={unassignSeat}
+                  onDragDrop={handleDragDrop}
                 />
               );
             })}
