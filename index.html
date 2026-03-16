@@ -1644,13 +1644,15 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
     if (isLocked)
       return { bg:'#d9d9d9', br:'#8a8a8a', co:'#111', op:1, sh:'0 0 0 2px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.35)' };
     if (isDraggingThis)
-      return { bg:'radial-gradient(circle at 40% 35%,#5a8a6a,#2d5a3d)', br:'rgba(255,255,255,0.8)', co:'#d0f0dc', op:0.38, sh:'0 0 0 2px rgba(255,255,255,0.35),0 2px 8px rgba(0,0,0,0.5)' };
+      // full opacity, bright white ring + strong shadow = clearly being lifted
+      return { bg:'radial-gradient(circle at 40% 35%,#7aaa8a,#4a8a5a)', br:'rgba(255,255,255,0.95)', co:'#ffffff', op:1, sh:'0 0 0 3px rgba(255,255,255,0.7),0 6px 20px rgba(0,0,0,0.7)' };
     if (isDropTarget)
-      return { bg:'radial-gradient(circle at 40% 35%,#2a5a78,#0d3354)', br:'#60c8ff', co:'#e0f6ff', op:1, sh:'0 0 0 3px rgba(96,200,255,0.6),0 2px 8px rgba(0,0,0,0.5)' };
+      return { bg:'radial-gradient(circle at 40% 35%,#2a5a78,#0d3354)', br:'#60c8ff', co:'#e0f6ff', op:1, sh:'0 0 0 3px rgba(96,200,255,0.65),0 2px 8px rgba(0,0,0,0.5)' };
     if (violationSeatIds.has(seat.id))
       return { bg:'radial-gradient(circle at 40% 35%,#a04040,#6b1515)', br:'rgba(220,100,100,0.6)', co:'#ffd0d0', op:1, sh:'0 2px 8px rgba(0,0,0,0.5)' };
     if (isSelected)
-      return { bg:'radial-gradient(circle at 40% 35%,#3a6a8a,#163d5c)', br:'rgba(80,200,255,0.95)', co:'#e0f4ff', op:1, sh:'0 0 0 3px rgba(80,200,255,0.5),0 2px 8px rgba(0,0,0,0.5)' };
+      // bright cyan ring + blue tint — clearly distinct from locked (gray) and normal (green)
+      return { bg:'radial-gradient(circle at 40% 35%,#2a7ab0,#0d4a80)', br:'rgba(80,210,255,0.95)', co:'#cceeff', op:1, sh:'0 0 0 3px rgba(80,210,255,0.55),0 2px 10px rgba(0,0,0,0.5)' };
     if (isHL)
       return { bg:'radial-gradient(circle at 40% 35%,#b8860b,#7a5800)', br:'rgba(255,220,60,0.9)', co:'#fff8c0', op:1, sh:'0 0 0 3px rgba(255,220,60,0.45),0 2px 8px rgba(0,0,0,0.5)' };
     if (aId)
@@ -1669,8 +1671,10 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
 
     const handleDragStart = (e) => {
       if (!canDrag) { e.preventDefault(); return; }
-      // Let browser capture the element as drag image before we update state
-      requestAnimationFrame(() => setDraggingSeatId(seat.id));
+      // Store source seat ID in dataTransfer (survives element updates)
+      e.dataTransfer.setData('seat-id', seat.id);
+      // React 18 batches this; drag image is captured by browser before re-render
+      setDraggingSeatId(seat.id);
     };
     const handleDragEnd = () => {
       setDraggingSeatId(null);
@@ -1687,8 +1691,9 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
     };
     const handleDrop = (e) => {
       e.preventDefault();
-      if (draggingSeatId && draggingSeatId !== seat.id) {
-        onDragDrop(draggingSeatId, seat.id);
+      const srcId = e.dataTransfer.getData('seat-id') || draggingSeatId;
+      if (srcId && srcId !== seat.id) {
+        onDragDrop(srcId, seat.id);
       }
       setDraggingSeatId(null);
       setDropTargetSeatId(null);
@@ -1776,7 +1781,7 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
           {seats.map((seat,i) => {
             const ang = (2*Math.PI*i/N) - Math.PI/2;
             const cx = roundSz/2 + oR*Math.cos(ang), cy = roundSz/2 + oR*Math.sin(ang);
-            return <ChairEl key={seat.id} seat={seat} w={cR*2} h={cR*2} posStyle={{left:cx-cR,top:cy-cR}} />;
+            return <React.Fragment key={seat.id}>{ChairEl({ seat, w:cR*2, h:cR*2, posStyle:{left:cx-cR,top:cy-cR} })}</React.Fragment>;
           })}
         </div>
       ) : (
@@ -1791,7 +1796,7 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
             <div style={{position:'absolute',inset:10,borderRadius:6,border:'1px solid rgba(255,255,255,0.05)'}}/>
           </div>
           {rectPos().map(({x,y,seat}) =>
-            <ChairEl key={seat.id} seat={seat} w={cW} h={cH} posStyle={{left:x,top:y}} radius={8} />
+            <React.Fragment key={seat.id}>{ChairEl({ seat, w:cW, h:cH, posStyle:{left:x,top:y}, radius:8 })}</React.Fragment>
           )}
         </div>
       )}
@@ -1861,12 +1866,15 @@ function AssignPage({ event, dispatch, notify }) {
     return new Set(attendees.filter(a => a.flags.includes(filterTag)).map(a => a.id));
   }, [filterTag, attendees]);
 
+  // 選択解除 — single source of truth
+  const clearSelection = () => setSelected(null);
+
   // Outside-click clears selection
   const assignLayoutRef = React.useRef(null);
   useEffect(() => {
     const handler = (e) => {
       if (assignLayoutRef.current && !assignLayoutRef.current.contains(e.target)) {
-        setSelected(null);
+        clearSelection();
       }
     };
     document.addEventListener('pointerdown', handler);
@@ -1881,7 +1889,7 @@ function AssignPage({ event, dispatch, notify }) {
     if (tgtAtt && lockedAttendees[tgtAtt]) { notify('🔒 ロック中の参加者は移動できません','warning'); return; }
     const updates = { [tgtSeatId]: srcAtt, [srcSeatId]: tgtAtt || null };
     dispatch({ type:'BATCH_ASSIGN', eventId:event.id, updates });
-    setSelected(null);
+    clearSelection();
   };
 
   const handleSeatClick = (seatId) => {
@@ -1901,7 +1909,7 @@ function AssignPage({ event, dispatch, notify }) {
       const updates = { [seatId]: selected };
       if (prevSeat && prevSeat !== seatId) updates[prevSeat] = cur || null;
       dispatch({type:'BATCH_ASSIGN', eventId:event.id, updates});
-      setSelected(null);
+      clearSelection();
     } else if (cur) {
       setSelected(cur);
     }
@@ -2260,11 +2268,11 @@ function AssignPage({ event, dispatch, notify }) {
                 <b style={{color:'var(--ink)',display:'block',marginBottom:'0.15rem'}}>👆 {selName} を選択中</b>
                 席をクリックして配置 / 別の席と入れ替え
                 <div style={{display:'flex',gap:'0.35rem',marginTop:'0.3rem',flexWrap:'wrap'}}>
-                  <button onClick={()=>setSelected(null)} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
+                  <button onClick={clearSelection} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
                   {lockedAttendees[selected] ? (
-                    <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false});setSelected(null);}} style={{background:'#fff',border:'2px solid #1f7a45',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'#1f7a45'}}> 🔓 ロック解除</button>
+                    <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false});clearSelection();}} style={{background:'#fff',border:'2px solid #1f7a45',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'#1f7a45'}}> 🔓 ロック解除</button>
                   ) : (
-                    <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true});setSelected(null);}} style={{background:'#fff4f4',border:'2px solid var(--accent)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}> 🔒 ロック</button>
+                    <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true});clearSelection();}} style={{background:'#fff4f4',border:'2px solid var(--accent)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}> 🔒 ロック</button>
                   )}
                 </div>
               </>
@@ -2317,7 +2325,7 @@ function AssignPage({ event, dispatch, notify }) {
                   onSeatClick={handleSeatClick}
                   onUnassign={unassignSeat}
                   onDragDrop={handleDragDrop}
-                  onDragCancel={() => setSelected(null)}
+                  onDragCancel={clearSelection}
                 />
               );
             })}
