@@ -1682,7 +1682,9 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
       onDragCancel && onDragCancel();
     };
     const handleDragOver = (e) => {
-      if (!draggingSeatId || draggingSeatId === seat.id) return;
+      // Use dataTransfer.types so cross-table drags work.
+      // draggingSeatId is per-table local state and is null in other tables.
+      if (!e.dataTransfer.types.includes('seat-id')) return;
       e.preventDefault();
       setDropTargetSeatId(seat.id);
     };
