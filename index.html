@@ -1819,6 +1819,13 @@ function AssignPage({ event, dispatch, notify }) {
   const [selected,  setSelected]  = useState(null);
   const [filterTag, setFilterTag] = useState('');
   const [search,    setSearch]    = useState('');
+  // サイドバータブ（卓管理 / 席割）
+  const [sideTab, setSideTab] = useState('seat'); // 'seat' | 'table'
+  const [showAddTable, setShowAddTable] = useState(false);
+  const [newTableDraft, setNewTableDraft] = useState({ name:'', seatCount:6, shape:'rect' });
+  const [newTableSeatInput, setNewTableSeatInput] = useState('6');
+  const [expandedTableId, setExpandedTableId] = useState(null);
+  const [editingSeatCounts, setEditingSeatCounts] = useState({});
   const [customRuleModalOpen, setCustomRuleModalOpen] = useState(false);
   const [customRuleDraft, setCustomRuleDraft] = useState(event.customRule || 'disperse');
   const [customGatherFlagsDraft, setCustomGatherFlagsDraft] = useState((event.customGatherFlags || []).slice(0,4));
@@ -1882,6 +1889,44 @@ function AssignPage({ event, dispatch, notify }) {
     document.addEventListener('pointerdown', handler);
     return () => document.removeEventListener('pointerdown', handler);
   }, []);
+
+  // 参加者選択時に卓タブ表示中なら席タブへ自動切替
+  useEffect(() => {
+    if (selected && sideTab === 'table') setSideTab('seat');
+  }, [selected]);
+
+  // 卓管理ハンドラ（LayoutPage から移植）
+  const addTable = () => {
+    const n = parseInt(newTableSeatInput, 10);
+    const seatCount = Number.isFinite(n) ? Math.max(1, Math.min(30, n)) : 6;
+    const name = newTableDraft.name.trim() || `T${tables.length + 1}`;
+    const cols = Math.ceil(Math.sqrt(tables.length + 1));
+    const idx = tables.length;
+    const t = { id:uid(), eventId:event.id, name, seatCount, shape:newTableDraft.shape||'rect', order:tables.length, posX:80+(idx%cols)*260, posY:80+Math.floor(idx/cols)*260 };
+    dispatch({ type:'ADD_TABLE', eventId:event.id, payload:t });
+    setShowAddTable(false); setNewTableDraft({name:'',seatCount:6,shape:'rect'}); setNewTableSeatInput('6');
+    notify('卓を追加しました');
+  };
+  const delTable = (tid) => {
+    if (confirm('この卓を削除しますか？')) {
+      dispatch({ type:'DEL_TABLE', eventId:event.id, tableId:tid });
+      if (expandedTableId === tid) setExpandedTableId(null);
+      notify('卓を削除しました');
+    }
+  };
+  const duplicateTable = (table) => {
+    const copy = { ...table, id:uid(), name:`${table.name} (コピー)`, order:tables.length, posX:(table.posX||80)+40, posY:(table.posY||80)+40 };
+    dispatch({ type:'ADD_TABLE', eventId:event.id, payload:copy });
+    notify('卓を複製しました');
+  };
+  const updateTable = (tid, key, val) => dispatch({ type:'UPDATE_TABLE', eventId:event.id, tableId:tid, key, val });
+  const commitTableSeatCount = (tableId, fallback) => {
+    const raw = editingSeatCounts[tableId];
+    if (raw === undefined) return;
+    const n = parseInt(raw, 10);
+    updateTable(tableId, 'seatCount', Number.isFinite(n) ? Math.max(1, Math.min(30, n)) : Math.max(1, fallback||1));
+    setEditingSeatCounts(prev => { const next = {...prev}; delete next[tableId]; return next; });
+  };
 
   const handleDragDrop = (srcSeatId, tgtSeatId) => {
     const srcAtt = assignments[srcSeatId];
@@ -2224,70 +2269,124 @@ function AssignPage({ event, dispatch, notify }) {
 
       <div className="assign-layout" ref={assignLayoutRef}>
         <div className="assign-sidebar">
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title">未割当 <span className="badge">{unassigned.length}</span></div>
-            </div>
-            <div className="assign-sidebar-inner" style={{padding:'0.75rem'}}>
-              <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="名前で検索…" style={{marginBottom:'0.5rem'}}/>
-              <div className="filter-row">
-                <button className={`btn btn-sm ${!filterTag?'btn-primary':'btn-outline'}`} onClick={()=>setFilterTag('')}>すべて</button>
-                {allTags.map(t=>(
-                  <button key={t}
-                    className={`btn btn-sm ${filterTag===t?'btn-primary':'btn-outline'}`}
-                    onClick={()=>setFilterTag(p=>p===t?'':t)}
-                    style={filterTag===t ? {background:'var(--accent-gold)',borderColor:'var(--accent-gold)',color:'#fff'} : {}}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-              {filterTag && (
-                <div style={{margin:'0.4rem 0',padding:'0.3rem 0.6rem',background:'rgba(184,134,11,0.1)',border:'1px solid rgba(184,134,11,0.35)',borderRadius:5,fontSize:'0.72rem',color:'var(--accent-gold)'}}>
-                  ★ 「{filterTag}」をハイライト中 — 金色の席が対象者
-                </div>
-              )}
-              <div className="assign-attendee-list">
-                {filteredUnassigned.length===0 && <div className="text-sm text-muted" style={{padding:'0.5rem 0'}}>全員割当済</div>}
-                {filteredUnassigned.map(a=>{
-                  const isHL = filterTag && a.flags.includes(filterTag);
-                  return (
-                    <div key={a.id}
-                      className={`attendee-item ${selected===a.id?'selected':''}`}
-                      onClick={()=>setSelected(s=>s===a.id?null:a.id)}
-                      style={isHL ? {borderColor:'var(--accent-gold)',background:'rgba(184,134,11,0.07)'} : {}}>
-                      {isHL && <span style={{color:'var(--accent-gold)',marginRight:4,fontSize:'0.8rem'}}>★</span>}
-                      <span>{a.name}</span>
-                      {a.flags.length>0 && <div className="item-flags">{a.flags.map(f=><span key={f} className="tag" style={{fontSize:'0.65rem',padding:'0.1rem 0.4rem'}}>{f}</span>)}</div>}
+          {/* ── サイドバータブ ── */}
+          <div style={{display:'flex',borderBottom:'2px solid var(--border)',marginBottom:'0.75rem',flexShrink:0}}>
+            <button onClick={()=>setSideTab('table')} style={{flex:1,padding:'0.45rem 0.25rem',background:'none',border:'none',borderBottom:sideTab==='table'?'2px solid var(--accent)':'2px solid transparent',marginBottom:'-2px',cursor:'pointer',fontWeight:700,fontSize:'0.82rem',color:sideTab==='table'?'var(--accent)':'var(--ink-light)',transition:'color 0.15s'}}>
+              🪑 卓
+            </button>
+            <button onClick={()=>setSideTab('seat')} style={{flex:1,padding:'0.45rem 0.25rem',background:'none',border:'none',borderBottom:sideTab==='seat'?'2px solid var(--accent)':'2px solid transparent',marginBottom:'-2px',cursor:'pointer',fontWeight:700,fontSize:'0.82rem',color:sideTab==='seat'?'var(--accent)':'var(--ink-light)',transition:'color 0.15s',position:'relative'}}>
+              👥 席{selected && sideTab!=='seat' && <span style={{position:'absolute',top:6,right:10,width:7,height:7,borderRadius:'50%',background:'var(--accent)',display:'block'}}/>}
+            </button>
+          </div>
+
+          {/* ── 卓タブ ── */}
+          {sideTab==='table' && (
+            <div>
+              <button className="btn btn-accent btn-sm w-full" style={{marginBottom:'0.75rem'}} onClick={()=>setShowAddTable(true)}>＋ 卓を追加</button>
+              {tables.length===0 && <div className="text-sm text-muted" style={{textAlign:'center',padding:'1rem 0'}}>卓がありません</div>}
+              {tables.map((t) => {
+                const tSeats = seats.filter(s=>s.tableId===t.id);
+                const occCount = tSeats.filter(s=>assignments[s.id]).length;
+                const hasViol = violations.some(v=>v.tableId===t.id);
+                const isExp = expandedTableId===t.id;
+                return (
+                  <div key={t.id} className={`floor-table-item ${isExp?'active':''}`} onClick={()=>setExpandedTableId(isExp?null:t.id)}>
+                    <div className="floor-table-item-head">
+                      <span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span>
+                      <span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span>
                     </div>
-                  );
-                })}
+                    <div className="floor-seat-bar">
+                      {tSeats.map(s=>{ const viol=violationSeatIds.has(s.id); const occ=!!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}
+                    </div>
+                    {isExp && (
+                      <div onClick={e=>e.stopPropagation()}>
+                        <div className="floor-edit-row" style={{marginTop:'0.6rem'}}><label>卓名</label><input type="text" value={t.name} onChange={e=>updateTable(t.id,'name',e.target.value)} style={{flex:1}}/></div>
+                        <div className="floor-edit-row"><label>座席数</label><input type="number" min="1" max="30" value={editingSeatCounts[t.id]??String(t.seatCount)} onFocus={e=>e.target.select()} onChange={e=>setEditingSeatCounts(prev=>({...prev,[t.id]:e.target.value}))} onBlur={()=>commitTableSeatCount(t.id,t.seatCount)} onKeyDown={e=>{ if(e.key==='Enter'){commitTableSeatCount(t.id,t.seatCount);e.target.blur();} }} style={{width:60}}/></div>
+                        <div className="floor-edit-row"><label>形状</label><div style={{display:'flex',gap:'0.4rem',flex:1}}>{[{v:'rect',icon:'⬛',label:'四角'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn btn-sm ${(t.shape||'rect')===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,gap:'0.25rem'}} onClick={()=>updateTable(t.id,'shape',s.v)}>{s.icon} {s.label}</button>))}</div></div>
+                        {hasViol && <div style={{marginTop:'0.5rem',fontSize:'0.73rem',color:'var(--accent)',background:'#fde8e8',borderRadius:5,padding:'0.3rem 0.5rem'}}>{violations.filter(v=>v.tableId===t.id).map((v,i)=><div key={i}>NG: {v.aName} × {v.bName}</div>)}</div>}
+                        <button className="btn btn-outline btn-sm w-full" style={{marginTop:'0.6rem'}} onClick={()=>duplicateTable(t)}>この卓を複製</button>
+                        <button className="btn btn-danger btn-sm w-full" style={{marginTop:'0.4rem'}} onClick={()=>delTable(t.id)}>この卓を削除</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{marginTop:'0.75rem',padding:'0.45rem 0.75rem',background:'var(--paper-dark)',borderRadius:6,fontSize:'0.78rem',color:'var(--ink-light)'}}>
+                卓: {tables.length}　総席: {totalSeats}　割当: {assignedCount}/{totalSeats}
+                {violations.length>0 && <span style={{color:'var(--accent)',marginLeft:'0.5rem'}}>NG違反: {violations.length}件</span>}
               </div>
             </div>
-          </div>
-          <div className={`selection-hint ${selName ? 'has-selection' : ''}`}>
-            {selName ? (
-              <>
-                <b style={{color:'var(--ink)',display:'block',marginBottom:'0.15rem'}}>👆 {selName} を選択中</b>
-                席をクリックして配置 / 別の席と入れ替え
-                <div style={{display:'flex',gap:'0.35rem',marginTop:'0.3rem',flexWrap:'wrap'}}>
-                  <button onClick={clearSelection} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
-                  {lockedAttendees[selected] ? (
-                    <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false});clearSelection();}} style={{background:'#fff',border:'2px solid #1f7a45',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'#1f7a45'}}> 🔓 ロック解除</button>
-                  ) : (
-                    <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true});clearSelection();}} style={{background:'#fff4f4',border:'2px solid var(--accent)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}> 🔒 ロック</button>
-                  )}
+          )}
+
+          {/* ── 席タブ ── */}
+          {sideTab==='seat' && (
+            <>
+              <div className="card">
+                <div className="card-header">
+                  <div className="card-title">未割当 <span className="badge">{unassigned.length}</span></div>
                 </div>
-              </>
-            ) : (
-              <>
-                <b style={{display:'block',marginBottom:'0.2rem'}}>操作方法</b>
-                👆 未割当リストで人を選択<br/>
-                🪑 席をクリックして配置・入れ替え<br/>
-                🏷 フラグボタンで座席表をハイライト<br/>
-                × で個別解除
-              </>
-            )}
-          </div>
+                <div className="assign-sidebar-inner" style={{padding:'0.75rem'}}>
+                  <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="名前で検索…" style={{marginBottom:'0.5rem'}}/>
+                  <div className="filter-row">
+                    <button className={`btn btn-sm ${!filterTag?'btn-primary':'btn-outline'}`} onClick={()=>setFilterTag('')}>すべて</button>
+                    {allTags.map(t=>(
+                      <button key={t}
+                        className={`btn btn-sm ${filterTag===t?'btn-primary':'btn-outline'}`}
+                        onClick={()=>setFilterTag(p=>p===t?'':t)}
+                        style={filterTag===t ? {background:'var(--accent-gold)',borderColor:'var(--accent-gold)',color:'#fff'} : {}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  {filterTag && (
+                    <div style={{margin:'0.4rem 0',padding:'0.3rem 0.6rem',background:'rgba(184,134,11,0.1)',border:'1px solid rgba(184,134,11,0.35)',borderRadius:5,fontSize:'0.72rem',color:'var(--accent-gold)'}}>
+                      ★ 「{filterTag}」をハイライト中 — 金色の席が対象者
+                    </div>
+                  )}
+                  <div className="assign-attendee-list">
+                    {filteredUnassigned.length===0 && <div className="text-sm text-muted" style={{padding:'0.5rem 0'}}>全員割当済</div>}
+                    {filteredUnassigned.map(a=>{
+                      const isHL = filterTag && a.flags.includes(filterTag);
+                      return (
+                        <div key={a.id}
+                          className={`attendee-item ${selected===a.id?'selected':''}`}
+                          onClick={()=>setSelected(s=>s===a.id?null:a.id)}
+                          style={isHL ? {borderColor:'var(--accent-gold)',background:'rgba(184,134,11,0.07)'} : {}}>
+                          {isHL && <span style={{color:'var(--accent-gold)',marginRight:4,fontSize:'0.8rem'}}>★</span>}
+                          <span>{a.name}</span>
+                          {a.flags.length>0 && <div className="item-flags">{a.flags.map(f=><span key={f} className="tag" style={{fontSize:'0.65rem',padding:'0.1rem 0.4rem'}}>{f}</span>)}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className={`selection-hint ${selName ? 'has-selection' : ''}`}>
+                {selName ? (
+                  <>
+                    <b style={{color:'var(--ink)',display:'block',marginBottom:'0.15rem'}}>👆 {selName} を選択中</b>
+                    席をクリックして配置 / 別の席と入れ替え
+                    <div style={{display:'flex',gap:'0.35rem',marginTop:'0.3rem',flexWrap:'wrap'}}>
+                      <button onClick={clearSelection} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>選択解除</button>
+                      {lockedAttendees[selected] ? (
+                        <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:false});clearSelection();}} style={{background:'#fff',border:'2px solid #1f7a45',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'#1f7a45'}}> 🔓 ロック解除</button>
+                      ) : (
+                        <button onClick={()=>{dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:true});clearSelection();}} style={{background:'#fff4f4',border:'2px solid var(--accent)',borderRadius:4,padding:'0.15rem 0.5rem',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:'var(--accent)'}}> 🔒 ロック</button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <b style={{display:'block',marginBottom:'0.2rem'}}>操作方法</b>
+                    👆 未割当リストで人を選択<br/>
+                    🪑 席をクリックして配置・入れ替え<br/>
+                    🏷 フラグボタンで座席表をハイライト<br/>
+                    × で個別解除
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="assign-floor-view assign-floor-canvas"
@@ -2334,6 +2433,16 @@ function AssignPage({ event, dispatch, notify }) {
           </div>
         </div>
       </div>
+
+      {/* 卓追加モーダル（卓タブから呼び出し） */}
+      {showAddTable && (
+        <Modal title="卓を追加" onClose={()=>setShowAddTable(false)}
+          footer={<><button className="btn btn-outline" onClick={()=>setShowAddTable(false)}>キャンセル</button><button className="btn btn-accent" onClick={addTable}>追加</button></>}>
+          <div><label>卓名（省略時: 自動採番）</label><input type="text" value={newTableDraft.name} onChange={e=>setNewTableDraft(f=>({...f,name:e.target.value}))} placeholder={`T${tables.length+1}`} autoFocus/></div>
+          <div><label>座席数</label><input type="number" min="1" max="30" value={newTableSeatInput} onFocus={e=>e.target.select()} onChange={e=>setNewTableSeatInput(e.target.value)} onBlur={()=>{ const n=parseInt(newTableSeatInput,10); if(Number.isFinite(n)) setNewTableSeatInput(String(Math.max(1,Math.min(30,n)))); }}/></div>
+          <div><label>テーブル形状</label><div style={{display:'flex',gap:'0.75rem',marginTop:'0.25rem'}}>{[{v:'rect',icon:'⬛',label:'四角（デフォルト）'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn ${newTableDraft.shape===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,flexDirection:'column',gap:'0.3rem',padding:'0.75rem 0.5rem',fontSize:'0.82rem'}} onClick={()=>setNewTableDraft(f=>({...f,shape:s.v}))}><span style={{fontSize:'1.5rem'}}>{s.icon}</span>{s.label}</button>))}</div></div>
+        </Modal>
+      )}
     </div>
   );
 }
