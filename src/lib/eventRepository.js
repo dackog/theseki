@@ -123,6 +123,39 @@ export async function deleteEvent(id) {
  * @param {string} id  events テーブルの UUID
  * @returns {Promise<{ data: object | null, error: Error | null }>}
  */
+/**
+ * ローカルイベント配列を Supabase に一括 upsert する。
+ * 冪等: 何度呼んでも安全（ON CONFLICT DO UPDATE）。
+ * 未ログイン時は { succeeded:0, failed:0, errors:[] } を返す（throw しない）。
+ *
+ * @param {object[]} events  state.events の配列（sanitizeEvent 済み）
+ * @returns {Promise<{ succeeded: number, failed: number, errors: Array }>}
+ */
+export async function syncLocalEvents(events) {
+  const userId = await _currentUserId();
+  if (!userId) {
+    _log('syncLocalEvents: not authenticated, skipping');
+    return { succeeded: 0, failed: 0, errors: [] };
+  }
+  _log('syncLocalEvents', { count: events.length });
+
+  const results = await Promise.allSettled(
+    events.map(ev => createEvent(ev.name, ev))
+  );
+
+  let succeeded = 0;
+  const errors = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled' && !r.value.error) {
+      succeeded++;
+    } else {
+      errors.push(r.reason ?? r.value?.error ?? new Error('unknown'));
+    }
+  }
+  _log('syncLocalEvents result', { succeeded, failed: results.length - succeeded });
+  return { succeeded, failed: results.length - succeeded, errors };
+}
+
 export async function getEvent(id) {
   _log('getEvent', { id });
   const { data, error } = await supabase

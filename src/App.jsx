@@ -10,6 +10,7 @@ import { reducer, DEFAULT_STATE } from './reducer.js';
 import { loadState, saveState } from './lib/storage.js';
 import { exportEventJSON, parseImportedEvent, buildShareURL, loadSharedEvent } from './lib/share.js';
 import { onAuthChange, getSession, signOut, sendMagicLink } from './lib/auth.js';
+import { syncLocalEvents } from './lib/eventRepository.js';
 import AuthModal from './components/AuthModal.jsx';
 import EventsPage from './components/EventsPage.jsx';
 import LayoutPage from './components/LayoutPage.jsx';
@@ -59,6 +60,8 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authSending, setAuthSending] = useState(false);
   const [authResult, setAuthResult] = useState(null);
+  const [syncStatus, setSyncStatus] = useState('idle'); // 'idle'|'syncing'|'done'|'error'
+  const [syncResult, setSyncResult] = useState(null);   // { succeeded, failed } | null
   useEffect(() => {
     getSession().then(({ session }) => {
       setAuthUser(session?.user ?? null);
@@ -87,6 +90,14 @@ export default function App() {
   async function handleSignOut() {
     await signOut();
     setShowAuthModal(false);
+  }
+
+  async function handleSync() {
+    setSyncStatus('syncing');
+    setSyncResult(null);
+    const result = await syncLocalEvents(state.events);
+    setSyncResult({ succeeded: result.succeeded, failed: result.failed });
+    setSyncStatus(result.failed > 0 && result.succeeded === 0 ? 'error' : 'done');
   }
 
   // 自動保存（デバウンス100ms）＋ステータス表示
@@ -224,6 +235,10 @@ export default function App() {
           onSend={handleSendMagicLink}
           onSignOut={handleSignOut}
           onClose={() => setShowAuthModal(false)}
+          eventCount={state.events.length}
+          syncStatus={syncStatus}
+          syncResult={syncResult}
+          onSync={handleSync}
         />
       )}
     </>

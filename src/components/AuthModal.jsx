@@ -3,7 +3,7 @@
 // ロジックは App.jsx 側に置き、このコンポーネントは表示のみを担う。
 import Modal from './Modal.jsx';
 
-export default function AuthModal({ user, email, setEmail, sending, result, onSend, onSignOut, onClose }) {
+export default function AuthModal({ user, email, setEmail, sending, result, onSend, onSignOut, onClose, eventCount, syncStatus, syncResult, onSync }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (!sending && email.trim()) onSend();
@@ -34,9 +34,49 @@ export default function AuthModal({ user, email, setEmail, sending, result, onSe
       }
     >
       {user ? (
-        <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
-          <span style={{fontSize:'0.8rem',color:'var(--ink-muted,rgba(0,0,0,0.45))'}}>ログイン中</span>
-          <span style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{user.email}</span>
+        <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <span style={{fontSize:'0.8rem',color:'var(--ink-muted,rgba(0,0,0,0.45))'}}>ログイン中</span>
+            <span style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{user.email}</span>
+          </div>
+          {eventCount > 0 && (
+            <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',paddingTop:'0.5rem',borderTop:'1px solid var(--border,#e5e5e5)'}}>
+              <span style={{fontSize:'0.8rem',color:'var(--ink-muted,rgba(0,0,0,0.45))'}}>
+                ローカルイベント: {eventCount} 件
+              </span>
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={onSync}
+                disabled={syncStatus === 'syncing'}
+              >
+                {syncStatus === 'syncing' ? '同期中...' : 'Supabase に同期'}
+              </button>
+              {syncResult && (
+                <div style={{
+                  padding:'0.5rem 0.625rem',
+                  borderRadius:'6px',
+                  fontSize:'0.8rem',
+                  lineHeight:1.5,
+                  background: syncResult.failed === 0
+                    ? 'rgba(76,175,130,0.12)'
+                    : syncResult.succeeded === 0
+                      ? 'rgba(201,53,53,0.1)'
+                      : 'rgba(230,180,0,0.1)',
+                  color: syncResult.failed === 0
+                    ? '#2e7d5e'
+                    : syncResult.succeeded === 0
+                      ? 'var(--danger,#c93535)'
+                      : '#7a5c00',
+                }}>
+                  {syncResult.failed === 0
+                    ? `${syncResult.succeeded} 件を同期しました`
+                    : syncResult.succeeded === 0
+                      ? `同期に失敗しました（${syncResult.failed} 件）。再度お試しください。`
+                      : `${syncResult.succeeded} 件成功、${syncResult.failed} 件失敗`}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
