@@ -9,6 +9,8 @@ import { useState, useEffect, useMemo, useCallback, useReducer, useRef } from 'r
 import { reducer, DEFAULT_STATE } from './reducer.js';
 import { loadState, saveState } from './lib/storage.js';
 import { exportEventJSON, parseImportedEvent, buildShareURL, loadSharedEvent } from './lib/share.js';
+import { onAuthChange, getSession, signOut, sendMagicLink } from './lib/auth.js';
+import AuthModal from './components/AuthModal.jsx';
 import EventsPage from './components/EventsPage.jsx';
 import LayoutPage from './components/LayoutPage.jsx';
 import AttendeesPage from './components/AttendeesPage.jsx';
@@ -49,6 +51,43 @@ export default function App() {
   const [note, notify] = useNotify();
   const [saveStatus, setSaveStatus] = useState('saved');
   const saveTimer = useRef(null);
+
+  // auth 状態（2段構え: 初回 getSession → 以降 onAuthChange で追跡）
+  const [authUser, setAuthUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authSending, setAuthSending] = useState(false);
+  const [authResult, setAuthResult] = useState(null);
+  useEffect(() => {
+    getSession().then(({ session }) => {
+      setAuthUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const unsub = onAuthChange((_event, session) => {
+      setAuthUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  async function handleSendMagicLink() {
+    setAuthSending(true);
+    setAuthResult(null);
+    const { error } = await sendMagicLink(authEmail);
+    setAuthSending(false);
+    if (error) {
+      setAuthResult({ type: 'error', message: error.message });
+    } else {
+      setAuthResult({ type: 'success', message: 'メールを送信しました。リンクをクリックしてログインしてください。' });
+      setAuthEmail('');
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut();
+    setShowAuthModal(false);
+  }
 
   // 自動保存（デバウンス100ms）＋ステータス表示
   useEffect(() => {
@@ -144,6 +183,15 @@ export default function App() {
       <div className={`topbar ${(page==='layout'||page==='assign'||page==='attendees')?'topbar-subpage':''}`}>
         <div className="topbar-logo">The<span>SEKI</span></div>
         <div className="topbar-actions-desktop" style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'0.75rem'}}>
+          {!authLoading && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => { setAuthResult(null); setShowAuthModal(true); }}
+              style={{color:'rgba(255,255,255,0.7)',fontSize:'0.75rem',maxWidth:'140px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+            >
+              {authUser ? authUser.email : 'ログイン'}
+            </button>
+          )}
           <span className="topbar-status" style={{color:statusColor}}>{statusLabel}</span>
           <label className="btn btn-ghost btn-sm" style={{cursor:'pointer',color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>
             📂 復元<input type="file" accept=".json" onChange={handleImportJSON} style={{display:'none'}}/>
@@ -166,6 +214,18 @@ export default function App() {
       )}
 
       {note && <div className={`notification ${note.type}`}>{note.msg}</div>}
+      {showAuthModal && (
+        <AuthModal
+          user={authUser}
+          email={authEmail}
+          setEmail={setAuthEmail}
+          sending={authSending}
+          result={authResult}
+          onSend={handleSendMagicLink}
+          onSignOut={handleSignOut}
+          onClose={() => setShowAuthModal(false)}
+        />
+      )}
     </>
   );
 }
