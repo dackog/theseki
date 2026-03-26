@@ -647,6 +647,14 @@
     }
     .inner-nav-tabs { width: 100%; margin-left: 0 !important; display: flex; gap: 0.4rem; }
     .inner-nav-tabs button { flex: 1; font-size: 0.8rem; padding: 0.5rem 0.5rem; min-height: var(--ctrl-h-mobile); }
+    #assign-header-portal { display: none !important; }
+    /* モバイル専用アクションバー（デスクトップでは非表示） */
+    .assign-mobile-toolbar {
+      display: flex; align-items: center; gap: 0.5rem;
+      flex-wrap: wrap; padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--paper-warm);
+    }
 
     /* ── イベント一覧 ── */
     .events-grid { grid-template-columns: 1fr; gap: 0.875rem; margin-top: 1rem; }
@@ -1067,6 +1075,8 @@
      LayoutPage と同様に flex:1 で全高を使う
   ═══════════════════════════════════════════════════ */
   @media (min-width: 769px) {
+    /* モバイルツールバーはデスクトップで非表示 */
+    .assign-mobile-toolbar { display: none; }
     .assign-page-shell {
       flex: 1;
       min-height: 0;
@@ -1076,11 +1086,6 @@
       padding: 0 !important;
       max-width: 100% !important;
       margin: 0 !important;
-    }
-    .assign-page-shell .page-header {
-      padding: 0.75rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
     }
     .assign-page-shell .violation-banner {
       margin: 0.5rem 1.5rem 0;
@@ -2269,21 +2274,29 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
 
   return (
     <div className="main assign-page-shell">
-      <div className="page-header">
-        <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexWrap:'wrap'}}>
-          <div className="page-title">席割り</div>
-          {[
-            {label:`卓数: ${tables.length}`, c:'#000'},
-            {label:`総席: ${totalSeats}`, c:'#000'},
-            {label:`割当: ${assignedCount}/${totalSeats}`, c:'#4caf82'},
-          ].map((p,i)=>(
-            <span key={i} className="stat-chip" style={{color:p.c}}>{p.label}</span>
-          ))}
-        </div>
-        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
-          <button className="btn btn-outline btn-sm" onClick={randomAssign}>🎲 ランダム配置</button>
-          <button className="btn btn-green btn-sm" onClick={customAssign}>✨ カスタム配置</button>
-          <button className="btn btn-outline btn-sm" onClick={()=>setCustomRuleModalOpen(true)}>⚙️ カスタム設定</button>
+      {/* 統計・アクションボタンを InnerNav の #assign-header-portal に注入 */}
+      {(()=>{ const t=document.getElementById('assign-header-portal'); return t ? ReactDOM.createPortal(
+        <>
+          <span style={{fontSize:'0.72rem',color:'var(--ink-light)',whiteSpace:'nowrap'}}>卓: {tables.length}</span>
+          <span style={{fontSize:'0.72rem',color:'var(--ink-light)',whiteSpace:'nowrap'}}>席: {totalSeats}</span>
+          <span style={{fontSize:'0.72rem',color:'#4caf82',fontWeight:700,whiteSpace:'nowrap'}}>割当: {assignedCount}/{totalSeats}</span>
+          <span style={{color:'var(--border)',padding:'0 2px',flexShrink:0}}>|</span>
+          <button className="btn btn-outline btn-sm" onClick={randomAssign} style={{flexShrink:0,whiteSpace:'nowrap'}}>🎲 ランダム配置</button>
+          <button className="btn btn-green btn-sm" onClick={customAssign} style={{flexShrink:0,whiteSpace:'nowrap'}}>✨ カスタム配置</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setCustomRuleModalOpen(true)} style={{flexShrink:0,whiteSpace:'nowrap'}}>⚙️ カスタム設定</button>
+          <button className="btn btn-danger btn-sm" onClick={clearAll} style={{flexShrink:0,whiteSpace:'nowrap'}}>全解除</button>
+        </>,
+        t
+      ) : null; })()}
+
+      {/* モバイル専用アクションバー（デスクトップでは非表示） */}
+      <div className="assign-mobile-toolbar">
+        <span style={{fontSize:'0.71rem',color:'var(--ink-light)'}}>卓:{tables.length} 席:{totalSeats}</span>
+        <span style={{fontSize:'0.71rem',color:'#4caf82',fontWeight:700}}>割当:{assignedCount}/{totalSeats}</span>
+        <div style={{marginLeft:'auto',display:'flex',gap:'0.35rem',flexWrap:'wrap'}}>
+          <button className="btn btn-outline btn-sm" onClick={randomAssign}>🎲 ランダム</button>
+          <button className="btn btn-green btn-sm" onClick={customAssign}>✨ カスタム</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setCustomRuleModalOpen(true)}>⚙️</button>
           <button className="btn btn-danger btn-sm" onClick={clearAll}>全解除</button>
         </div>
       </div>
@@ -3142,7 +3155,9 @@ function App() {
       <span className="inner-nav-title" style={{fontSize:'0.82rem',fontWeight:600,color:'var(--ink)',fontFamily:"'Noto Serif JP',serif"}}>
         {currentEvent?.name}
       </span>
-      <div className="inner-nav-tabs" style={{marginLeft:'auto',display:'flex',gap:'0.4rem'}}>
+      {/* 席割ページの統計・アクションをここに描画（AssignPage からポータルで注入） */}
+      <span id="assign-header-portal" style={{flex:1,display:'flex',alignItems:'center',gap:'0.4rem',minWidth:0,overflow:'hidden'}}/>
+      <div className="inner-nav-tabs" style={{display:'flex',gap:'0.4rem',flexShrink:0}}>
         {[{id:'assign',label:'席割'},{id:'attendees',label:'参加者'}].map(t=>(
           <button key={t.id}
             className={`btn btn-sm ${subPage===t.id?'btn-primary':'btn-outline'}`}
