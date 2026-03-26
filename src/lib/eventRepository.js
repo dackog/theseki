@@ -78,7 +78,8 @@ export async function createEvent(title, payloadJson) {
       { onConflict: 'owner_user_id,client_id' }
     )
     .select('id, title, client_id, created_at, updated_at')
-    .single();
+    .maybeSingle();
+  if (error) console.error('[eventRepository] createEvent error:', error);
   return { data: data ?? null, error: error ?? null };
 }
 
@@ -155,8 +156,11 @@ export async function syncLocalEvents(events) {
       errors.push(r.reason ?? r.value?.error ?? new Error('unknown'));
     }
   }
-  _log('syncLocalEvents result', { succeeded, failed: results.length - succeeded });
-  return { succeeded, failed: results.length - succeeded, errors };
+  const failed = results.length - succeeded;
+  const firstErrorMessage = errors[0]?.message ?? errors[0]?.toString() ?? null;
+  if (failed > 0) console.error('[eventRepository] syncLocalEvents errors:', errors);
+  _log('syncLocalEvents result', { succeeded, failed });
+  return { succeeded, failed, errors, firstErrorMessage };
 }
 
 export async function getEvent(id) {

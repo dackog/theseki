@@ -96,7 +96,7 @@ export default function App() {
     setSyncStatus('syncing');
     setSyncResult(null);
     const result = await syncLocalEvents(state.events);
-    setSyncResult({ succeeded: result.succeeded, failed: result.failed });
+    setSyncResult({ succeeded: result.succeeded, failed: result.failed, errorMessage: result.firstErrorMessage });
     setSyncStatus(result.failed > 0 && result.succeeded === 0 ? 'error' : 'done');
   }
 

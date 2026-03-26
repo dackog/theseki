@@ -73,6 +73,11 @@ export default function AuthModal({ user, email, setEmail, sending, result, onSe
                     : syncResult.succeeded === 0
                       ? `同期に失敗しました（${syncResult.failed} 件）。再度お試しください。`
                       : `${syncResult.succeeded} 件成功、${syncResult.failed} 件失敗`}
+                  {syncResult.errorMessage && (
+                    <div style={{marginTop:'0.25rem',fontSize:'0.72rem',opacity:0.8,wordBreak:'break-all'}}>
+                      {syncResult.errorMessage}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
