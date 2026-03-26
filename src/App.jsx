@@ -199,6 +199,15 @@ export default function App() {
     <>
       <div className={`topbar ${(page==='layout'||page==='assign'||page==='attendees')?'topbar-subpage':''}`}>
         <div className="topbar-logo">The<span>SEKI</span></div>
+        {!authLoading && (
+          <button
+            className="btn btn-ghost btn-sm topbar-login-mobile"
+            onClick={() => { setAuthResult(null); setShowAuthModal(true); }}
+            style={{marginLeft:'auto',color:'rgba(255,255,255,0.7)',fontSize:'0.8rem',maxWidth:'120px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+          >
+            {authUser ? authUser.email : 'ログイン'}
+          </button>
+        )}
         <div className="topbar-actions-desktop" style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'0.75rem'}}>
           {!authLoading && (
             <button
