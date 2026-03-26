@@ -619,6 +619,9 @@
     flex-shrink: 0;
   }
 
+  /* デスクトップではスマホ専用UIを非表示 */
+  .floor-table-move-btns { display: none; }
+
   /* ═══════════════════════════════════════
      スマホ対応 (max-width: 768px)
   ═══════════════════════════════════════ */
@@ -650,8 +653,8 @@
     #assign-header-portal { display: none !important; }
     /* モバイル専用アクションバー（デスクトップでは非表示） */
     .assign-mobile-toolbar {
-      display: flex; align-items: center; gap: 0.5rem;
-      flex-wrap: wrap; padding: 0.5rem 0.75rem;
+      display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+      padding: 0.5rem 0.75rem;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0; background: var(--paper-warm);
     }
@@ -681,11 +684,34 @@
     .assign-sidebar { position: static; }
     .assign-sidebar-inner { max-height: 220px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     .assign-floor-view {
-      min-height: 480px !important;
+      min-height: 360px !important;
       overflow-x: hidden !important;
       overflow-y: auto !important;
+      padding: 0 !important;
+    }
+    /* スマホ: キャンバスを縦並びフローに切り替え */
+    .assign-floor-canvas-inner {
+      position: static !important;
+      width: auto !important;
+      height: auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 1.25rem !important;
       padding: 1rem !important;
     }
+    .assign-table-drag-wrap {
+      position: static !important;
+      left: auto !important;
+      top: auto !important;
+      cursor: default !important;
+    }
+    /* 全画面ボタン非表示 */
+    .assign-fullscreen-btn { display: none !important; }
+    /* ▲▼ 並び替えボタン表示 */
+    .floor-table-move-btns { display: flex !important; gap: 3px; }
+    /* 未割当リストの最大高さをスマホ向けに縮小 */
+    .assign-attendee-list { max-height: 30vh !important; }
     .assign-status-banner { position: static; }
     .main { padding-bottom: 2rem; }
 
@@ -2291,12 +2317,15 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
 
       {/* モバイル専用アクションバー（デスクトップでは非表示） */}
       <div className="assign-mobile-toolbar">
-        <span style={{fontSize:'0.71rem',color:'var(--ink-light)'}}>卓:{tables.length} 席:{totalSeats}</span>
-        <span style={{fontSize:'0.71rem',color:'#4caf82',fontWeight:700}}>割当:{assignedCount}/{totalSeats}</span>
-        <div style={{marginLeft:'auto',display:'flex',gap:'0.35rem',flexWrap:'wrap'}}>
-          <button className="btn btn-outline btn-sm" onClick={randomAssign}>🎲 ランダム</button>
-          <button className="btn btn-green btn-sm" onClick={customAssign}>✨ カスタム</button>
-          <button className="btn btn-outline btn-sm" onClick={()=>setCustomRuleModalOpen(true)}>⚙️</button>
+        <div style={{display:'flex',justifyContent:'center',gap:'0.5rem',marginBottom:'0.35rem',fontSize:'0.72rem'}}>
+          <span style={{color:'var(--ink-light)'}}>卓: {tables.length}</span>
+          <span style={{color:'var(--ink-light)'}}>席: {totalSeats}</span>
+          <span style={{color:'#4caf82',fontWeight:700}}>割当: {assignedCount}/{totalSeats}</span>
+        </div>
+        <div style={{display:'flex',justifyContent:'center',gap:'0.4rem',flexWrap:'wrap'}}>
+          <button className="btn btn-outline btn-sm" onClick={randomAssign}>🎲 ランダム配置</button>
+          <button className="btn btn-green btn-sm" onClick={customAssign}>✨ カスタム配置</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setCustomRuleModalOpen(true)}>⚙️ カスタム設定</button>
           <button className="btn btn-danger btn-sm" onClick={clearAll}>全解除</button>
         </div>
       </div>
@@ -2416,6 +2445,11 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
                     <div className="floor-table-item-head">
                       <span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span>
                       <span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span>
+                      {/* ▲▼ 並び替えボタン（スマホのみ表示） */}
+                      <div className="floor-table-move-btns">
+                        <button onClick={e=>{e.stopPropagation();dispatch({type:'MOVE_TABLE',eventId:event.id,idx:index,dir:-1});}} disabled={index===0} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,cursor:index===0?'default':'pointer',opacity:index===0?0.3:1,padding:'2px 7px',fontSize:'0.8rem',lineHeight:1,minHeight:32}}>▲</button>
+                        <button onClick={e=>{e.stopPropagation();dispatch({type:'MOVE_TABLE',eventId:event.id,idx:index,dir:+1});}} disabled={index===tables.length-1} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,cursor:index===tables.length-1?'default':'pointer',opacity:index===tables.length-1?0.3:1,padding:'2px 7px',fontSize:'0.8rem',lineHeight:1,minHeight:32}}>▼</button>
+                      </div>
                     </div>
                     <div className="floor-seat-bar">
                       {tSeats.map(s=>{ const viol=violationSeatIds.has(s.id); const occ=!!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}
@@ -2514,8 +2548,8 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
         <div ref={floorViewRef} className="assign-floor-view assign-floor-canvas"
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}
         >
-          {/* 全画面トグルボタン（sticky で常時表示） */}
-          <div style={{position:'sticky',top:'0.5rem',height:0,zIndex:20,display:'flex',justifyContent:'flex-end',paddingRight:'0.75rem',overflow:'visible'}}>
+          {/* 全画面トグルボタン（sticky で常時表示、スマホでは非表示） */}
+          <div className="assign-fullscreen-btn" style={{position:'sticky',top:'0.5rem',height:0,zIndex:20,display:'flex',justifyContent:'flex-end',paddingRight:'0.75rem',overflow:'visible'}}>
             <button onClick={toggleFullscreen} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',borderRadius:6,color:'#fff',padding:'4px 10px',cursor:'pointer',fontSize:'0.75rem',fontWeight:600,backdropFilter:'blur(4px)',whiteSpace:'nowrap'}}>
               {isFullscreen ? '✕ 全画面終了' : '⛶ 全画面'}
             </button>
@@ -2547,6 +2581,7 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
               const tViol  = violations.filter(v=>v.tableId===table.id);
               return (
                 <div key={table.id}
+                  className="assign-table-drag-wrap"
                   style={{position:'absolute', left:posX, top:posY, cursor:'grab', userSelect:'none'}}
                   onMouseDown={e => startTableDrag(e, table.id)}
                 >
