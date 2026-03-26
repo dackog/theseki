@@ -75,6 +75,7 @@ export function reducer(state, action) {
         : Object.fromEntries(Object.entries(e.lockedAttendees||{}).filter(([k])=>k!==action.attendeeId))
     }));
 
+    case 'RESET_STATE': return { ...DEFAULT_STATE };
     default: return state;
   }
 }

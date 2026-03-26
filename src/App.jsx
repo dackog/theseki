@@ -89,6 +89,8 @@ export default function App() {
 
   async function handleSignOut() {
     await signOut();
+    dispatch({ type: 'RESET_STATE' });
+    setPage('events');
     setShowAuthModal(false);
   }
 
