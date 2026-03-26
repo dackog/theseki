@@ -22,10 +22,13 @@ const _log = (...args) => {
   if (import.meta.env.DEV) console.debug('[eventRepository]', ...args);
 };
 
-/** auth.uid() を取得。未ログインは null を返す。 */
+/** auth.uid() を取得。未ログインは null を返す。
+ *  getSession()（ローカル読み取り）を使用。
+ *  getUser()（サーバー検証）は GitHub Pages 等でセッション未検出になるケースがある。
+ */
 async function _currentUserId() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.id ?? null;
 }
 
 /**
