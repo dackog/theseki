@@ -66,21 +66,42 @@ export async function createEvent(title, payloadJson) {
     return { data: null, error: null };
   }
 
-  const { data, error } = await supabase
-    .from('events')
-    .upsert(
-      {
-        owner_user_id: userId,
-        title,
-        payload_json: payloadJson,
-        client_id: payloadJson?.id ?? null,
-      },
-      { onConflict: 'owner_user_id,client_id' }
-    )
-    .select('id, title, client_id, created_at, updated_at')
-    .maybeSingle();
-  if (error) console.error('[eventRepository] createEvent error:', error);
-  return { data: data ?? null, error: error ?? null };
+  const clientId = payloadJson?.id ?? null;
+
+  // client_id が既に DB に存在するか確認（onConflict の代替）
+  let existingId = null;
+  if (clientId) {
+    const { data: existing } = await supabase
+      .from('events')
+      .select('id')
+      .eq('owner_user_id', userId)
+      .eq('client_id', clientId)
+      .maybeSingle();
+    existingId = existing?.id ?? null;
+  }
+
+  if (existingId) {
+    // 既存行を UPDATE
+    _log('createEvent → update', { existingId });
+    const { data, error } = await supabase
+      .from('events')
+      .update({ title, payload_json: payloadJson })
+      .eq('id', existingId)
+      .select('id, title, client_id, updated_at')
+      .maybeSingle();
+    if (error) console.error('[eventRepository] createEvent update error:', error);
+    return { data: data ?? null, error: error ?? null };
+  } else {
+    // 新規 INSERT
+    _log('createEvent → insert', { clientId });
+    const { data, error } = await supabase
+      .from('events')
+      .insert({ owner_user_id: userId, title, payload_json: payloadJson, client_id: clientId })
+      .select('id, title, client_id, created_at, updated_at')
+      .maybeSingle();
+    if (error) console.error('[eventRepository] createEvent insert error:', error);
+    return { data: data ?? null, error: error ?? null };
+  }
 }
 
 /**
