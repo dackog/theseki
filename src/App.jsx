@@ -44,8 +44,7 @@ export default function App() {
     );
   }
 
-  const saved = loadState();
-  const [state, dispatch_] = useReducer(reducer, saved || DEFAULT_STATE);
+  const [state, dispatch_] = useReducer(reducer, DEFAULT_STATE);
   const [page, setPage] = useState('events');
   const [assignInitTab, setAssignInitTab] = useState('seat');
   const [assignKey, setAssignKey] = useState(0);
@@ -66,6 +65,10 @@ export default function App() {
     getSession().then(({ session }) => {
       setAuthUser(session?.user ?? null);
       setAuthLoading(false);
+      if (session) {
+        const saved = loadState();
+        if (saved) dispatch({ type: 'LOAD_STATE', payload: saved });
+      }
     });
     const unsub = onAuthChange((_event, session) => {
       setAuthUser(session?.user ?? null);
@@ -102,15 +105,16 @@ export default function App() {
     setSyncStatus(result.failed > 0 && result.succeeded === 0 ? 'error' : 'done');
   }
 
-  // 自動保存（デバウンス100ms）＋ステータス表示
+  // 自動保存（デバウンス100ms）＋ステータス表示。ログイン中のみ保存（未ログイン時は localStorage を上書きしない）
   useEffect(() => {
+    if (!authUser) return;
     setSaveStatus('saving');
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveState(state);
       setSaveStatus('saved');
     }, 100);
-  }, [state]);
+  }, [state, authUser]);
 
   // localStorage容量超過エラー
   useEffect(() => {

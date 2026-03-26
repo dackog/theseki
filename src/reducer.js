@@ -76,6 +76,10 @@ export function reducer(state, action) {
     }));
 
     case 'RESET_STATE': return { ...DEFAULT_STATE };
+    case 'LOAD_STATE': return {
+      events: action.payload.events ?? [],
+      currentEventId: action.payload.currentEventId ?? null,
+    };
     default: return state;
   }
 }
