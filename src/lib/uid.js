@@ -1,8 +1,9 @@
 // src/lib/uid.js
 // CDN 版からのコピー (docs/index.html 行 1313-1319)
-// uid() は Commit 8 で crypto.randomUUID() へ変更予定
+// ⚠️ 変更点: Math.random().toString(36) → crypto.randomUUID() (hex 8文字)
+// 出力形式変更 (base-36 → hex) だが既存 localStorage データへの影響なし（IDは値として保存）
 
-export function uid() { return Math.random().toString(36).slice(2,10); }
+export function uid() { return crypto.randomUUID().replace(/-/g, '').slice(0, 8); }
 export function now() { return new Date().toISOString(); }
 export function fmtDate(iso) {
   if (!iso) return '';
