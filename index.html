@@ -1809,7 +1809,7 @@ function AssignFloorTable({ table, seats, assignments, attendees, violationSeatI
 // ============================================================
 // AssignPage
 // ============================================================
-function AssignPage({ event, dispatch, notify }) {
+function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
   const tables      = event.tables || [];
   const attendees   = event.attendees || [];
   const ngPairs     = event.ngPairs || [];
@@ -1820,7 +1820,7 @@ function AssignPage({ event, dispatch, notify }) {
   const [filterTag, setFilterTag] = useState('');
   const [search,    setSearch]    = useState('');
   // サイドバータブ（卓管理 / 席割）
-  const [sideTab, setSideTab] = useState('seat'); // 'seat' | 'table'
+  const [sideTab, setSideTab] = useState(initialSideTab); // 'seat' | 'table'
   const [showAddTable, setShowAddTable] = useState(false);
   const [newTableDraft, setNewTableDraft] = useState({ name:'', seatCount:6, shape:'rect' });
   const [newTableSeatInput, setNewTableSeatInput] = useState('6');
@@ -2284,7 +2284,7 @@ function AssignPage({ event, dispatch, notify }) {
             <div>
               <button className="btn btn-accent btn-sm w-full" style={{marginBottom:'0.75rem'}} onClick={()=>setShowAddTable(true)}>＋ 卓を追加</button>
               {tables.length===0 && <div className="text-sm text-muted" style={{textAlign:'center',padding:'1rem 0'}}>卓がありません</div>}
-              {tables.map((t) => {
+              {tables.map((t, index) => {
                 const tSeats = seats.filter(s=>s.tableId===t.id);
                 const occCount = tSeats.filter(s=>assignments[s.id]).length;
                 const hasViol = violations.some(v=>v.tableId===t.id);
@@ -2294,6 +2294,8 @@ function AssignPage({ event, dispatch, notify }) {
                     <div className="floor-table-item-head">
                       <span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span>
                       <span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span>
+                      <button onClick={e=>{e.stopPropagation();dispatch({type:'MOVE_TABLE',eventId:event.id,idx:index,dir:-1});}} disabled={index===0} style={{background:'none',border:'none',cursor:index===0?'default':'pointer',opacity:index===0?0.3:0.7,padding:'0 2px',fontSize:'0.75rem',lineHeight:1,color:'var(--ink-light)'}}>▲</button>
+                      <button onClick={e=>{e.stopPropagation();dispatch({type:'MOVE_TABLE',eventId:event.id,idx:index,dir:+1});}} disabled={index===tables.length-1} style={{background:'none',border:'none',cursor:index===tables.length-1?'default':'pointer',opacity:index===tables.length-1?0.3:0.7,padding:'0 2px',fontSize:'0.75rem',lineHeight:1,color:'var(--ink-light)'}}>▼</button>
                     </div>
                     <div className="floor-seat-bar">
                       {tSeats.map(s=>{ const viol=violationSeatIds.has(s.id); const occ=!!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}
@@ -2939,6 +2941,8 @@ function App() {
   const saved = loadState();
   const [state, dispatch_] = React.useReducer(reducer, saved || DEFAULT_STATE);
   const [page, setPage] = useState('events');
+  const [assignInitTab, setAssignInitTab] = useState('seat');
+  const [assignKey, setAssignKey] = useState(0);
   const [note, notify] = useNotify();
   const [saveStatus, setSaveStatus] = useState('saved');
   const saveTimer = useRef(null);
@@ -2981,7 +2985,7 @@ function App() {
       try {
         const imported = parseImportedEvent(ev.target.result);
         dispatch({type:'IMPORT_EVENT', payload:imported});
-        setPage('layout');
+        setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');
         notify(`「${imported.name}」をインポートしました`, 'success');
       } catch(err) {
         notify(`インポート失敗: ${err.message}`, 'error');
@@ -3008,7 +3012,7 @@ function App() {
 
   // イベント内サブページ用のブレッドクラム＋タブバー
   const InnerNav = ({ subPage, setSubPage }) => (
-    <div className={`inner-nav-wrap ${(subPage==='layout'||subPage==='assign'||subPage==='attendees')?'subpage-fixed':''}`}>
+    <div className={`inner-nav-wrap ${(subPage==='assign'||subPage==='attendees')?'subpage-fixed':''}`}>
       <button className="btn btn-ghost btn-sm inner-nav-back" onClick={()=>setPage('events')}
         style={{color:'var(--ink-light)',padding:'0.3rem 0.5rem',whiteSpace:'nowrap'}}>
         ← 一覧
@@ -3018,7 +3022,7 @@ function App() {
         {currentEvent?.name}
       </span>
       <div className="inner-nav-tabs" style={{marginLeft:'auto',display:'flex',gap:'0.4rem'}}>
-        {[{id:'layout',label:'卓一覧'},{id:'assign',label:'席割'},{id:'attendees',label:'参加者'}].map(t=>(
+        {[{id:'assign',label:'席割'},{id:'attendees',label:'参加者'}].map(t=>(
           <button key={t.id}
             className={`btn btn-sm ${subPage===t.id?'btn-primary':'btn-outline'}`}
             onClick={()=>setSubPage(t.id)}>
@@ -3043,13 +3047,13 @@ function App() {
         </div>
       </div>
 
-      {page==='events' && <EventsPage state={state} dispatch={dispatch} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('layout');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>}
+      {page==='events' && <EventsPage state={state} dispatch={dispatch} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>}
       {(page==='layout'||page==='assign'||page==='attendees') && currentEvent && (
         <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column',height:'calc(100dvh - 52px)'}}>
-          <InnerNav subPage={page} setSubPage={setPage}/>
+          <InnerNav subPage={page} setSubPage={(p)=>{if(p==='assign'){setAssignInitTab('seat');setAssignKey(k=>k+1);}setPage(p);}}/>
           <div className="event-subpage-content" style={{minHeight:0, WebkitOverflowScrolling:'touch'}}>
             {page==='layout' && <LayoutPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
-            {page==='assign' && <AssignPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
+            {page==='assign' && <AssignPage key={assignKey} event={currentEvent} dispatch={dispatch} notify={notify} initialSideTab={assignInitTab}/>}
             {page==='attendees' && <AttendeesPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
           </div>
         </div>
