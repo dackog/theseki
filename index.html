@@ -564,16 +564,17 @@
       linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
     background-size: 40px 40px;
-    border-radius: var(--radius-md); overflow: auto; min-height: 420px;
-    padding: 1.5rem; position: relative;
+    border-radius: var(--radius-md); overflow: auto; min-height: 0;
+    padding: 0; position: relative;
   }
   .assign-floor-canvas::-webkit-scrollbar { width: 6px; height: 6px; }
   .assign-floor-canvas::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
   .assign-floor-canvas::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
   .assign-floor-canvas::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
   .assign-floor-canvas-inner {
-    display: flex; flex-wrap: wrap;
-    gap: 2.5rem; align-items: flex-start; justify-content: center;
+    position: relative;
+    width: 1200px;
+    height: 800px;
   }
 
   /* AssignPage — unassigned attendee scroll list */
@@ -1059,6 +1060,61 @@
     opacity: 0.38;
     cursor: not-allowed;
     filter: grayscale(0.3);
+  }
+
+  /* ═══════════════════════════════════════════════════
+     AssignPage: 画面全高対応 + 全画面モード
+     LayoutPage と同様に flex:1 で全高を使う
+  ═══════════════════════════════════════════════════ */
+  @media (min-width: 769px) {
+    .assign-page-shell {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 0 !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+    }
+    .assign-page-shell .page-header {
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .assign-page-shell .violation-banner {
+      margin: 0.5rem 1.5rem 0;
+      flex-shrink: 0;
+    }
+    .assign-page-shell .assign-layout {
+      flex: 1;
+      min-height: 0;
+      align-items: stretch;
+      overflow: hidden;
+      gap: 0;
+      grid-template-columns: 240px 1fr;
+    }
+    .assign-page-shell .assign-sidebar {
+      position: static;
+      overflow-y: auto;
+      padding: 0.75rem;
+      border-right: 1px solid var(--border);
+    }
+    .assign-page-shell .assign-floor-view {
+      overflow: auto;
+    }
+    .assign-floor-view:fullscreen {
+      width: 100vw !important;
+      height: 100vh !important;
+      border-radius: 0 !important;
+      overflow: auto !important;
+    }
+    .assign-floor-view:-webkit-full-screen {
+      width: 100vw !important;
+      height: 100vh !important;
+      border-radius: 0 !important;
+      overflow: auto !important;
+    }
   }
 </style>
 </head>
@@ -1878,6 +1934,59 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
   // 選択解除 — single source of truth
   const clearSelection = () => setSelected(null);
 
+  // 卓ドラッグ配置 + 全画面 共用 ref
+  const floorViewRef = useRef(null);
+
+  // 卓ドラッグ配置（mousemove/mouseup on window）
+  const startTableDrag = useCallback((e, tableId) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('[draggable="true"]')) return; // 席クリック時は卓ドラッグしない
+    e.preventDefault();
+    const wrapperRect = e.currentTarget.getBoundingClientRect();
+    const startOffsetX = e.clientX - wrapperRect.left;
+    const startOffsetY = e.clientY - wrapperRect.top;
+    const move = (me) => {
+      const canvas = floorViewRef.current;
+      if (!canvas) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      const newX = me.clientX - canvasRect.left - startOffsetX + canvas.scrollLeft;
+      const newY = me.clientY - canvasRect.top  - startOffsetY + canvas.scrollTop;
+      dispatch({ type:'MOVE_TABLE_POS', eventId:event.id, tableId,
+        posX: Math.max(0, newX), posY: Math.max(0, newY) });
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      document.body.style.cursor = '';
+    };
+    document.body.style.cursor = 'grabbing';
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  }, [event.id, dispatch]);
+
+  // 全画面モード
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    document.addEventListener('webkitfullscreenchange', handler);
+    return () => {
+      document.removeEventListener('fullscreenchange', handler);
+      document.removeEventListener('webkitfullscreenchange', handler);
+    };
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    const el = floorViewRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      const req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req) req.call(el);
+    } else {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+  }, []);
+
   // Outside-click clears selection
   const assignLayoutRef = React.useRef(null);
   useEffect(() => {
@@ -2159,7 +2268,7 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
   const selName = selected ? attendees.find(a=>a.id===selected)?.name : null;
 
   return (
-    <div className="main">
+    <div className="main assign-page-shell">
       <div className="page-header">
         <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexWrap:'wrap'}}>
           <div className="page-title">席割り</div>
@@ -2269,13 +2378,13 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
 
       <div className="assign-layout" ref={assignLayoutRef}>
         <div className="assign-sidebar">
-          {/* ── サイドバータブ ── */}
-          <div style={{display:'flex',borderBottom:'2px solid var(--border)',marginBottom:'0.75rem',flexShrink:0}}>
-            <button onClick={()=>setSideTab('table')} style={{flex:1,padding:'0.45rem 0.25rem',background:'none',border:'none',borderBottom:sideTab==='table'?'2px solid var(--accent)':'2px solid transparent',marginBottom:'-2px',cursor:'pointer',fontWeight:700,fontSize:'0.82rem',color:sideTab==='table'?'var(--accent)':'var(--ink-light)',transition:'color 0.15s'}}>
-              🪑 卓
+          {/* ── サイドバータブ（セグメントコントロール） ── */}
+          <div style={{display:'flex',background:'var(--paper-dark)',borderRadius:8,padding:3,marginBottom:'0.75rem',gap:2,flexShrink:0}}>
+            <button onClick={()=>setSideTab('table')} style={{flex:1,padding:'0.5rem 0.25rem',borderRadius:6,border:'none',cursor:'pointer',fontWeight:700,fontSize:'0.8rem',background:sideTab==='table'?'var(--accent)':'transparent',color:sideTab==='table'?'#fff':'var(--ink-light)',transition:'all 0.15s',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.3rem'}}>
+              🪑 卓管理
             </button>
-            <button onClick={()=>setSideTab('seat')} style={{flex:1,padding:'0.45rem 0.25rem',background:'none',border:'none',borderBottom:sideTab==='seat'?'2px solid var(--accent)':'2px solid transparent',marginBottom:'-2px',cursor:'pointer',fontWeight:700,fontSize:'0.82rem',color:sideTab==='seat'?'var(--accent)':'var(--ink-light)',transition:'color 0.15s',position:'relative'}}>
-              👥 席{selected && sideTab!=='seat' && <span style={{position:'absolute',top:6,right:10,width:7,height:7,borderRadius:'50%',background:'var(--accent)',display:'block'}}/>}
+            <button onClick={()=>setSideTab('seat')} style={{flex:1,padding:'0.5rem 0.25rem',borderRadius:6,border:'none',cursor:'pointer',fontWeight:700,fontSize:'0.8rem',background:sideTab==='seat'?'var(--accent)':'transparent',color:sideTab==='seat'?'#fff':'var(--ink-light)',transition:'all 0.15s',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.3rem',position:'relative'}}>
+              👥 席割{selected && sideTab!=='seat' && <span style={{position:'absolute',top:4,right:6,width:7,height:7,borderRadius:'50%',background:'#fff',display:'block'}}/>}
             </button>
           </div>
 
@@ -2294,8 +2403,6 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
                     <div className="floor-table-item-head">
                       <span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span>
                       <span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span>
-                      <button onClick={e=>{e.stopPropagation();dispatch({type:'MOVE_TABLE',eventId:event.id,idx:index,dir:-1});}} disabled={index===0} style={{background:'none',border:'none',cursor:index===0?'default':'pointer',opacity:index===0?0.3:0.7,padding:'0 2px',fontSize:'0.75rem',lineHeight:1,color:'var(--ink-light)'}}>▲</button>
-                      <button onClick={e=>{e.stopPropagation();dispatch({type:'MOVE_TABLE',eventId:event.id,idx:index,dir:+1});}} disabled={index===tables.length-1} style={{background:'none',border:'none',cursor:index===tables.length-1?'default':'pointer',opacity:index===tables.length-1?0.3:0.7,padding:'0 2px',fontSize:'0.75rem',lineHeight:1,color:'var(--ink-light)'}}>▼</button>
                     </div>
                     <div className="floor-seat-bar">
                       {tSeats.map(s=>{ const viol=violationSeatIds.has(s.id); const occ=!!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}
@@ -2391,9 +2498,15 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
           )}
         </div>
 
-        <div className="assign-floor-view assign-floor-canvas"
+        <div ref={floorViewRef} className="assign-floor-view assign-floor-canvas"
           onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}
         >
+          {/* 全画面トグルボタン（sticky で常時表示） */}
+          <div style={{position:'sticky',top:'0.5rem',height:0,zIndex:20,display:'flex',justifyContent:'flex-end',paddingRight:'0.75rem',overflow:'visible'}}>
+            <button onClick={toggleFullscreen} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',borderRadius:6,color:'#fff',padding:'4px 10px',cursor:'pointer',fontSize:'0.75rem',fontWeight:600,backdropFilter:'blur(4px)',whiteSpace:'nowrap'}}>
+              {isFullscreen ? '✕ 全画面終了' : '⛶ 全画面'}
+            </button>
+          </div>
           {tables.length===0 && (
             <div style={{textAlign:'center',padding:'3rem',color:'rgba(255,255,255,0.2)'}}>
               <div style={{fontSize:'3rem',marginBottom:'1rem'}}>🪑</div>
@@ -2412,24 +2525,32 @@ function AssignPage({ event, dispatch, notify, initialSideTab='seat' }) {
             </div>
           )}
           <div className="assign-floor-canvas-inner">
-            {tables.map(table => {
+            {tables.map((table, index) => {
+              const cols = 5;
+              const posX = table.posX ?? (40 + (index % cols) * 200);
+              const posY = table.posY ?? (40 + Math.floor(index / cols) * 220);
               const tSeats = seats.filter(s=>s.tableId===table.id);
               const hasV   = violationTableIds.has(table.id);
               const tViol  = violations.filter(v=>v.tableId===table.id);
               return (
-                <AssignFloorTable key={table.id}
-                  table={table} seats={tSeats}
-                  assignments={assignments} attendees={attendees}
-                  violationSeatIds={new Set([...violationSeatIds].filter(id=>tSeats.some(s=>s.id===id)))}
-                  selectedId={selected}
-                  lockedAttendees={lockedAttendees}
-                  hasViolation={hasV} tableViolations={tViol}
-                  flagHighlightIds={flagHighlightIds}
-                  onSeatClick={handleSeatClick}
-                  onUnassign={unassignSeat}
-                  onDragDrop={handleDragDrop}
-                  onDragCancel={clearSelection}
-                />
+                <div key={table.id}
+                  style={{position:'absolute', left:posX, top:posY, cursor:'grab', userSelect:'none'}}
+                  onMouseDown={e => startTableDrag(e, table.id)}
+                >
+                  <AssignFloorTable
+                    table={table} seats={tSeats}
+                    assignments={assignments} attendees={attendees}
+                    violationSeatIds={new Set([...violationSeatIds].filter(id=>tSeats.some(s=>s.id===id)))}
+                    selectedId={selected}
+                    lockedAttendees={lockedAttendees}
+                    hasViolation={hasV} tableViolations={tViol}
+                    flagHighlightIds={flagHighlightIds}
+                    onSeatClick={handleSeatClick}
+                    onUnassign={unassignSeat}
+                    onDragDrop={handleDragDrop}
+                    onDragCancel={clearSelection}
+                  />
+                </div>
               );
             })}
           </div>
