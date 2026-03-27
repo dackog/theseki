@@ -58,9 +58,9 @@ export default function AuthModal({
     if (isPasswordRecovery) setView('update_password');
   }, [isPasswordRecovery]);
 
-  // ログイン後に user が変化したらアカウントビューへ
+  // ログイン後に user が変化したらアカウントビューへ（パスワードリセット中は除く）
   useEffect(() => {
-    if (user) setView('account');
+    if (user && !isPasswordRecovery) setView('account');
   }, [user]);
 
   function changeView(v) {

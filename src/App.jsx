@@ -130,6 +130,7 @@ export default function App() {
     await signOut();
     clearState();                      // localStorage 削除（次回起動時に空スタート）
     dispatch({ type: 'RESET_STATE' }); // 画面クリア
+    setIsPasswordRecovery(false);      // リセットフロー中でもログアウトしたら解除
     setPage('events');
     setShowAuthModal(false);
   }
