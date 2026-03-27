@@ -7,10 +7,10 @@
 
 import { useState, useEffect, useMemo, useCallback, useReducer, useRef } from 'react';
 import { reducer, DEFAULT_STATE } from './reducer.js';
-import { loadState, saveState } from './lib/storage.js';
+import { loadState, saveState, clearState, sanitizeEvent } from './lib/storage.js';
 import { exportEventJSON, parseImportedEvent, buildShareURL, loadSharedEvent } from './lib/share.js';
-import { onAuthChange, getSession, signOut, sendMagicLink } from './lib/auth.js';
-import { syncLocalEvents } from './lib/eventRepository.js';
+import { onAuthChange, getSession, signOut, signIn, signUp, resetPasswordForEmail, updatePassword } from './lib/auth.js';
+import { syncLocalEvents, listEvents } from './lib/eventRepository.js';
 import AuthModal from './components/AuthModal.jsx';
 import EventsPage from './components/EventsPage.jsx';
 import LayoutPage from './components/LayoutPage.jsx';
@@ -56,47 +56,85 @@ export default function App() {
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authEmail, setAuthEmail] = useState('');
-  const [authSending, setAuthSending] = useState(false);
-  const [authResult, setAuthResult] = useState(null);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [syncStatus, setSyncStatus] = useState('idle'); // 'idle'|'syncing'|'done'|'error'
   const [syncResult, setSyncResult] = useState(null);   // { succeeded, failed } | null
+
+  const dispatch = useCallback((action) => dispatch_(action), []);
+
   useEffect(() => {
+    // 起動時は常に localStorage から復元（ログイン不問）
+    // キャッシュが残っていれば未ログインでも作業継続できる
+    const saved = loadState();
+    if (saved) dispatch({ type: 'LOAD_STATE', payload: saved });
+
     getSession().then(({ session }) => {
       setAuthUser(session?.user ?? null);
       setAuthLoading(false);
-      if (session) {
-        const saved = loadState();
-        if (saved) dispatch({ type: 'LOAD_STATE', payload: saved });
-      }
     });
-    const unsub = onAuthChange((_event, session) => {
+
+    const unsub = onAuthChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // パスワードリセットリンクからの戻り → パスワード更新UIを表示
+        setIsPasswordRecovery(true);
+        setShowAuthModal(true);
+        return;
+      }
       setAuthUser(session?.user ?? null);
       setAuthLoading(false);
     });
     return unsub;
   }, []);
 
-  async function handleSendMagicLink() {
-    setAuthSending(true);
-    setAuthResult(null);
-    const { error } = await sendMagicLink(authEmail);
-    setAuthSending(false);
-    if (error) {
-      setAuthResult({ type: 'error', message: error.message });
-    } else {
-      setAuthResult({ type: 'success', message: 'メールを送信しました。リンクをクリックしてログインしてください。' });
-      setAuthEmail('');
+  // ---- auth ハンドラ ----
+
+  async function handleLogin(email, password) {
+    const { error } = await signIn(email, password);
+    if (!error) {
+      setShowAuthModal(false);
+      // state は起動時に localStorage から復元済みなので、ここで events が揃っている
+      if (state.events.length > 0) {
+        handleAutoSync();
+      }
     }
+    return { error };
+  }
+
+  async function handleSignUp(email, password) {
+    const { session, error } = await signUp(email, password);
+    if (!error && session) {
+      // Email Confirmation OFF: 即ログイン
+      setShowAuthModal(false);
+      if (state.events.length > 0) {
+        handleAutoSync();
+      }
+    }
+    return { session, error };
+  }
+
+  async function handleResetPassword(email) {
+    const { error } = await resetPasswordForEmail(email);
+    return { error };
+  }
+
+  async function handleUpdatePassword(newPassword) {
+    const { error } = await updatePassword(newPassword);
+    if (!error) {
+      setIsPasswordRecovery(false);
+      // onAuthStateChange が USER_UPDATED / SIGNED_IN で authUser を更新する
+    }
+    return { error };
   }
 
   async function handleSignOut() {
     await signOut();
-    dispatch({ type: 'RESET_STATE' });
+    clearState();                      // localStorage 削除（次回起動時に空スタート）
+    dispatch({ type: 'RESET_STATE' }); // 画面クリア
     setPage('events');
     setShowAuthModal(false);
   }
 
+  // ローカルイベントを DB に一括同期（ログイン時の自動同期 + 手動同期ボタン）
   async function handleSync() {
     setSyncStatus('syncing');
     setSyncResult(null);
@@ -105,16 +143,51 @@ export default function App() {
     setSyncStatus(result.failed > 0 && result.succeeded === 0 ? 'error' : 'done');
   }
 
-  // 自動保存（デバウンス100ms）＋ステータス表示。ログイン中のみ保存（未ログイン時は localStorage を上書きしない）
+  // ログイン時の自動同期（通知バナーで結果表示）
+  async function handleAutoSync() {
+    const result = await syncLocalEvents(state.events);
+    if (result.failed === 0 && result.succeeded > 0) {
+      notify(`${result.succeeded} 件をDBに同期しました`);
+    } else if (result.failed > 0) {
+      notify(`同期: ${result.succeeded} 件成功 / ${result.failed} 件失敗`, 'error');
+    }
+  }
+
+  // DB からイベントを復元（再ログイン後などに使用）
+  async function handleRestoreFromDB() {
+    const { data, error } = await listEvents();
+    if (error) {
+      notify('DBからの復元に失敗しました', 'error');
+      return;
+    }
+    if (!data.length) {
+      notify('復元できるイベントがDBに見つかりませんでした', 'error');
+      return;
+    }
+    const events = data
+      .map(row => {
+        if (!row.payload_json) return null;
+        return sanitizeEvent({
+          tables: [], attendees: [], ngPairs: [], assignments: {},
+          ...row.payload_json,
+        });
+      })
+      .filter(Boolean);
+    const restored = { events, currentEventId: null };
+    dispatch({ type: 'LOAD_STATE', payload: restored });
+    saveState(restored);
+    notify(`${events.length} 件のイベントをDBから復元しました`);
+  }
+
+  // 自動保存（デバウンス100ms）— ログイン不問で保存（未ログイン時のイベントも保持）
   useEffect(() => {
-    if (!authUser) return;
     setSaveStatus('saving');
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveState(state);
       setSaveStatus('saved');
     }, 100);
-  }, [state, authUser]);
+  }, [state]);
 
   // localStorage容量超過エラー
   useEffect(() => {
@@ -126,7 +199,6 @@ export default function App() {
     return () => window.removeEventListener('theseki:saveerror', handler);
   }, [notify]);
 
-  const dispatch = useCallback((action) => dispatch_(action), []);
   const currentEvent = state.events.find(e=>e.id===state.currentEventId);
 
   // JSONバックアップ
@@ -202,7 +274,7 @@ export default function App() {
         {!authLoading && (
           <button
             className="btn btn-ghost btn-sm topbar-login-mobile"
-            onClick={() => { setAuthResult(null); setShowAuthModal(true); }}
+            onClick={() => setShowAuthModal(true)}
             style={{marginLeft:'auto',color:'rgba(255,255,255,0.7)',fontSize:'0.8rem',maxWidth:'120px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
           >
             {authUser ? authUser.email : 'ログイン'}
@@ -212,7 +284,7 @@ export default function App() {
           {!authLoading && (
             <button
               className="btn btn-ghost btn-sm"
-              onClick={() => { setAuthResult(null); setShowAuthModal(true); }}
+              onClick={() => setShowAuthModal(true)}
               style={{color:'rgba(255,255,255,0.7)',fontSize:'0.75rem',maxWidth:'140px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
             >
               {authUser ? authUser.email : 'ログイン'}
@@ -243,17 +315,18 @@ export default function App() {
       {showAuthModal && (
         <AuthModal
           user={authUser}
-          email={authEmail}
-          setEmail={setAuthEmail}
-          sending={authSending}
-          result={authResult}
-          onSend={handleSendMagicLink}
           onSignOut={handleSignOut}
           onClose={() => setShowAuthModal(false)}
           eventCount={state.events.length}
           syncStatus={syncStatus}
           syncResult={syncResult}
           onSync={handleSync}
+          isPasswordRecovery={isPasswordRecovery}
+          onLogin={handleLogin}
+          onSignUp={handleSignUp}
+          onResetPassword={handleResetPassword}
+          onUpdatePassword={handleUpdatePassword}
+          onRestoreFromDB={handleRestoreFromDB}
         />
       )}
     </>

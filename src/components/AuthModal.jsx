@@ -1,119 +1,322 @@
 // src/components/AuthModal.jsx
-// Magic Link ログイン UI — 第3段階
-// ロジックは App.jsx 側に置き、このコンポーネントは表示のみを担う。
+// email/password 認証 UI（ログイン / 新規登録 / パスワードリセット / パスワード更新 / アカウント）
+import { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
 
-export default function AuthModal({ user, email, setEmail, sending, result, onSend, onSignOut, onClose, eventCount, syncStatus, syncResult, onSync }) {
-  function handleSubmit(e) {
-    e.preventDefault();
-    if (!sending && email.trim()) onSend();
+const inkMuted = 'var(--ink-muted,rgba(0,0,0,0.5))';
+
+function ResultMsg({ result }) {
+  if (!result) return null;
+  return (
+    <div style={{
+      padding:'0.625rem 0.75rem', borderRadius:'6px', fontSize:'0.8rem', lineHeight:1.5,
+      background: result.type === 'success' ? 'rgba(76,175,130,0.12)' : 'rgba(201,53,53,0.1)',
+      color: result.type === 'success' ? '#2e7d5e' : 'var(--danger,#c93535)',
+    }}>
+      {result.message}
+    </div>
+  );
+}
+
+export default function AuthModal({
+  user,
+  onSignOut,
+  onClose,
+  eventCount,
+  syncStatus,
+  syncResult,
+  onSync,
+  isPasswordRecovery,
+  onLogin,
+  onSignUp,
+  onResetPassword,
+  onUpdatePassword,
+  onRestoreFromDB,
+}) {
+  const initialView = isPasswordRecovery ? 'update_password'
+    : user ? 'account'
+    : 'login';
+
+  const [view, setView] = useState(initialView);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    if (isPasswordRecovery) setView('update_password');
+  }, [isPasswordRecovery]);
+
+  // ログイン後に user が変化したらアカウントビューへ
+  useEffect(() => {
+    if (user) setView('account');
+  }, [user]);
+
+  function changeView(v) {
+    setView(v);
+    setResult(null);
+    setEmail('');
+    setPassword('');
+    setNewPassword('');
   }
 
-  return (
-    <Modal
-      title={user ? 'アカウント' : 'ログイン'}
-      onClose={onClose}
-      footer={
-        user ? (
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={onSignOut}
-            style={{color:'var(--danger,#c93535)'}}
-          >
-            ログアウト
-          </button>
-        ) : (
+  async function doLogin() {
+    if (!email.trim() || !password || loading) return;
+    setLoading(true);
+    setResult(null);
+    const { error } = await onLogin(email, password);
+    setLoading(false);
+    if (error) setResult({ type: 'error', message: error.message });
+  }
+
+  async function doSignUp() {
+    if (!email.trim() || !password || loading) return;
+    if (password.length < 8) {
+      setResult({ type: 'error', message: 'パスワードは8文字以上で入力してください' });
+      return;
+    }
+    setLoading(true);
+    setResult(null);
+    const { session, error } = await onSignUp(email, password);
+    setLoading(false);
+    if (error) {
+      setResult({ type: 'error', message: error.message });
+    } else if (!session) {
+      // Email Confirmation ON: 確認メール送信済み
+      setResult({ type: 'success', message: '確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。' });
+    }
+    // session あり（即ログイン）の場合は App.jsx がモーダルを閉じる
+  }
+
+  async function doResetPassword() {
+    if (!email.trim() || loading) return;
+    setLoading(true);
+    setResult(null);
+    const { error } = await onResetPassword(email);
+    setLoading(false);
+    if (error) {
+      setResult({ type: 'error', message: error.message });
+    } else {
+      setResult({ type: 'success', message: 'パスワードリセットメールを送信しました。メール内のリンクをクリックしてください。' });
+    }
+  }
+
+  async function doUpdatePassword() {
+    if (!newPassword || loading) return;
+    if (newPassword.length < 8) {
+      setResult({ type: 'error', message: 'パスワードは8文字以上で入力してください' });
+      return;
+    }
+    setLoading(true);
+    setResult(null);
+    const { error } = await onUpdatePassword(newPassword);
+    setLoading(false);
+    if (error) {
+      setResult({ type: 'error', message: error.message });
+    } else {
+      setResult({ type: 'success', message: 'パスワードを更新しました。' });
+    }
+  }
+
+  // ---- login ----
+  if (view === 'login') {
+    return (
+      <Modal
+        title="ログイン"
+        onClose={onClose}
+        footer={
           <button
             className="btn btn-primary btn-sm"
-            onClick={onSend}
-            disabled={sending || !email.trim()}
+            onClick={doLogin}
+            disabled={loading || !email.trim() || !password}
           >
-            {sending ? '送信中...' : 'Magic Link を送信'}
+            {loading ? 'ログイン中...' : 'ログイン'}
           </button>
-        )
-      }
-    >
-      {user ? (
-        <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
-          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
-            <span style={{fontSize:'0.8rem',color:'var(--ink-muted,rgba(0,0,0,0.45))'}}>ログイン中</span>
-            <span style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{user.email}</span>
-          </div>
-          {eventCount > 0 && (
-            <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',paddingTop:'0.5rem',borderTop:'1px solid var(--border,#e5e5e5)'}}>
-              <span style={{fontSize:'0.8rem',color:'var(--ink-muted,rgba(0,0,0,0.45))'}}>
-                ローカルイベント: {eventCount} 件
-              </span>
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={onSync}
-                disabled={syncStatus === 'syncing'}
-              >
-                {syncStatus === 'syncing' ? '同期中...' : 'Supabase に同期'}
-              </button>
-              {syncResult && (
-                <div style={{
-                  padding:'0.5rem 0.625rem',
-                  borderRadius:'6px',
-                  fontSize:'0.8rem',
-                  lineHeight:1.5,
-                  background: syncResult.failed === 0
-                    ? 'rgba(76,175,130,0.12)'
-                    : syncResult.succeeded === 0
-                      ? 'rgba(201,53,53,0.1)'
-                      : 'rgba(230,180,0,0.1)',
-                  color: syncResult.failed === 0
-                    ? '#2e7d5e'
-                    : syncResult.succeeded === 0
-                      ? 'var(--danger,#c93535)'
-                      : '#7a5c00',
-                }}>
-                  {syncResult.failed === 0
-                    ? `${syncResult.succeeded} 件を同期しました`
-                    : syncResult.succeeded === 0
-                      ? `同期に失敗しました（${syncResult.failed} 件）。再度お試しください。`
-                      : `${syncResult.succeeded} 件成功、${syncResult.failed} 件失敗`}
-                  {syncResult.errorMessage && (
-                    <div style={{marginTop:'0.25rem',fontSize:'0.72rem',opacity:0.8,wordBreak:'break-all'}}>
-                      {syncResult.errorMessage}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+        }
+      >
+        <form onSubmit={e => { e.preventDefault(); doLogin(); }} style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
           <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
             <label style={{fontSize:'0.8rem',fontWeight:600}}>メールアドレス</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="user@example.com"
-              autoFocus
-              disabled={sending}
-            />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" autoFocus disabled={loading} />
           </div>
-          {result && (
-            <div style={{
-              padding:'0.625rem 0.75rem',
-              borderRadius:'6px',
-              fontSize:'0.8rem',
-              lineHeight:1.5,
-              background: result.type === 'success'
-                ? 'rgba(76,175,130,0.12)'
-                : 'rgba(201,53,53,0.1)',
-              color: result.type === 'success'
-                ? '#2e7d5e'
-                : 'var(--danger,#c93535)',
-            }}>
-              {result.message}
-            </div>
-          )}
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>パスワード</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="パスワード" disabled={loading} />
+          </div>
+          <ResultMsg result={result} />
+          <div style={{display:'flex',justifyContent:'space-between',gap:'0.5rem',paddingTop:'0.25rem'}}>
+            <button type="button" className="btn btn-ghost btn-sm" style={{fontSize:'0.75rem',color:inkMuted,padding:'0.2rem 0'}} onClick={() => changeView('signup')}>
+              新規登録はこちら
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" style={{fontSize:'0.75rem',color:inkMuted,padding:'0.2rem 0'}} onClick={() => changeView('reset')}>
+              パスワードを忘れた方はこちら
+            </button>
+          </div>
         </form>
-      )}
+      </Modal>
+    );
+  }
+
+  // ---- signup ----
+  if (view === 'signup') {
+    return (
+      <Modal
+        title="新規登録"
+        onClose={onClose}
+        footer={
+          <div style={{display:'flex',gap:'0.5rem',width:'100%'}}>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => changeView('login')} disabled={loading}>
+              ログインに戻る
+            </button>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{flex:1}}
+              onClick={doSignUp}
+              disabled={loading || !email.trim() || !password}
+            >
+              {loading ? '登録中...' : '登録する'}
+            </button>
+          </div>
+        }
+      >
+        <form onSubmit={e => { e.preventDefault(); doSignUp(); }} style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>メールアドレス</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" autoFocus disabled={loading} />
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>パスワード（8文字以上）</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="8文字以上" disabled={loading} />
+          </div>
+          <ResultMsg result={result} />
+        </form>
+      </Modal>
+    );
+  }
+
+  // ---- password reset ----
+  if (view === 'reset') {
+    return (
+      <Modal
+        title="パスワードのリセット"
+        onClose={onClose}
+        footer={
+          <div style={{display:'flex',gap:'0.5rem',width:'100%'}}>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => changeView('login')} disabled={loading}>
+              戻る
+            </button>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{flex:1}}
+              onClick={doResetPassword}
+              disabled={loading || !email.trim()}
+            >
+              {loading ? '送信中...' : 'パスワードをリセットする'}
+            </button>
+          </div>
+        }
+      >
+        <form onSubmit={e => { e.preventDefault(); doResetPassword(); }} style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+          <p style={{fontSize:'0.85rem',color:'var(--ink-muted,rgba(0,0,0,0.6))',lineHeight:1.6,margin:0}}>
+            ログインできなくなった場合、パスワードをリセットすることができます。<br/>
+            会員情報として登録したメールアドレスを入力して、『パスワードをリセットする』をクリックしてください。
+          </p>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>メールアドレス</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" autoFocus disabled={loading} />
+          </div>
+          <ResultMsg result={result} />
+        </form>
+      </Modal>
+    );
+  }
+
+  // ---- update password (PASSWORD_RECOVERY) ----
+  if (view === 'update_password') {
+    return (
+      <Modal
+        title="新しいパスワードを設定"
+        onClose={onClose}
+        footer={
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={doUpdatePassword}
+            disabled={loading || !newPassword}
+          >
+            {loading ? '更新中...' : 'パスワードを更新する'}
+          </button>
+        }
+      >
+        <form onSubmit={e => { e.preventDefault(); doUpdatePassword(); }} style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>新しいパスワード（8文字以上）</label>
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="8文字以上" autoFocus disabled={loading} />
+          </div>
+          <ResultMsg result={result} />
+        </form>
+      </Modal>
+    );
+  }
+
+  // ---- account (logged in) ----
+  return (
+    <Modal
+      title="アカウント"
+      onClose={onClose}
+      footer={
+        <button className="btn btn-ghost btn-sm" onClick={onSignOut} style={{color:'var(--danger,#c93535)'}}>
+          ログアウト
+        </button>
+      }
+    >
+      <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+        <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+          <span style={{fontSize:'0.8rem',color:inkMuted}}>ログイン中</span>
+          <span style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{user.email}</span>
+        </div>
+
+        {/* DB復元 */}
+        <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',paddingTop:'0.5rem',borderTop:'1px solid var(--border,#e5e5e5)'}}>
+          <button className="btn btn-outline btn-sm" onClick={onRestoreFromDB}>
+            DBからイベントを復元
+          </button>
+        </div>
+
+        {/* Supabase 同期 */}
+        {eventCount > 0 && (
+          <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
+            <span style={{fontSize:'0.8rem',color:inkMuted}}>
+              ローカルイベント: {eventCount} 件
+            </span>
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={onSync}
+              disabled={syncStatus === 'syncing'}
+            >
+              {syncStatus === 'syncing' ? '同期中...' : 'Supabase に同期'}
+            </button>
+            {syncResult && (
+              <div style={{
+                padding:'0.5rem 0.625rem', borderRadius:'6px', fontSize:'0.8rem', lineHeight:1.5,
+                background: syncResult.failed === 0 ? 'rgba(76,175,130,0.12)' : syncResult.succeeded === 0 ? 'rgba(201,53,53,0.1)' : 'rgba(230,180,0,0.1)',
+                color: syncResult.failed === 0 ? '#2e7d5e' : syncResult.succeeded === 0 ? 'var(--danger,#c93535)' : '#7a5c00',
+              }}>
+                {syncResult.failed === 0
+                  ? `${syncResult.succeeded} 件を同期しました`
+                  : syncResult.succeeded === 0
+                    ? `同期に失敗しました（${syncResult.failed} 件）。再度お試しください。`
+                    : `${syncResult.succeeded} 件成功、${syncResult.failed} 件失敗`}
+                {syncResult.errorMessage && (
+                  <div style={{marginTop:'0.25rem',fontSize:'0.72rem',opacity:0.8,wordBreak:'break-all'}}>
+                    {syncResult.errorMessage}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </Modal>
   );
 }

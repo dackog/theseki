@@ -1,31 +1,55 @@
 // src/lib/auth.js
-// Supabase Auth ユーティリティ — Magic Link 前提
-// 将来の Phase 2 でログイン UI から呼び出す想定
+// Supabase Auth ユーティリティ — email/password 認証
 
 import { supabase } from './supabase.js';
 
+const _redirectTo = () => `${window.location.origin}${import.meta.env.BASE_URL}`;
+
 /**
- * Magic Link メールを送信する。
- * emailRedirectTo は BASE_URL を含めて /theseki/ サブパスまで指定する。
- * window.location.origin だけだと GitHub Pages でトップドメインに戻ってしまう。
- *
- * @param {string} email
- * @returns {Promise<{ error: Error | null }>}
+ * 新規ユーザー登録。
+ * Email Confirmations が ON の場合は session: null（確認メール送信）。
+ * OFF の場合は session あり（即ログイン）。
  */
-export async function sendMagicLink(email) {
-  const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`;
-  const { error } = await supabase.auth.signInWithOtp({
+export async function signUp(email, password) {
+  const { data, error } = await supabase.auth.signUp({
     email,
-    options: { emailRedirectTo: redirectTo },
+    password,
+    options: { emailRedirectTo: _redirectTo() },
+  });
+  return { user: data?.user ?? null, session: data?.session ?? null, error: error ?? null };
+}
+
+/**
+ * メールアドレス + パスワードでログイン。
+ */
+export async function signIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  return { user: data?.user ?? null, error: error ?? null };
+}
+
+/**
+ * パスワードリセットメールを送信する。
+ * ユーザーがリンクをクリックすると /theseki/ に戻り、
+ * onAuthStateChange で PASSWORD_RECOVERY イベントが発火する。
+ */
+export async function resetPasswordForEmail(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: _redirectTo(),
   });
   return { error: error ?? null };
 }
 
 /**
+ * パスワードを更新する（PASSWORD_RECOVERY セッション中に呼ぶ）。
+ */
+export async function updatePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  return { error: error ?? null };
+}
+
+/**
  * 現在のユーザーをサインアウトする。
- * TheSEKI の localStorage (theseki_v2) には触れない。
- *
- * @returns {Promise<{ error: Error | null }>}
+ * TheSEKI の localStorage (theseki_v2) には触れない（呼び出し側で clearState する）。
  */
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
@@ -35,9 +59,6 @@ export async function signOut() {
 /**
  * 現在のセッションを取得する。
  * 初回マウント時に既存ログイン状態を確認するために使う。
- * 継続的な監視には onAuthChange を使うこと。
- *
- * @returns {Promise<{ session: import('@supabase/supabase-js').Session | null, error: Error | null }>}
  */
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
@@ -47,9 +68,7 @@ export async function getSession() {
 /**
  * auth 状態の変化を購読する。
  * useEffect 内で呼び出し、返り値の unsubscribe 関数を cleanup に渡す。
- *
- * @param {(event: string, session: import('@supabase/supabase-js').Session | null) => void} callback
- * @returns {() => void} unsubscribe 関数
+ * PASSWORD_RECOVERY / SIGNED_IN / SIGNED_OUT などを検知できる。
  */
 export function onAuthChange(callback) {
   const { data: { subscription } } = supabase.auth.onAuthStateChange(callback);

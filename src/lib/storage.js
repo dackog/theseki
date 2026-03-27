@@ -90,6 +90,10 @@ export function loadState() {
   }
 }
 
+export function clearState() {
+  localStorage.removeItem(LS_KEY);
+}
+
 let _saveErrorShown = false;
 export function saveState(s) {
   try {
