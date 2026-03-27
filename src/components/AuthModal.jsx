@@ -40,9 +40,19 @@ export default function AuthModal({
   const [view, setView] = useState(initialView);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+
+  function validatePassword(pw) {
+    if (!pw) return 'パスワードを入力してください';
+    if (pw.length < 6) return 'パスワードは6文字以上で入力してください';
+    if (pw.length > 64) return 'パスワードは64文字以内で入力してください';
+    if (!/[a-z]/.test(pw)) return 'パスワードに半角英字（小文字）を1文字以上含めてください';
+    if (!/[0-9]/.test(pw)) return 'パスワードに数字を1文字以上含めてください';
+    return null;
+  }
 
   useEffect(() => {
     if (isPasswordRecovery) setView('update_password');
@@ -58,6 +68,7 @@ export default function AuthModal({
     setResult(null);
     setEmail('');
     setPassword('');
+    setPasswordConfirm('');
     setNewPassword('');
   }
 
@@ -71,10 +82,11 @@ export default function AuthModal({
   }
 
   async function doSignUp() {
-    if (!email.trim() || !password || loading) return;
-    if (password.length < 8) {
-      setResult({ type: 'error', message: 'パスワードは8文字以上で入力してください' });
-      return;
+    if (!email.trim() || !password || !passwordConfirm || loading) return;
+    const pwError = validatePassword(password);
+    if (pwError) { setResult({ type: 'error', message: pwError }); return; }
+    if (password !== passwordConfirm) {
+      setResult({ type: 'error', message: 'パスワードが一致しません' }); return;
     }
     setLoading(true);
     setResult(null);
@@ -103,10 +115,11 @@ export default function AuthModal({
   }
 
   async function doUpdatePassword() {
-    if (!newPassword || loading) return;
-    if (newPassword.length < 8) {
-      setResult({ type: 'error', message: 'パスワードは8文字以上で入力してください' });
-      return;
+    if (!newPassword || !passwordConfirm || loading) return;
+    const pwError = validatePassword(newPassword);
+    if (pwError) { setResult({ type: 'error', message: pwError }); return; }
+    if (newPassword !== passwordConfirm) {
+      setResult({ type: 'error', message: 'パスワードが一致しません' }); return;
     }
     setLoading(true);
     setResult(null);
@@ -173,7 +186,7 @@ export default function AuthModal({
               className="btn btn-primary btn-sm"
               style={{flex:1}}
               onClick={doSignUp}
-              disabled={loading || !email.trim() || !password}
+              disabled={loading || !email.trim() || !password || !passwordConfirm}
             >
               {loading ? '登録中...' : '登録する'}
             </button>
@@ -186,8 +199,12 @@ export default function AuthModal({
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" autoFocus disabled={loading} />
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
-            <label style={{fontSize:'0.8rem',fontWeight:600}}>パスワード（8文字以上）</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="8文字以上" disabled={loading} />
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>パスワード（6〜64文字、英小文字・数字を含む）</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="例: abc123" disabled={loading} />
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>パスワード（確認）</label>
+            <input type="password" value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)} placeholder="もう一度入力" disabled={loading} />
           </div>
           <ResultMsg result={result} />
         </form>
@@ -242,16 +259,24 @@ export default function AuthModal({
           <button
             className="btn btn-primary btn-sm"
             onClick={doUpdatePassword}
-            disabled={loading || !newPassword}
+            disabled={loading || !newPassword || !passwordConfirm}
           >
             {loading ? '更新中...' : 'パスワードを更新する'}
           </button>
         }
       >
         <form onSubmit={e => { e.preventDefault(); doUpdatePassword(); }} style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+          <p style={{fontSize:'0.85rem',color:'var(--ink-muted,rgba(0,0,0,0.6))',lineHeight:1.6,margin:0}}>
+            新しいパスワードを入力してください。<br/>
+            6〜64文字で、半角英字（小文字）と数字を各1文字以上含めてください。
+          </p>
           <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
-            <label style={{fontSize:'0.8rem',fontWeight:600}}>新しいパスワード（8文字以上）</label>
-            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="8文字以上" autoFocus disabled={loading} />
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>新しいパスワード</label>
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="例: abc123" autoFocus disabled={loading} />
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>パスワード（確認）</label>
+            <input type="password" value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)} placeholder="もう一度入力" disabled={loading} />
           </div>
           <ResultMsg result={result} />
         </form>
