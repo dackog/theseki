@@ -78,7 +78,10 @@ export default function AuthModal({
     setResult(null);
     const { error } = await onLogin(email, password);
     setLoading(false);
-    if (error) setResult({ type: 'error', message: error.message });
+    if (error) {
+      console.warn('[AuthModal] login error:', error);
+      setResult({ type: 'error', message: 'メールアドレスまたはパスワードが正しくありません' });
+    }
   }
 
   async function doSignUp() {
@@ -93,7 +96,8 @@ export default function AuthModal({
     const { session, error } = await onSignUp(email, password);
     setLoading(false);
     if (error) {
-      setResult({ type: 'error', message: error.message });
+      console.warn('[AuthModal] signup error:', error);
+      setResult({ type: 'error', message: '登録に失敗しました。すでに登録済みのメールアドレスか、入力内容を確認してください' });
     } else if (!session) {
       // Email Confirmation ON: 確認メール送信済み
       setResult({ type: 'success', message: '確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。' });
@@ -108,7 +112,8 @@ export default function AuthModal({
     const { error } = await onResetPassword(email);
     setLoading(false);
     if (error) {
-      setResult({ type: 'error', message: error.message });
+      console.warn('[AuthModal] resetPassword error:', error);
+      setResult({ type: 'error', message: 'メール送信に失敗しました。メールアドレスを確認してください' });
     } else {
       setResult({ type: 'success', message: 'パスワードリセットメールを送信しました。メール内のリンクをクリックしてください。' });
     }
@@ -126,7 +131,8 @@ export default function AuthModal({
     const { error } = await onUpdatePassword(newPassword);
     setLoading(false);
     if (error) {
-      setResult({ type: 'error', message: error.message });
+      console.warn('[AuthModal] updatePassword error:', error);
+      setResult({ type: 'error', message: 'パスワードの更新に失敗しました。もう一度お試しください' });
     } else {
       setResult({ type: 'success', message: 'パスワードを更新しました。' });
     }
@@ -330,13 +336,8 @@ export default function AuthModal({
                 {syncResult.failed === 0
                   ? `${syncResult.succeeded} 件を同期しました`
                   : syncResult.succeeded === 0
-                    ? `同期に失敗しました（${syncResult.failed} 件）。再度お試しください。`
-                    : `${syncResult.succeeded} 件成功、${syncResult.failed} 件失敗`}
-                {syncResult.errorMessage && (
-                  <div style={{marginTop:'0.25rem',fontSize:'0.72rem',opacity:0.8,wordBreak:'break-all'}}>
-                    {syncResult.errorMessage}
-                  </div>
-                )}
+                    ? `同期に失敗しました。ネットワーク接続を確認してください`
+                    : `${syncResult.succeeded} 件同期しました（${syncResult.failed} 件失敗）`}
               </div>
             )}
           </div>

@@ -80,6 +80,13 @@ export default function App() {
         setShowAuthModal(true);
         return;
       }
+      if (event === 'SIGNED_OUT') {
+        // 別タブや外部からのログアウトも含めて確実にクリア
+        clearState();
+        dispatch({ type: 'RESET_STATE' });
+        setIsPasswordRecovery(false);
+        setPage('events');
+      }
       setAuthUser(session?.user ?? null);
       setAuthLoading(false);
     });
@@ -156,6 +163,7 @@ export default function App() {
 
   // DB からイベントを復元（再ログイン後などに使用）
   async function handleRestoreFromDB() {
+    if (!confirm('DBからイベントを復元します。\n現在のローカルデータは上書きされます。よろしいですか？')) return;
     const { data, error } = await listEvents();
     if (error) {
       notify('DBからの復元に失敗しました', 'error');
@@ -300,7 +308,7 @@ export default function App() {
         </div>
       </div>
 
-      {page==='events' && <EventsPage state={state} dispatch={dispatch} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>}
+      {page==='events' && <EventsPage state={state} dispatch={dispatch} authUser={authUser} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>}
       {(page==='layout'||page==='assign'||page==='attendees') && currentEvent && (
         <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column',height:'calc(100dvh - 52px)'}}>
           <InnerNav subPage={page} setSubPage={(p)=>{if(p==='assign'){setAssignInitTab('seat');setAssignKey(k=>k+1);}setPage(p);}}/>

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { uid, now, fmtDate } from '../lib/uid.js';
 import Modal from './Modal.jsx';
 
-export default function EventsPage({ state, dispatch, onLayout, onAssign }) {
+export default function EventsPage({ state, dispatch, authUser, onLayout, onAssign }) {
   const [showNew, setShowNew] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState({ name: '', datetime: '' });
@@ -49,6 +49,11 @@ export default function EventsPage({ state, dispatch, onLayout, onAssign }) {
         <div className="page-title">イベント一覧</div>
         <button className="btn btn-accent" onClick={()=>setShowNew(true)}>＋ 新規イベント</button>
       </div>
+      {!authUser && (
+        <div style={{fontSize:'0.75rem',color:'var(--ink-muted,rgba(0,0,0,0.45))',marginBottom:'0.75rem',padding:'0.4rem 0.625rem',background:'var(--paper-soft,rgba(0,0,0,0.03))',borderRadius:'6px',border:'1px solid var(--border,#e5e5e5)'}}>
+          ローカルに保存中（未ログイン）
+        </div>
+      )}
       {state.events.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">🎉</div>
