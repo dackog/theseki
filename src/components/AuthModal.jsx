@@ -145,11 +145,11 @@ export default function AuthModal({
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="パスワード" disabled={loading} />
           </div>
           <ResultMsg result={result} />
-          <div style={{display:'flex',justifyContent:'space-between',gap:'0.5rem',paddingTop:'0.25rem'}}>
-            <button type="button" className="btn btn-ghost btn-sm" style={{fontSize:'0.75rem',color:inkMuted,padding:'0.2rem 0'}} onClick={() => changeView('signup')}>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem',paddingTop:'0.5rem',borderTop:'1px solid var(--border,#e5e5e5)'}}>
+            <button type="button" className="btn btn-ghost btn-sm" style={{fontSize:'0.8rem',color:'var(--accent,#7c4fc4)',textDecoration:'underline',textUnderlineOffset:'3px',padding:'0.2rem 0',textAlign:'left',justifyContent:'flex-start'}} onClick={() => changeView('signup')}>
               新規登録はこちら
             </button>
-            <button type="button" className="btn btn-ghost btn-sm" style={{fontSize:'0.75rem',color:inkMuted,padding:'0.2rem 0'}} onClick={() => changeView('reset')}>
+            <button type="button" className="btn btn-ghost btn-sm" style={{fontSize:'0.8rem',color:'var(--accent,#7c4fc4)',textDecoration:'underline',textUnderlineOffset:'3px',padding:'0.2rem 0',textAlign:'left',justifyContent:'flex-start'}} onClick={() => changeView('reset')}>
               パスワードを忘れた方はこちら
             </button>
           </div>
