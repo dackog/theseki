@@ -12,6 +12,7 @@ function ResultMsg({ result }) {
       padding:'0.625rem 0.75rem', borderRadius:'6px', fontSize:'0.8rem', lineHeight:1.5,
       background: result.type === 'success' ? 'rgba(76,175,130,0.12)' : 'rgba(201,53,53,0.1)',
       color: result.type === 'success' ? '#2e7d5e' : 'var(--danger,#c93535)',
+      whiteSpace: 'pre-wrap',
     }}>
       {result.message}
     </div>
@@ -97,10 +98,10 @@ export default function AuthModal({
     setLoading(false);
     if (error) {
       console.warn('[AuthModal] signup error:', error);
-      setResult({ type: 'error', message: '登録に失敗しました。すでに登録済みのメールアドレスか、入力内容を確認してください' });
+      setResult({ type: 'error', message: '登録に失敗しました。入力内容を確認してください' });
     } else if (!session) {
-      // Email Confirmation ON: 確認メール送信済み
-      setResult({ type: 'success', message: '確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。' });
+      // Email Confirmation ON: Supabase はメール列挙防止のため登録済みアドレスでも error を返さない
+      setResult({ type: 'success', message: 'ご入力のメールアドレスに確認メールをお送りしました。メール内のリンクをクリックして登録を完了してください。\n\nしばらくしてもメールが届かない場合、すでに登録済みのメールアドレスである可能性があります。その場合はログインをお試しください。' });
     }
     // session あり（即ログイン）の場合は App.jsx がモーダルを閉じる
   }
@@ -113,9 +114,10 @@ export default function AuthModal({
     setLoading(false);
     if (error) {
       console.warn('[AuthModal] resetPassword error:', error);
-      setResult({ type: 'error', message: 'メール送信に失敗しました。メールアドレスを確認してください' });
+      setResult({ type: 'error', message: 'メールの送信に失敗しました。しばらくしてから再度お試しください' });
     } else {
-      setResult({ type: 'success', message: 'パスワードリセットメールを送信しました。メール内のリンクをクリックしてください。' });
+      // Supabase はメール列挙防止のため存在しないアドレスでも error を返さない
+      setResult({ type: 'success', message: 'パスワードリセットのご案内を送信しました。メール内のリンクをクリックしてパスワードを再設定してください。\n\nしばらくしてもメールが届かない場合、登録済みのメールアドレスかどうかをご確認ください。' });
     }
   }
 
@@ -242,8 +244,8 @@ export default function AuthModal({
       >
         <form onSubmit={e => { e.preventDefault(); doResetPassword(); }} style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
           <p style={{fontSize:'0.85rem',color:'var(--ink-muted,rgba(0,0,0,0.6))',lineHeight:1.6,margin:0}}>
-            ログインできなくなった場合、パスワードをリセットすることができます。<br/>
-            会員情報として登録したメールアドレスを入力して、『パスワードをリセットする』をクリックしてください。
+            登録済みのメールアドレスにパスワードリセットのご案内を送信します。<br/>
+            メールアドレスを入力して「パスワードをリセットする」をクリックしてください。
           </p>
           <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
             <label style={{fontSize:'0.8rem',fontWeight:600}}>メールアドレス</label>
