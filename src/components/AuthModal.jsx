@@ -43,6 +43,7 @@ export default function AuthModal({
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -71,6 +72,7 @@ export default function AuthModal({
     setPassword('');
     setPasswordConfirm('');
     setNewPassword('');
+    setNickname('');
   }
 
   async function doLogin() {
@@ -94,7 +96,7 @@ export default function AuthModal({
     }
     setLoading(true);
     setResult(null);
-    const { session, error } = await onSignUp(email, password);
+    const { session, error } = await onSignUp(email, password, nickname);
     setLoading(false);
     if (error) {
       console.warn('[AuthModal] signup error:', error);
@@ -214,6 +216,10 @@ export default function AuthModal({
             <label style={{fontSize:'0.8rem',fontWeight:600}}>パスワード（確認）</label>
             <input type="password" value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)} placeholder="もう一度入力" disabled={loading} />
           </div>
+          <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+            <label style={{fontSize:'0.8rem',fontWeight:600}}>ニックネーム（任意・20文字以内）</label>
+            <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="例: たろう" maxLength={20} disabled={loading} />
+          </div>
           <ResultMsg result={result} />
         </form>
       </Modal>
@@ -306,7 +312,10 @@ export default function AuthModal({
       <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
         <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
           <span style={{fontSize:'0.8rem',color:inkMuted}}>ログイン中</span>
-          <span style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{user.email}</span>
+          {user.user_metadata?.nickname && (
+            <span style={{fontSize:'1rem',fontWeight:600}}>{user.user_metadata.nickname}</span>
+          )}
+          <span style={{fontSize:'0.85rem',color:inkMuted,wordBreak:'break-all'}}>{user.email}</span>
         </div>
 
         {/* DB復元 */}

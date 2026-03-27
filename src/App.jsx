@@ -8,9 +8,10 @@
 import { useState, useEffect, useMemo, useCallback, useReducer, useRef } from 'react';
 import { reducer, DEFAULT_STATE } from './reducer.js';
 import { loadState, saveState, clearState, sanitizeEvent } from './lib/storage.js';
-import { exportEventJSON, parseImportedEvent, buildShareURL, loadSharedEvent } from './lib/share.js';
+import { exportEventJSON, parseImportedEvent, loadSharedEvent } from './lib/share.js';
 import { onAuthChange, getSession, signOut, signIn, signUp, resetPasswordForEmail, updatePassword } from './lib/auth.js';
-import { syncLocalEvents, listEvents } from './lib/eventRepository.js';
+import { syncLocalEvents, listEvents, createEvent } from './lib/eventRepository.js';
+import { createShare, getSharedEvent } from './lib/shareRepository.js';
 import AuthModal from './components/AuthModal.jsx';
 import EventsPage from './components/EventsPage.jsx';
 import LayoutPage from './components/LayoutPage.jsx';
@@ -30,20 +31,19 @@ function useNotify() {
 }
 
 export default function App() {
-  // 共有URLチェック
-  const sharedEvent = useMemo(() => loadSharedEvent(), []);
-  if (sharedEvent) {
-    return (
-      <>
-        <div className="topbar">
-          <div className="topbar-logo">The<span>SEKI</span></div>
-          <nav className="topbar-nav"><span className="nav-btn active">座席表 閲覧</span></nav>
-        </div>
-        <ViewPage event={sharedEvent}/>
-      </>
-    );
-  }
+  // ---- 共有URL検出（hooks は全て早期 return より前に置く）----
 
+  // ?share= パラメータ（DB共有、新方式）
+  const shareParam = useMemo(() => new URLSearchParams(location.search).get('share'), []);
+  // #view= ハッシュ（後方互換、旧方式）— ?share= がある場合はスキップ
+  const legacySharedEvent = useMemo(() => !shareParam ? loadSharedEvent() : null, [shareParam]);
+
+  // DB共有リンクの読み込み状態
+  const [dbSharedEvent, setDbSharedEvent] = useState(null);
+  const [dbShareNotFound, setDbShareNotFound] = useState(false);
+  const [dbShareLoading, setDbShareLoading] = useState(!!shareParam);
+
+  // ---- 通常アプリ用 state ----
   const [state, dispatch_] = useReducer(reducer, DEFAULT_STATE);
   const [page, setPage] = useState('events');
   const [assignInitTab, setAssignInitTab] = useState('seat');
@@ -61,6 +61,22 @@ export default function App() {
   const [syncResult, setSyncResult] = useState(null);   // { succeeded, failed } | null
 
   const dispatch = useCallback((action) => dispatch_(action), []);
+
+  // ?share= の場合は DB からイベントを取得
+  useEffect(() => {
+    if (!shareParam) return;
+    getSharedEvent(shareParam).then(({ event, error }) => {
+      if (error) {
+        console.error('[App] getSharedEvent error:', error);
+        setDbShareNotFound(true);
+      } else if (!event) {
+        setDbShareNotFound(true);
+      } else {
+        setDbSharedEvent(event);
+      }
+      setDbShareLoading(false);
+    });
+  }, [shareParam]);
 
   useEffect(() => {
     // 起動時は常に localStorage から復元（ログイン不問）
@@ -107,8 +123,8 @@ export default function App() {
     return { error };
   }
 
-  async function handleSignUp(email, password) {
-    const { session, error } = await signUp(email, password);
+  async function handleSignUp(email, password, nickname) {
+    const { session, error } = await signUp(email, password, nickname);
     if (!error && session) {
       // Email Confirmation OFF: 即ログイン
       setShowAuthModal(false);
@@ -235,20 +251,74 @@ export default function App() {
     e.target.value='';
   };
 
-  // 閲覧用URL共有
-  const handleShare = () => {
+  // 閲覧用共有リンク作成（DB方式）
+  async function handleCreateShare() {
     if (!currentEvent) return;
-    const url = buildShareURL(currentEvent);
-    if (!url) { notify('URL生成に失敗しました', 'error'); return; }
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(()=>notify('共有URLをクリップボードにコピーしました'));
-    } else {
-      prompt('この URLを共有してください:', url);
+    if (!authUser) {
+      notify('共有リンクの作成にはログインが必要です', 'error');
+      return;
     }
-  };
+    // DB に upsert して DB uuid を取得
+    const { data, error: upsertError } = await createEvent(currentEvent.name, currentEvent);
+    if (upsertError || !data?.id) {
+      console.error('[App] handleCreateShare upsert error:', upsertError);
+      notify('リンクの作成に失敗しました。もう一度お試しください', 'error');
+      return;
+    }
+    const { shareId, error: shareError } = await createShare(data.id);
+    if (shareError) {
+      console.error('[App] handleCreateShare error:', shareError);
+      notify('リンクの作成に失敗しました。もう一度お試しください', 'error');
+      return;
+    }
+    const url = `${location.origin}${import.meta.env.BASE_URL}?share=${shareId}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => notify('共有リンクをクリップボードにコピーしました'));
+    } else {
+      prompt('この URL を共有してください:', url);
+    }
+  }
 
   const statusColor = saveStatus==='error'?'var(--accent)': saveStatus==='saving'?'var(--accent-gold)':'#4caf82';
   const statusLabel = saveStatus==='error'?'保存エラー ⚠️': saveStatus==='saving'?'保存中…':'保存済 ✓';
+
+  // ニックネーム優先表示（nickname → email ローカルパート → 'ログイン'）
+  const displayName = authUser
+    ? (authUser.user_metadata?.nickname || authUser.email.split('@')[0])
+    : 'ログイン';
+
+  // ---- 共有URLモード（通常アプリより先に返す）----
+
+  // ?share= DBアクセス中 or ViewPage 表示
+  if (shareParam) {
+    return (
+      <>
+        <div className="topbar">
+          <div className="topbar-logo">The<span>SEKI</span></div>
+          <nav className="topbar-nav"><span className="nav-btn active">座席表 閲覧</span></nav>
+        </div>
+        {dbShareLoading
+          ? <div className="main"><p style={{padding:'2rem',textAlign:'center',color:'var(--ink-muted,rgba(0,0,0,0.5))'}}>読み込み中...</p></div>
+          : <ViewPage event={dbSharedEvent} notFound={dbShareNotFound} />
+        }
+      </>
+    );
+  }
+
+  // #view= 後方互換（旧方式）
+  if (legacySharedEvent) {
+    return (
+      <>
+        <div className="topbar">
+          <div className="topbar-logo">The<span>SEKI</span></div>
+          <nav className="topbar-nav"><span className="nav-btn active">座席表 閲覧</span></nav>
+        </div>
+        <ViewPage event={legacySharedEvent}/>
+      </>
+    );
+  }
+
+  // ---- 通常アプリ ----
 
   // イベント内サブページ用のブレッドクラム＋タブバー
   // InnerNav は currentEvent への閉包依存のため App.jsx に同居
@@ -286,7 +356,7 @@ export default function App() {
             onClick={() => setShowAuthModal(true)}
             style={{marginLeft:'auto',color:'rgba(255,255,255,0.7)',fontSize:'0.8rem',maxWidth:'120px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
           >
-            {authUser ? authUser.email : 'ログイン'}
+            {displayName}
           </button>
         )}
         <div className="topbar-actions-desktop" style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'0.75rem'}}>
@@ -296,7 +366,7 @@ export default function App() {
               onClick={() => setShowAuthModal(true)}
               style={{color:'rgba(255,255,255,0.7)',fontSize:'0.75rem',maxWidth:'140px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
             >
-              {authUser ? authUser.email : 'ログイン'}
+              {displayName}
             </button>
           )}
           <span className="topbar-status" style={{color:statusColor}}>{statusLabel}</span>
@@ -304,7 +374,7 @@ export default function App() {
             📂 復元<input type="file" accept=".json" onChange={handleImportJSON} style={{display:'none'}}/>
           </label>
           {currentEvent && <button className="btn btn-ghost btn-sm" onClick={handleExportJSON} style={{color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>💾 バックアップ</button>}
-          {currentEvent && <button className="btn btn-ghost btn-sm" onClick={handleShare} style={{color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>🔗 共有URL</button>}
+          {currentEvent && <button className="btn btn-ghost btn-sm" onClick={handleCreateShare} style={{color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>🔗 共有URL</button>}
         </div>
       </div>
 

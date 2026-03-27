@@ -10,11 +10,15 @@ const _redirectTo = () => `${window.location.origin}${import.meta.env.BASE_URL}`
  * Email Confirmations が ON の場合は session: null（確認メール送信）。
  * OFF の場合は session あり（即ログイン）。
  */
-export async function signUp(email, password) {
+export async function signUp(email, password, nickname = '') {
+  const trimmed = nickname.trim().slice(0, 20);
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: _redirectTo() },
+    options: {
+      data: trimmed ? { nickname: trimmed } : {},
+      emailRedirectTo: _redirectTo(),
+    },
   });
   return { user: data?.user ?? null, session: data?.session ?? null, error: error ?? null };
 }

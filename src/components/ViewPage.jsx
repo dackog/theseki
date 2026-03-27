@@ -4,7 +4,20 @@
 import { useMemo } from 'react';
 import { generateSeats } from '../lib/seats.js';
 
-export default function ViewPage({ event }) {
+export default function ViewPage({ event, notFound }) {
+  if (notFound) {
+    return (
+      <div className="main">
+        <div className="empty-state">
+          <div className="empty-state-icon">🔒</div>
+          <div>このリンクは無効です</div>
+          <div className="text-sm text-muted" style={{marginTop:'0.5rem'}}>
+            リンクの有効期限が切れたか、無効化されています
+          </div>
+        </div>
+      </div>
+    );
+  }
   const tables = event.tables || [];
   const attendees = event.attendees || [];
   const assignments = event.assignments || {};
