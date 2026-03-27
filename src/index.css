@@ -97,7 +97,7 @@
     display: flex; align-items: center; gap: 0.5rem;
   }
   .topbar-logo span { color: var(--accent); }
-  .topbar-login-mobile { display: none; }
+  .topbar-login-mobile { display: none !important; }
   .topbar-nav {
     display: flex; gap: 0.5rem; margin-left: 2rem; flex: 1;
   }
