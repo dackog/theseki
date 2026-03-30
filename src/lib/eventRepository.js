@@ -232,6 +232,27 @@ export async function syncDirtyEvents(events) {
   return { succeeded, failed, errors, firstErrorMessage, syncedClientIds };
 }
 
+/**
+ * client_id（= event.id 8文字 hex）でイベント行を削除する。
+ * 対象行が存在しない場合は何もせず { error: null } を返す。
+ *
+ * @param {string} clientId  event.id（8文字 hex）
+ * @returns {Promise<{ error: Error | null }>}
+ */
+export async function deleteEventByClientId(clientId) {
+  _log('deleteEventByClientId', { clientId });
+  const userId = await _currentUserId();
+  if (!userId) return { error: null };
+  const { data } = await supabase
+    .from('events')
+    .select('id')
+    .eq('owner_user_id', userId)
+    .eq('client_id', clientId)
+    .maybeSingle();
+  if (!data?.id) return { error: null };
+  return deleteEvent(data.id);
+}
+
 export async function getEvent(id) {
   _log('getEvent', { id });
   const { data, error } = await supabase

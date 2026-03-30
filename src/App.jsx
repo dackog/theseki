@@ -10,7 +10,7 @@ import { reducer, DEFAULT_STATE } from './reducer.js';
 import { loadState, saveState, clearState, sanitizeEvent } from './lib/storage.js';
 import { exportEventJSON, parseImportedEvent, loadSharedEvent } from './lib/share.js';
 import { onAuthChange, getSession, signOut, signIn, signUp, resetPasswordForEmail, updatePassword } from './lib/auth.js';
-import { syncLocalEvents, listEvents, createEvent, syncDirtyEvents } from './lib/eventRepository.js';
+import { syncLocalEvents, listEvents, createEvent, syncDirtyEvents, deleteEventByClientId } from './lib/eventRepository.js';
 import { createShare, getSharedEvent } from './lib/shareRepository.js';
 import { loadSyncMeta, saveSyncMeta, clearSyncMeta, markSynced, getUnsyncedEvents } from './lib/syncMeta.js';
 import AuthModal from './components/AuthModal.jsx';
@@ -62,8 +62,84 @@ export default function App() {
   const [syncResult, setSyncResult] = useState(null);       // { succeeded, failed } | null
   const autoSyncTimer = useRef(null);
   const dbSyncDoneTimer = useRef(null);
+  const authUserRef = useRef(authUser);
+  useEffect(() => { authUserRef.current = authUser; }, [authUser]);
 
-  const dispatch = useCallback((action) => dispatch_(action), []);
+  const dispatch = useCallback((action) => {
+    dispatch_(action);
+    if (action.type === 'DELETE_EVENT' && authUserRef.current) {
+      const clientId = action.payload;
+      deleteEventByClientId(clientId).catch(err =>
+        console.error('[App] deleteEventByClientId error:', err)
+      );
+      const meta = loadSyncMeta();
+      const { [clientId]: _removed, ...rest } = meta;
+      saveSyncMeta(rest);
+    }
+  }, []);
+
+  /**
+   * Phase B/C: DB とローカルを newer wins でマージする。
+   * ログイン直後・アプリ起動時（既存セッションあり）に呼ぶ。
+   * - DB のみ: ローカルに追加
+   * - 両方あり: 新しい方を採用
+   * - ローカルのみ: そのまま残す（auto-sync が後で DB へ push する）
+   * @param {object[]} localEvents  現在のローカルイベント配列
+   * @param {string|null} currentEventId  現在の currentEventId
+   */
+  async function mergeWithDB(localEvents, currentEventId) {
+    const { data: dbRows, error } = await listEvents();
+    if (error) {
+      console.error('[App] mergeWithDB listEvents error:', error);
+      return;
+    }
+    if (!dbRows.length) return; // DB が空なら何もしない
+
+    const localById = new Map(localEvents.map(ev => [ev.id, ev]));
+    const merged = [...localEvents];
+    const dbWonClientIds = [];
+
+    for (const row of dbRows) {
+      if (!row.payload_json) continue;
+      const clientId = row.client_id;
+      if (!clientId) continue;
+      const localEv = localById.get(clientId);
+      if (!localEv) {
+        // DB にのみ存在 → ローカルに追加
+        const ev = sanitizeEvent({
+          tables: [], attendees: [], ngPairs: [], assignments: {},
+          ...row.payload_json,
+        });
+        merged.push(ev);
+        dbWonClientIds.push(clientId);
+      } else {
+        // 両方にあり → newer wins
+        const dbMs = new Date(row.updated_at).getTime();
+        const localMs = localEv.updatedAt ? new Date(localEv.updatedAt).getTime() : 0;
+        if (dbMs > localMs) {
+          const idx = merged.findIndex(e => e.id === clientId);
+          if (idx !== -1) {
+            merged[idx] = sanitizeEvent({
+              tables: [], attendees: [], ngPairs: [], assignments: {},
+              ...row.payload_json,
+            });
+            dbWonClientIds.push(clientId);
+          }
+        }
+      }
+    }
+
+    // DB 勝ちのイベントを syncMeta に記録（再 push 不要なため）
+    if (dbWonClientIds.length > 0) {
+      const meta = loadSyncMeta();
+      const updated = markSynced(meta, dbWonClientIds);
+      saveSyncMeta(updated);
+    }
+
+    const newState = { events: merged, currentEventId: currentEventId ?? null };
+    dispatch_({ type: 'LOAD_STATE', payload: newState });
+    saveState(newState);
+  }
 
   // ?share= の場合は DB からイベントを取得
   useEffect(() => {
@@ -85,10 +161,17 @@ export default function App() {
     // 起動時は常に localStorage から復元（ログイン不問）
     // キャッシュが残っていれば未ログインでも作業継続できる
     const saved = loadState();
-    if (saved) dispatch({ type: 'LOAD_STATE', payload: saved });
+    const initialLocalEvents = saved?.events ?? [];
+    const initialCurrentId = saved?.currentEventId ?? null;
+    if (saved) dispatch_({ type: 'LOAD_STATE', payload: saved });
 
-    getSession().then(({ session }) => {
-      setAuthUser(session?.user ?? null);
+    getSession().then(async ({ session }) => {
+      const user = session?.user ?? null;
+      setAuthUser(user);
+      if (user) {
+        // Phase C: 既存セッションあり → DB と newer wins マージ
+        await mergeWithDB(initialLocalEvents, initialCurrentId);
+      }
       setAuthLoading(false);
     });
 
@@ -118,9 +201,8 @@ export default function App() {
     const { error } = await signIn(email, password);
     if (!error) {
       setShowAuthModal(false);
-      if (state.events.length > 0) {
-        handleAutoSyncDirty();
-      }
+      // Phase B: ログイン直後に DB とマージ（newer wins）
+      await mergeWithDB(state.events, state.currentEventId);
     }
     return { error };
   }
@@ -130,9 +212,8 @@ export default function App() {
     if (!error && session) {
       // Email Confirmation OFF: 即ログイン
       setShowAuthModal(false);
-      if (state.events.length > 0) {
-        handleAutoSyncDirty();
-      }
+      // Phase B: 即ログイン時は DB に何もないので mergeWithDB は no-op だが統一する
+      await mergeWithDB(state.events, state.currentEventId);
     }
     return { session, error };
   }
