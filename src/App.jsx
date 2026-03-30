@@ -7,6 +7,35 @@
 
 import { useState, useEffect, useMemo, useCallback, useReducer, useRef } from 'react';
 import { reducer, DEFAULT_STATE } from './reducer.js';
+
+// InnerNav を App 外で定義することで、App の再レンダー時に
+// コンポーネント型の参照が変わらず unmount/remount が起きないようにする。
+// （内部で定義すると毎レンダーで新しい関数参照になり、ポータルターゲットが消える）
+function InnerNav({ subPage, setSubPage, eventName, onBack }) {
+  return (
+    <div className={`inner-nav-wrap ${(subPage==='assign'||subPage==='attendees')?'subpage-fixed':''}`}>
+      <button className="btn btn-ghost btn-sm inner-nav-back" onClick={onBack}
+        style={{color:'var(--ink-light)',padding:'0.3rem 0.5rem',whiteSpace:'nowrap'}}>
+        ← 一覧
+      </button>
+      <span style={{color:'var(--border)'}}>|</span>
+      <span className="inner-nav-title" style={{fontSize:'0.82rem',fontWeight:600,color:'var(--ink)',fontFamily:"'Noto Serif JP',serif"}}>
+        {eventName}
+      </span>
+      {/* 席割ページの統計・アクションをここに描画（AssignPage からポータルで注入） */}
+      <span id="assign-header-portal" style={{flex:1,display:'flex',alignItems:'center',gap:'0.4rem',minWidth:0,overflow:'visible'}}/>
+      <div className="inner-nav-tabs" style={{display:'flex',gap:'0.4rem',flexShrink:0}}>
+        {[{id:'assign',label:'席割'},{id:'attendees',label:'参加者'}].map(t=>(
+          <button key={t.id}
+            className={`btn btn-sm ${subPage===t.id?'btn-primary':'btn-outline'}`}
+            onClick={()=>setSubPage(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 import { loadState, saveState, clearState, sanitizeEvent } from './lib/storage.js';
 import { loadSharedEvent } from './lib/share.js';
 import { onAuthChange, getSession, signOut, signIn, signUp, resetPasswordForEmail, updatePassword } from './lib/auth.js';
@@ -373,32 +402,6 @@ export default function App() {
 
   // ---- 通常アプリ ----
 
-  // イベント内サブページ用のブレッドクラム＋タブバー
-  // InnerNav は currentEvent への閉包依存のため App.jsx に同居
-  const InnerNav = ({ subPage, setSubPage }) => (
-    <div className={`inner-nav-wrap ${(subPage==='assign'||subPage==='attendees')?'subpage-fixed':''}`}>
-      <button className="btn btn-ghost btn-sm inner-nav-back" onClick={()=>setPage('events')}
-        style={{color:'var(--ink-light)',padding:'0.3rem 0.5rem',whiteSpace:'nowrap'}}>
-        ← 一覧
-      </button>
-      <span style={{color:'var(--border)'}}>|</span>
-      <span className="inner-nav-title" style={{fontSize:'0.82rem',fontWeight:600,color:'var(--ink)',fontFamily:"'Noto Serif JP',serif"}}>
-        {currentEvent?.name}
-      </span>
-      {/* 席割ページの統計・アクションをここに描画（AssignPage からポータルで注入） */}
-      <span id="assign-header-portal" style={{flex:1,display:'flex',alignItems:'center',gap:'0.4rem',minWidth:0,overflow:'hidden'}}/>
-      <div className="inner-nav-tabs" style={{display:'flex',gap:'0.4rem',flexShrink:0}}>
-        {[{id:'assign',label:'席割'},{id:'attendees',label:'参加者'}].map(t=>(
-          <button key={t.id}
-            className={`btn btn-sm ${subPage===t.id?'btn-primary':'btn-outline'}`}
-            onClick={()=>setSubPage(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <>
       <div className={`topbar ${(page==='layout'||page==='assign'||page==='attendees')?'topbar-subpage':''}`}>
@@ -433,7 +436,7 @@ export default function App() {
       {page==='events' && <EventsPage state={state} dispatch={dispatch} authUser={authUser} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>}
       {(page==='layout'||page==='assign'||page==='attendees') && currentEvent && (
         <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column',height:'calc(100dvh - 52px)'}}>
-          <InnerNav subPage={page} setSubPage={(p)=>{if(p==='assign'){setAssignInitTab('seat');setAssignKey(k=>k+1);}setPage(p);}}/>
+          <InnerNav subPage={page} setSubPage={(p)=>{if(p==='assign'){setAssignInitTab('seat');setAssignKey(k=>k+1);}setPage(p);}} eventName={currentEvent?.name} onBack={()=>setPage('events')}/>
           <div className="event-subpage-content" style={{minHeight:0, WebkitOverflowScrolling:'touch'}}>
             {page==='layout' && <LayoutPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
             {page==='assign' && <AssignPage key={assignKey} event={currentEvent} dispatch={dispatch} notify={notify} initialSideTab={assignInitTab}/>}

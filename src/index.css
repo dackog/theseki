@@ -624,7 +624,7 @@
     .topbar-nav { margin-left: 0.6rem; gap: 0.2rem; }
     .nav-btn { font-size: 0.73rem; padding: 0.28rem 0.55rem; min-height: var(--ctrl-h-mobile); }
     .topbar-actions-desktop { display: none !important; }
-    .topbar-login-mobile { display: flex; align-items: center; }
+    .topbar-login-mobile { display: flex !important; align-items: center; }
 
     /* ── メイン余白 ── */
     .main { padding: 0.9rem; }
