@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TheSEKI — Pattern 1: モダンSaaS型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Pattern 1: モダンSaaS型（Notion / Stripe風）
+   コンセプト: 「使うたびに賢くなる道具」
+   余白で意図を伝え、構造で情報を整理する
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* カラーパレット */
+  --ink:          #0f172a;   /* slate-900 */
+  --ink-light:    #475569;   /* slate-600 */
+  --ink-muted:    #94a3b8;   /* slate-400 */
+  --paper:        #ffffff;
+  --paper-warm:   #f8fafc;   /* slate-50 */
+  --paper-dark:   #f1f5f9;   /* slate-100 */
+  --accent:       #4f46e5;   /* indigo-600 */
+  --accent-hover: #4338ca;   /* indigo-700 */
+  --accent-light: #eef2ff;   /* indigo-50 */
+  --accent-border:#c7d2fe;   /* indigo-200 */
+  --green:        #059669;   /* emerald-600 */
+  --green-light:  #d1fae5;   /* emerald-100 */
+  --border:       #e2e8f0;   /* slate-200 */
+  --border-focus: #a5b4fc;   /* indigo-300 */
+  --danger:       #dc2626;   /* red-600 */
+  --danger-light: #fee2e2;
+  --warning:      #d97706;   /* amber-600 */
+  --warning-light:#fef3c7;
+  --shadow-sm:    0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.06);
+  --shadow-md:    0 4px 6px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.06);
+  --shadow-lg:    0 10px 15px rgba(15,23,42,0.1), 0 4px 6px rgba(15,23,42,0.05);
+  --radius-sm:    4px;
+  --radius-md:    8px;
+  --radius-lg:    12px;
+  --topbar-h:     56px;
+  --sidebar-w:    220px;
+  --panel-w:      288px;
+}
+
+body {
+  font-family: 'Inter', 'Noto Sans JP', -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--paper-warm);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 1.25rem;
+  gap: 1rem;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+.topbar-logo {
+  font-size: 1.1rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--ink);
+  display: flex; align-items: center; gap: 0.5rem;
+  text-decoration: none;
+}
+.topbar-logo span {
+  color: var(--accent);
+}
+.topbar-logo .logo-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+}
+.topbar-divider {
+  width: 1px; height: 20px; background: var(--border);
+}
+.topbar-nav {
+  display: flex; align-items: center; gap: 0.25rem;
+  flex: 1;
+}
+.topbar-nav-item {
+  padding: 0.35rem 0.65rem;
+  font-size: 13px; font-weight: 500;
+  color: var(--ink-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer; border: none; background: none;
+  transition: all 0.15s;
+  text-decoration: none;
+  display: flex; align-items: center; gap: 0.35rem;
+}
+.topbar-nav-item:hover { background: var(--paper-dark); color: var(--ink); }
+.topbar-nav-item.active { background: var(--accent-light); color: var(--accent); }
+.topbar-nav-breadcrumb {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 13px; color: var(--ink-light);
+}
+.topbar-nav-breadcrumb .sep { color: var(--ink-muted); }
+.topbar-nav-breadcrumb .current { font-weight: 600; color: var(--ink); }
+.topbar-actions {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-left: auto;
+}
+.topbar-status {
+  font-size: 11px; font-weight: 500;
+  color: var(--green);
+  display: flex; align-items: center; gap: 0.3rem;
+}
+.topbar-status::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 13px; font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer; transition: all 0.15s;
+  text-decoration: none; white-space: nowrap;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-primary {
+  background: var(--accent); color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-outline {
+  background: var(--paper); color: var(--ink);
+  border-color: var(--border);
+}
+.btn-outline:hover { background: var(--paper-dark); border-color: #cbd5e1; }
+.btn-ghost {
+  background: transparent; color: var(--ink-light);
+  border-color: transparent;
+}
+.btn-ghost:hover { background: var(--paper-dark); color: var(--ink); }
+.btn-danger {
+  background: transparent; color: var(--danger);
+  border-color: transparent;
+}
+.btn-danger:hover { background: var(--danger-light); }
+.btn-sm { padding: 0.3rem 0.6rem; font-size: 12px; }
+.btn-icon {
+  padding: 0.4rem; min-width: 32px; justify-content: center;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+/* ── Layout Shell ─────────────────────────────────────────── */
+.app-shell {
+  padding-top: var(--topbar-h);
+  min-height: 100dvh;
+}
+
+/* ── Screen Toggle (demo only) ────────────────────────────── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── Events Page ─────────────────────────────────────────── */
+.events-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.page-title {
+  font-size: 1.25rem; font-weight: 700; color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.page-subtitle {
+  font-size: 13px; color: var(--ink-muted); margin-top: 0.25rem;
+}
+
+/* イベントリスト（リスト形式）*/
+.events-list {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.event-row {
+  display: grid;
+  grid-template-columns: 3fr 1.2fr 0.8fr auto;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  gap: 1rem;
+  transition: background 0.1s;
+  cursor: pointer;
+}
+.event-row:last-child { border-bottom: none; }
+.event-row:hover { background: var(--paper-warm); }
+.event-row-title {
+  font-size: 13.5px; font-weight: 600; color: var(--ink);
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.event-row-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+}
+.event-row-date {
+  font-size: 12.5px; color: var(--ink-light);
+}
+.event-row-stats {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.stat-badge {
+  font-size: 11px; font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  background: var(--paper-dark);
+  color: var(--ink-light);
+}
+.stat-badge.green { background: var(--green-light); color: var(--green); }
+.event-row-actions {
+  display: flex; align-items: center; gap: 0.25rem;
+  opacity: 0; transition: opacity 0.15s;
+}
+.event-row:hover .event-row-actions { opacity: 1; }
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 4rem 2rem;
+  color: var(--ink-muted);
+}
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.empty-state-title { font-size: 15px; font-weight: 600; color: var(--ink-light); margin-bottom: 0.4rem; }
+.empty-state-text { font-size: 13px; }
+
+/* ── Subpage Shell (Layout / Assign / Attendees) ─────────── */
+.subpage-shell {
+  display: flex; flex-direction: column;
+  height: calc(100dvh - var(--topbar-h));
+}
+.inner-nav {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.25rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  height: 44px;
+  flex-shrink: 0;
+}
+.inner-nav-tabs {
+  display: flex; align-items: center; gap: 0.125rem;
+}
+.inner-nav-tab {
+  padding: 0.3rem 0.75rem; font-size: 13px; font-weight: 500;
+  color: var(--ink-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer; border: none; background: none;
+  transition: all 0.15s;
+}
+.inner-nav-tab:hover { color: var(--ink); background: var(--paper-dark); }
+.inner-nav-tab.active {
+  color: var(--accent); background: var(--accent-light);
+}
+.inner-nav-sep { color: var(--ink-muted); font-size: 12px; }
+.inner-nav-spacer { flex: 1; }
+
+/* ── Layout Page ─────────────────────────────────────────── */
+.layout-shell {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.floor-toolbar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.25rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  flex-shrink: 0;
+}
+.floor-toolbar select {
+  font-family: inherit; font-size: 13px;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper); color: var(--ink);
+  cursor: pointer;
+}
+.floor-toolbar-stats {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-left: auto;
+}
+.stat-chip {
+  font-size: 11.5px; font-weight: 500;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  background: var(--paper-dark);
+  color: var(--ink-light);
+  display: flex; align-items: center; gap: 0.3rem;
+}
+.stat-chip.accent { background: var(--accent-light); color: var(--accent); }
+.floor-layout {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr var(--panel-w);
+  overflow: hidden;
+}
+.floor-canvas-region {
+  overflow: auto; background: var(--paper-warm);
+  position: relative;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.floor-panel {
+  background: var(--paper);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.floor-panel-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; color: var(--ink-light);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.floor-panel-body {
+  flex: 1; overflow-y: auto; padding: 0.5rem;
+}
+.floor-table-item {
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 0.6rem;
+  transition: background 0.1s;
+  border: 1px solid transparent;
+}
+.floor-table-item:hover { background: var(--paper-warm); }
+.floor-table-item.selected {
+  background: var(--accent-light);
+  border-color: var(--accent-border);
+}
+.floor-table-item-icon {
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  background: var(--paper-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--ink-light);
+  flex-shrink: 0;
+}
+.floor-table-item.selected .floor-table-item-icon {
+  background: var(--accent-light); color: var(--accent);
+}
+.floor-table-item-info { flex: 1; min-width: 0; }
+.floor-table-item-name {
+  font-size: 13px; font-weight: 500; color: var(--ink);
+}
+.floor-table-item-seats {
+  font-size: 11px; color: var(--ink-muted); margin-top: 1px;
+}
+.floor-panel-divider {
+  height: 1px; background: var(--border); margin: 0.5rem;
+}
+.floor-panel-section {
+  padding: 0.75rem 0.75rem;
+}
+.floor-panel-label {
+  font-size: 11.5px; font-weight: 500; color: var(--ink-muted);
+  margin-bottom: 0.35rem; display: block;
+}
+.floor-panel-input {
+  width: 100%; padding: 0.4rem 0.6rem;
+  font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper); color: var(--ink);
+  transition: border-color 0.15s;
+}
+.floor-panel-input:focus {
+  outline: none; border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+}
+.shape-toggle {
+  display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.shape-toggle button {
+  flex: 1; padding: 0.35rem 0.5rem; font-size: 12px;
+  border: none; background: var(--paper); cursor: pointer;
+  color: var(--ink-light); transition: all 0.1s;
+}
+.shape-toggle button.active {
+  background: var(--accent); color: white;
+}
+
+/* ── Floor Canvas Tables (visual representation) ─────────── */
+.floor-canvas-inner {
+  min-width: 800px; min-height: 500px;
+  position: relative; padding: 2rem;
+}
+.mock-table {
+  position: absolute;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.mock-table-top {
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.75rem;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-light);
+  box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.mock-table-top.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.mock-table-seats {
+  display: flex; gap: 3px;
+}
+.mock-seat {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--paper-dark);
+  border: 1.5px solid var(--border);
+}
+.mock-seat.filled {
+  background: var(--green-light);
+  border-color: var(--green);
+}
+
+/* ── Assign Page ─────────────────────────────────────────── */
+.assign-shell {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.assign-status-bar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1.25rem;
+  display: flex; align-items: center; gap: 1rem;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.assign-status-bar .progress-wrap {
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.progress-bar {
+  width: 140px; height: 6px; border-radius: 9999px;
+  background: var(--paper-dark); overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; background: var(--green);
+  border-radius: 9999px;
+}
+.assign-warning {
+  display: flex; align-items: center; gap: 0.3rem;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--warning); background: var(--warning-light);
+  padding: 0.2rem 0.6rem; border-radius: 9999px;
+}
+.assign-layout {
+  flex: 1; display: grid;
+  grid-template-columns: 256px 1fr;
+  overflow: hidden;
+}
+.assign-sidebar {
+  background: var(--paper);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.assign-sidebar-header {
+  padding: 0.75rem 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.search-input-wrap {
+  position: relative;
+}
+.search-input-wrap svg {
+  position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%);
+  color: var(--ink-muted); pointer-events: none;
+}
+.search-input {
+  width: 100%; padding: 0.4rem 0.6rem 0.4rem 2rem;
+  font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper-warm); color: var(--ink);
+}
+.search-input:focus {
+  outline: none; border-color: var(--border-focus);
+  background: var(--paper);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+}
+.assign-actions-row {
+  display: flex; gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.attendee-list { flex: 1; overflow-y: auto; }
+.attendee-item {
+  padding: 0.55rem 0.75rem;
+  display: flex; align-items: center; gap: 0.6rem;
+  cursor: pointer; transition: background 0.1s;
+  border-bottom: 1px solid var(--border);
+}
+.attendee-item:hover { background: var(--paper-warm); }
+.attendee-item.selected { background: var(--accent-light); }
+.attendee-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--paper-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--ink-light);
+  flex-shrink: 0;
+}
+.attendee-item.selected .attendee-avatar {
+  background: var(--accent); color: white;
+}
+.attendee-name {
+  font-size: 13px; font-weight: 500; color: var(--ink);
+  flex: 1;
+}
+.attendee-item.assigned .attendee-name { color: var(--ink-muted); }
+.assigned-badge {
+  width: 16px; height: 16px;
+  background: var(--green); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.assigned-badge::after {
+  content: '✓'; font-size: 9px; color: white; font-weight: 700;
+}
+.assign-floor-area {
+  overflow: auto;
+  background: var(--paper-warm);
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 32px 32px;
+  padding: 1.5rem;
+  display: flex; flex-wrap: wrap; gap: 1.25rem;
+  align-content: flex-start;
+}
+.assign-table-card {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1rem;
+  box-shadow: var(--shadow-sm);
+  min-width: 200px;
+}
+.assign-table-name {
+  font-size: 12px; font-weight: 600; color: var(--ink-light);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 0.6rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.assign-table-count {
+  font-size: 11px; font-weight: 500;
+  background: var(--paper-dark); color: var(--ink-muted);
+  padding: 0.1rem 0.4rem; border-radius: 9999px;
+}
+.seats-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+}
+.seat {
+  height: 36px; border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--border);
+  background: var(--paper-warm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; color: var(--ink-muted);
+  cursor: pointer; transition: all 0.1s;
+}
+.seat:hover { border-color: var(--accent); background: var(--accent-light); }
+.seat.filled {
+  background: var(--green-light);
+  border: 1.5px solid var(--green);
+  color: var(--ink); font-size: 10px; font-weight: 500;
+  padding: 0 2px; text-align: center; line-height: 1.2;
+}
+.seat.violation {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ── Modal ─────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,0.4);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.modal {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: min(440px, 92vw);
+  display: flex; flex-direction: column;
+  max-height: 80vh;
+}
+.modal-header {
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title {
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.modal-close {
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  border: none; background: transparent; cursor: pointer;
+  color: var(--ink-muted); font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s;
+}
+.modal-close:hover { background: var(--paper-dark); color: var(--ink); }
+.modal-body {
+  padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-label {
+  font-size: 12.5px; font-weight: 500; color: var(--ink-light);
+}
+.form-input {
+  padding: 0.5rem 0.75rem;
+  font-size: 14px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper); color: var(--ink);
+  transition: border-color 0.15s;
+}
+.form-input:focus {
+  outline: none; border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+}
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 0.5rem;
+}
+
+/* ── Demo Navigation ─────────────────────────────────────── */
+.demo-bar {
+  position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+  background: var(--ink);
+  border-radius: 9999px;
+  padding: 0.4rem 0.6rem;
+  display: flex; align-items: center; gap: 0.25rem;
+  z-index: 300;
+  box-shadow: var(--shadow-lg);
+}
+.demo-btn {
+  padding: 0.35rem 0.85rem; font-size: 12px; font-weight: 500;
+  border-radius: 9999px; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.6);
+  background: transparent; transition: all 0.15s;
+}
+.demo-btn.active { background: var(--accent); color: white; }
+.demo-btn:hover:not(.active) { color: white; }
+
+/* ── Mobile ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .topbar-nav { display: none; }
+  .event-row {
+    grid-template-columns: 1fr auto;
+  }
+  .event-row-date, .event-row-stats { display: none; }
+  .event-row-actions { opacity: 1; }
+  .assign-layout { grid-template-columns: 1fr; }
+  .assign-sidebar {
+    display: none;
+  }
+  .floor-layout { grid-template-columns: 1fr; }
+  .floor-panel { display: none; }
+  .events-page { padding: 1.5rem 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ====================== TOPBAR ====================== -->
+<header class="topbar" id="topbar">
+  <a href="#" class="topbar-logo">
+    <div class="logo-dot"></div>
+    The<span>SEKI</span>
+  </a>
+  <div class="topbar-divider"></div>
+  <nav class="topbar-nav" id="topbar-nav">
+    <!-- Events page: just logo -->
+    <span id="breadcrumb-events" class="topbar-nav-breadcrumb">
+      <span class="current">イベント一覧</span>
+    </span>
+    <!-- Subpage breadcrumb (hidden by default) -->
+    <span id="breadcrumb-sub" class="topbar-nav-breadcrumb" style="display:none;">
+      <span onclick="showScreen('events')" style="cursor:pointer;color:var(--ink-light);">イベント</span>
+      <span class="sep">/</span>
+      <span class="current">結婚式パーティー 2025</span>
+    </span>
+    <!-- Tab switcher for subpages -->
+    <div class="inner-nav-tabs" id="sub-tabs" style="display:none; margin-left:0.75rem;">
+      <button class="inner-nav-tab" onclick="showSubScreen('layout')">席配置</button>
+      <button class="inner-nav-tab active" onclick="showSubScreen('assign')">配置</button>
+      <button class="inner-nav-tab" onclick="showSubScreen('attendees')">招待客</button>
+    </div>
+  </nav>
+  <div class="topbar-actions">
+    <span class="topbar-status" id="save-status" style="display:none;">保存済</span>
+    <button class="btn btn-ghost btn-sm">田中</button>
+    <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-event-modal').style.display='flex'" id="new-event-btn">
+      + 新規
+    </button>
+  </div>
+</header>
+
+<!-- ====================== EVENTS SCREEN ====================== -->
+<div class="app-shell screen active" id="screen-events">
+  <div class="events-page">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">My Events</h1>
+        <p class="page-subtitle">イベントを選択して席割を開始</p>
+      </div>
+      <button class="btn btn-primary" onclick="document.getElementById('new-event-modal').style.display='flex'">
+        + 新規イベント
+      </button>
+    </div>
+
+    <div class="events-list">
+      <div class="event-row" onclick="showScreen('subpage')">
+        <div class="event-row-title">
+          <span class="event-row-dot"></span>
+          結婚式パーティー 2025
+        </div>
+        <div class="event-row-date">2025 / 04 / 12</div>
+        <div class="event-row-stats">
+          <span class="stat-badge green">48名</span>
+          <span class="stat-badge">5卓</span>
+        </div>
+        <div class="event-row-actions">
+          <button class="btn btn-ghost btn-sm btn-icon">✏</button>
+          <button class="btn btn-ghost btn-sm btn-icon">⧉</button>
+          <button class="btn btn-danger btn-sm btn-icon">✕</button>
+        </div>
+      </div>
+      <div class="event-row">
+        <div class="event-row-title">
+          <span class="event-row-dot" style="background:#64748b;"></span>
+          社内懇親会 春
+        </div>
+        <div class="event-row-date">2025 / 03 / 28</div>
+        <div class="event-row-stats">
+          <span class="stat-badge green">32名</span>
+          <span class="stat-badge">4卓</span>
+        </div>
+        <div class="event-row-actions">
+          <button class="btn btn-ghost btn-sm btn-icon">✏</button>
+          <button class="btn btn-ghost btn-sm btn-icon">⧉</button>
+          <button class="btn btn-danger btn-sm btn-icon">✕</button>
+        </div>
+      </div>
+      <div class="event-row">
+        <div class="event-row-title">
+          <span class="event-row-dot" style="background:#94a3b8;"></span>
+          卒業パーティー
+        </div>
+        <div class="event-row-date">2025 / 03 / 15</div>
+        <div class="event-row-stats">
+          <span class="stat-badge">28名</span>
+          <span class="stat-badge">3卓</span>
+        </div>
+        <div class="event-row-actions">
+          <button class="btn btn-ghost btn-sm btn-icon">✏</button>
+          <button class="btn btn-ghost btn-sm btn-icon">⧉</button>
+          <button class="btn btn-danger btn-sm btn-icon">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== SUBPAGE SHELL ====================== -->
+<div class="app-shell screen" id="screen-subpage" style="padding-top:var(--topbar-h);">
+  <div class="subpage-shell">
+
+    <!-- Layout Sub-screen -->
+    <div class="layout-shell screen active" id="sub-layout">
+      <div class="floor-toolbar">
+        <button class="btn btn-outline btn-sm">+ 卓を追加</button>
+        <select><option>テーマ: デフォルト</option><option>シンプル</option><option>キュート</option><option>スタイリッシュ</option></select>
+        <div class="floor-toolbar-stats">
+          <span class="stat-chip accent">5卓</span>
+          <span class="stat-chip">40席</span>
+          <span class="stat-chip" style="background:var(--green-light);color:var(--green);">38名配置済</span>
+        </div>
+      </div>
+      <div class="floor-layout">
+        <div class="floor-canvas-region">
+          <div class="floor-canvas-inner">
+            <!-- Mock tables -->
+            <div class="mock-table" style="left:60px;top:50px;">
+              <div class="mock-table-top selected">
+                <div style="font-size:10px;">A卓</div>
+                <div class="mock-table-seats">
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat"></div><div class="mock-seat"></div>
+                </div>
+              </div>
+            </div>
+            <div class="mock-table" style="left:240px;top:50px;">
+              <div class="mock-table-top">
+                <div style="font-size:10px;">B卓</div>
+                <div class="mock-table-seats">
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                </div>
+              </div>
+            </div>
+            <div class="mock-table" style="left:400px;top:50px;">
+              <div class="mock-table-top">
+                <div style="font-size:10px;">C卓</div>
+                <div class="mock-table-seats">
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                </div>
+              </div>
+            </div>
+            <div class="mock-table" style="left:140px;top:180px;">
+              <div class="mock-table-top">
+                <div style="font-size:10px;">D卓</div>
+                <div class="mock-table-seats">
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat"></div>
+                </div>
+              </div>
+            </div>
+            <div class="mock-table" style="left:330px;top:200px;">
+              <div class="mock-table-top">
+                <div style="font-size:10px;">E卓</div>
+                <div class="mock-table-seats">
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                  <div class="mock-seat filled"></div><div class="mock-seat filled"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="floor-panel">
+          <div class="floor-panel-header">
+            <span>卓リスト</span>
+            <button class="btn btn-ghost btn-sm btn-icon" style="font-size:14px;">+</button>
+          </div>
+          <div class="floor-panel-body">
+            <div class="floor-table-item selected">
+              <div class="floor-table-item-icon">A</div>
+              <div class="floor-table-item-info">
+                <div class="floor-table-item-name">A卓</div>
+                <div class="floor-table-item-seats">8席（6名配置）</div>
+              </div>
+            </div>
+            <div class="floor-table-item">
+              <div class="floor-table-item-icon">B</div>
+              <div class="floor-table-item-info">
+                <div class="floor-table-item-name">B卓</div>
+                <div class="floor-table-item-seats">6席（6名配置）</div>
+              </div>
+            </div>
+            <div class="floor-table-item">
+              <div class="floor-table-item-icon">C</div>
+              <div class="floor-table-item-info">
+                <div class="floor-table-item-name">C卓</div>
+                <div class="floor-table-item-seats">8席（8名配置）</div>
+              </div>
+            </div>
+            <div class="floor-table-item">
+              <div class="floor-table-item-icon">D</div>
+              <div class="floor-table-item-info">
+                <div class="floor-table-item-name">D卓</div>
+                <div class="floor-table-item-seats">6席（5名配置）</div>
+              </div>
+            </div>
+            <div class="floor-table-item">
+              <div class="floor-table-item-icon">E</div>
+              <div class="floor-table-item-info">
+                <div class="floor-table-item-name">E卓</div>
+                <div class="floor-table-item-seats">8席（8名配置）</div>
+              </div>
+            </div>
+          </div>
+          <div class="floor-panel-divider"></div>
+          <!-- Active table editor -->
+          <div class="floor-panel-section">
+            <span class="floor-panel-label">選択中: A卓</span>
+          </div>
+          <div class="floor-panel-section" style="padding-top:0;">
+            <label class="floor-panel-label">卓名</label>
+            <input class="floor-panel-input" value="A卓" type="text">
+          </div>
+          <div class="floor-panel-section" style="padding-top:0;">
+            <label class="floor-panel-label">席数</label>
+            <input class="floor-panel-input" value="8" type="number" min="1" max="20">
+          </div>
+          <div class="floor-panel-section" style="padding-top:0;">
+            <label class="floor-panel-label">形状</label>
+            <div class="shape-toggle">
+              <button class="active">○ 円形</button>
+              <button>□ 角形</button>
+            </div>
+          </div>
+          <div class="floor-panel-section" style="padding-top:0.25rem;">
+            <div style="display:flex;gap:0.4rem;">
+              <button class="btn btn-outline btn-sm" style="flex:1;">複製</button>
+              <button class="btn btn-danger btn-sm" style="flex:1;">削除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assign Sub-screen (default) -->
+    <div class="assign-shell screen" id="sub-assign" style="display:none;">
+      <div class="assign-status-bar">
+        <div class="progress-wrap">
+          <span style="font-size:12.5px;font-weight:600;color:var(--ink);">40 / 48名 配置済</span>
+          <div class="progress-bar"><div class="progress-bar-fill" style="width:83%;"></div></div>
+        </div>
+        <div class="assign-warning">⚠ NG違反 2件</div>
+        <div style="margin-left:auto;display:flex;gap:0.4rem;">
+          <button class="btn btn-outline btn-sm">ランダム配置</button>
+          <button class="btn btn-outline btn-sm">カスタム配置</button>
+        </div>
+      </div>
+      <div class="assign-layout">
+        <div class="assign-sidebar">
+          <div class="assign-sidebar-header">
+            <div class="search-input-wrap">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input class="search-input" placeholder="名前で検索...">
+            </div>
+            <select style="font-family:inherit;font-size:12.5px;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--paper-warm);">
+              <option>全タグ</option><option>新郎側</option><option>新婦側</option>
+            </select>
+          </div>
+          <div class="attendee-list">
+            <div class="attendee-item selected">
+              <div class="attendee-avatar" style="background:var(--accent);color:white;">田</div>
+              <span class="attendee-name">田中 太郎</span>
+            </div>
+            <div class="attendee-item">
+              <div class="attendee-avatar">鈴</div>
+              <span class="attendee-name">鈴木 花子</span>
+            </div>
+            <div class="attendee-item assigned">
+              <div class="attendee-avatar" style="background:var(--green-light);color:var(--green);">佐</div>
+              <span class="attendee-name">佐藤 一郎</span>
+              <div class="assigned-badge"></div>
+            </div>
+            <div class="attendee-item assigned">
+              <div class="attendee-avatar" style="background:var(--green-light);color:var(--green);">山</div>
+              <span class="attendee-name">山本 誠</span>
+              <div class="assigned-badge"></div>
+            </div>
+            <div class="attendee-item assigned">
+              <div class="attendee-avatar" style="background:var(--green-light);color:var(--green);">吉</div>
+              <span class="attendee-name">吉田 美香</span>
+              <div class="assigned-badge"></div>
+            </div>
+            <div class="attendee-item assigned">
+              <div class="attendee-avatar" style="background:var(--green-light);color:var(--green);">木</div>
+              <span class="attendee-name">木村 次郎</span>
+              <div class="assigned-badge"></div>
+            </div>
+            <div class="attendee-item">
+              <div class="attendee-avatar">中</div>
+              <span class="attendee-name">中野 さくら</span>
+            </div>
+            <div class="attendee-item assigned">
+              <div class="attendee-avatar" style="background:var(--green-light);color:var(--green);">加</div>
+              <span class="attendee-name">加藤 健太</span>
+              <div class="assigned-badge"></div>
+            </div>
+          </div>
+        </div>
+        <div class="assign-floor-area">
+          <div class="assign-table-card">
+            <div class="assign-table-name">A卓 <span class="assign-table-count">6 / 8</span></div>
+            <div class="seats-grid">
+              <div class="seat filled">佐藤<br>一郎</div>
+              <div class="seat filled">山本<br>誠</div>
+              <div class="seat filled">吉田<br>美香</div>
+              <div class="seat filled">木村<br>次郎</div>
+              <div class="seat filled violation">林<br>芳夫</div>
+              <div class="seat filled">渡辺<br>京子</div>
+              <div class="seat"></div>
+              <div class="seat"></div>
+            </div>
+          </div>
+          <div class="assign-table-card">
+            <div class="assign-table-name">B卓 <span class="assign-table-count">6 / 6</span></div>
+            <div class="seats-grid">
+              <div class="seat filled">加藤<br>健太</div>
+              <div class="seat filled">松本<br>優</div>
+              <div class="seat filled">石田<br>誠</div>
+              <div class="seat filled">田村<br>聡</div>
+              <div class="seat filled">小林<br>恵</div>
+              <div class="seat filled">中島<br>亮</div>
+            </div>
+          </div>
+          <div class="assign-table-card">
+            <div class="assign-table-name">C卓 <span class="assign-table-count">8 / 8</span></div>
+            <div class="seats-grid">
+              <div class="seat filled">大野<br>拓</div>
+              <div class="seat filled">清水<br>里</div>
+              <div class="seat filled">原<br>大輔</div>
+              <div class="seat filled">村田<br>梨</div>
+              <div class="seat filled">近藤<br>司</div>
+              <div class="seat filled">藤田<br>莉</div>
+              <div class="seat filled">岡田<br>修</div>
+              <div class="seat filled">西村<br>葵</div>
+            </div>
+          </div>
+          <div class="assign-table-card">
+            <div class="assign-table-name">D卓 <span class="assign-table-count">5 / 6</span></div>
+            <div class="seats-grid">
+              <div class="seat filled">上田<br>幸</div>
+              <div class="seat filled">森<br>達也</div>
+              <div class="seat filled">長谷川</div>
+              <div class="seat filled">池田<br>咲</div>
+              <div class="seat filled violation">橋本<br>隆</div>
+              <div class="seat"></div>
+            </div>
+          </div>
+          <div class="assign-table-card">
+            <div class="assign-table-name">E卓 <span class="assign-table-count">8 / 8</span></div>
+            <div class="seats-grid">
+              <div class="seat filled">永田<br>裕</div>
+              <div class="seat filled">三浦<br>楓</div>
+              <div class="seat filled">和田<br>正</div>
+              <div class="seat filled">坂本<br>菜</div>
+              <div class="seat filled">丸山<br>翔</div>
+              <div class="seat filled">福田<br>唯</div>
+              <div class="seat filled">横山<br>剛</div>
+              <div class="seat filled">菊池<br>凛</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ====================== NEW EVENT MODAL ====================== -->
+<div class="modal-backdrop" id="new-event-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">新規イベント</h2>
+      <button class="modal-close" onclick="document.getElementById('new-event-modal').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">イベント名</label>
+        <input class="form-input" type="text" placeholder="例：結婚披露宴" autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label">開催日時</label>
+        <input class="form-input" type="datetime-local">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('new-event-modal').style.display='none'">キャンセル</button>
+      <button class="btn btn-primary">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== DEMO NAV ====================== -->
+<div class="demo-bar">
+  <button class="demo-btn active" onclick="showScreen('events')">① イベント一覧</button>
+  <button class="demo-btn" onclick="showScreen('subpage');showSubScreen('layout')">② 席配置</button>
+  <button class="demo-btn" onclick="showScreen('subpage');showSubScreen('assign')">③ 配置</button>
+</div>
+
+<script>
+function showScreen(name) {
+  document.querySelectorAll('.app-shell.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+
+  const breadcrumbEvents = document.getElementById('breadcrumb-events');
+  const breadcrumbSub = document.getElementById('breadcrumb-sub');
+  const subTabs = document.getElementById('sub-tabs');
+  const newBtn = document.getElementById('new-event-btn');
+  const saveStatus = document.getElementById('save-status');
+
+  if (name === 'events') {
+    breadcrumbEvents.style.display = '';
+    breadcrumbSub.style.display = 'none';
+    subTabs.style.display = 'none';
+    newBtn.style.display = '';
+    saveStatus.style.display = 'none';
+  } else {
+    breadcrumbEvents.style.display = 'none';
+    breadcrumbSub.style.display = '';
+    subTabs.style.display = '';
+    newBtn.style.display = 'none';
+    saveStatus.style.display = '';
+  }
+
+  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+  if (name === 'events') document.querySelectorAll('.demo-btn')[0].classList.add('active');
+}
+
+function showSubScreen(name) {
+  document.querySelectorAll('#screen-subpage .screen').forEach(s => {
+    s.style.display = 'none';
+    s.classList.remove('active');
+  });
+  const target = document.getElementById('sub-' + name);
+  if (target) { target.style.display = 'flex'; target.classList.add('active'); }
+
+  document.querySelectorAll('.inner-nav-tab').forEach(t => t.classList.remove('active'));
+  const map = {layout:0, assign:1, attendees:2};
+  const idx = map[name];
+  if (idx !== undefined) document.querySelectorAll('.inner-nav-tab')[idx]?.classList.add('active');
+
+  const demoMap = {layout:1, assign:2};
+  if (demoMap[name] !== undefined) {
+    document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.demo-btn')[demoMap[name]]?.classList.add('active');
+  }
+}
+</script>
+
+</body>
+</html>

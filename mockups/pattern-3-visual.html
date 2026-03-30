@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TheSEKI — Pattern 3: 視覚重視型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Pattern 3: 視覚重視型（イベント・結婚式向け）
+   コンセプト: 「特別な日の、特別なツール」
+   会場の雰囲気を画面で感じられる高品質ビジュアル
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:           #1c1a17;
+  --ink-light:     #6b5b45;
+  --ink-muted:     #a89880;
+  --paper:         #fffef9;
+  --paper-warm:    #fdf8ee;
+  --paper-cream:   #f7f0e0;
+  --paper-dark:    #f0e6cc;
+  --gold:          #9d7c3f;
+  --gold-hover:    #7a5e28;
+  --gold-light:    #fdf2d8;
+  --gold-border:   #e8d49a;
+  --gold-shine:    #c9a84c;
+  --sage:          #3a7d5e;
+  --sage-light:    #e8f5ee;
+  --border:        #e8d9bd;
+  --border-light:  #f0e6cc;
+  --danger:        #b45309;
+  --danger-light:  #fef3c7;
+  --shadow-sm:     0 1px 3px rgba(28,26,23,0.08);
+  --shadow-md:     0 4px 12px rgba(28,26,23,0.1);
+  --shadow-lg:     0 8px 24px rgba(28,26,23,0.12);
+  --radius-sm:     4px;
+  --radius-md:     10px;
+  --radius-lg:     16px;
+  --radius-xl:     24px;
+  --topbar-h:      60px;
+}
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper-warm);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 2rem;
+  gap: 1.5rem;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+.topbar-logo {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1.2rem; font-weight: 700;
+  color: var(--ink); letter-spacing: 0.05em;
+  text-decoration: none;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.topbar-logo .logo-ornament {
+  color: var(--gold); font-size: 0.85rem;
+}
+.topbar-nav {
+  display: flex; align-items: center; gap: 1.5rem;
+  flex: 1; justify-content: center;
+}
+.topbar-nav-item {
+  font-size: 13px; font-weight: 500; letter-spacing: 0.03em;
+  color: var(--ink-light); text-decoration: none;
+  padding-bottom: 2px;
+  border-bottom: 1.5px solid transparent;
+  cursor: pointer; transition: all 0.15s;
+}
+.topbar-nav-item:hover { color: var(--ink); }
+.topbar-nav-item.active {
+  color: var(--gold); border-bottom-color: var(--gold);
+}
+.topbar-breadcrumb {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-size: 13px; color: var(--ink-light);
+}
+.topbar-breadcrumb .sep { color: var(--gold); font-size: 10px; }
+.topbar-breadcrumb .current { color: var(--ink); font-weight: 600; }
+.topbar-actions {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-left: auto;
+}
+.topbar-save-status {
+  font-size: 12px; color: var(--sage);
+  display: flex; align-items: center; gap: 0.3rem;
+}
+.topbar-save-status::before {
+  content: '✓'; font-size: 11px; font-weight: 700;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  font-size: 13px; font-weight: 500;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  cursor: pointer; transition: all 0.2s;
+  font-family: inherit; white-space: nowrap;
+  letter-spacing: 0.02em;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-gold {
+  background: var(--gold); color: white;
+  border-color: var(--gold);
+  box-shadow: 0 2px 6px rgba(157,124,63,0.3);
+}
+.btn-gold:hover {
+  background: var(--gold-hover); border-color: var(--gold-hover);
+  box-shadow: 0 4px 10px rgba(157,124,63,0.35);
+}
+.btn-outline {
+  background: transparent; color: var(--gold);
+  border-color: var(--gold-border);
+}
+.btn-outline:hover { background: var(--gold-light); }
+.btn-ghost {
+  background: transparent; color: var(--ink-light);
+  border-color: transparent;
+}
+.btn-ghost:hover { background: var(--paper-cream); color: var(--ink); }
+.btn-danger-soft {
+  background: transparent; color: var(--danger);
+  border-color: transparent;
+}
+.btn-danger-soft:hover { background: var(--danger-light); }
+.btn-sm { padding: 0.3rem 0.75rem; font-size: 12px; }
+.btn-icon { padding: 0.4rem 0.6rem; }
+
+/* ── Screen Toggle ─────────────────────────────────────── */
+.screen { display: none; }
+.screen.active { display: block; }
+.flex-screen { display: none; }
+.flex-screen.active { display: flex; }
+
+/* ── App Shell ─────────────────────────────────────────── */
+.app-shell { padding-top: var(--topbar-h); min-height: 100dvh; }
+
+/* ── Events Screen ─────────────────────────────────────── */
+.events-screen { max-width: 1000px; margin: 0 auto; padding: 3rem 2rem; }
+.events-hero {
+  text-align: center; margin-bottom: 3rem;
+}
+.events-hero-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1.75rem; font-weight: 700;
+  color: var(--ink); letter-spacing: 0.04em;
+  margin-bottom: 0.6rem;
+}
+.events-hero-title .ornament { color: var(--gold); margin: 0 0.6rem; font-size: 0.8em; }
+.events-hero-sub {
+  font-size: 13.5px; color: var(--ink-muted);
+}
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1.5rem;
+}
+.event-card {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s;
+  cursor: pointer;
+}
+.event-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+  border-color: var(--gold-border);
+}
+.event-card-header {
+  height: 110px; position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.event-card-header.theme-blush {
+  background: linear-gradient(135deg, #f9e4e4 0%, #fdf2d8 50%, #fce7f3 100%);
+}
+.event-card-header.theme-sage {
+  background: linear-gradient(135deg, #d1fae5 0%, #fdf8ee 50%, #dcfce7 100%);
+}
+.event-card-header.theme-navy {
+  background: linear-gradient(135deg, #e0e7ff 0%, #fdf8ee 50%, #dbeafe 100%);
+}
+.event-card-header-ornament {
+  font-size: 2rem; opacity: 0.6;
+}
+.event-card-header-date {
+  position: absolute; bottom: 0.6rem; right: 0.75rem;
+  font-size: 11px; font-weight: 500; color: var(--ink-muted);
+  background: rgba(255,255,255,0.85); padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+}
+.event-card-body {
+  padding: 1rem 1.25rem;
+}
+.event-card-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1rem; font-weight: 700; color: var(--ink);
+  margin-bottom: 0.4rem;
+}
+.event-card-meta {
+  display: flex; align-items: center; gap: 0.75rem;
+  font-size: 12px; color: var(--ink-muted); margin-bottom: 0.85rem;
+}
+.event-card-stat { display: flex; align-items: center; gap: 0.3rem; }
+.event-card-divider { color: var(--gold); font-size: 8px; }
+.event-card-actions {
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.event-card-main-btn {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0.6rem;
+  background: var(--gold-light); color: var(--gold);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.03em;
+  gap: 0.4rem;
+}
+.event-card-main-btn:hover { background: var(--gold); color: white; }
+.event-card-sub-btns {
+  display: flex; gap: 0.35rem; justify-content: flex-end;
+}
+.event-card-new {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0.6rem; padding: 2.5rem 1.5rem;
+  cursor: pointer; transition: all 0.15s;
+  min-height: 260px;
+  color: var(--ink-muted);
+}
+.event-card-new:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-light); }
+.event-card-new-icon { font-size: 1.8rem; opacity: 0.6; }
+.event-card-new-text { font-size: 13px; font-weight: 500; }
+
+/* ── Subpage Shell ─────────────────────────────────────── */
+.subpage-shell {
+  display: flex; flex-direction: column;
+  height: calc(100dvh - var(--topbar-h));
+}
+.event-subnav {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex; align-items: center; gap: 0;
+  justify-content: center;
+  height: 46px;
+  flex-shrink: 0;
+}
+.subnav-tab {
+  padding: 0 1.25rem; height: 100%;
+  display: flex; align-items: center;
+  font-size: 13px; font-weight: 500; letter-spacing: 0.02em;
+  color: var(--ink-muted); cursor: pointer;
+  border: none; background: none; font-family: inherit;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.subnav-tab:hover { color: var(--ink); }
+.subnav-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ── Layout Screen ─────────────────────────────────────── */
+.layout-shell {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.layout-toolbar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.5rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  flex-shrink: 0;
+}
+.layout-toolbar select {
+  font-family: inherit; font-size: 13px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border); border-radius: 9999px;
+  background: var(--paper-warm); color: var(--ink);
+}
+.toolbar-stat {
+  font-size: 12px; color: var(--ink-muted);
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  background: var(--paper-warm); border-radius: 9999px;
+  border: 1px solid var(--border);
+}
+.toolbar-stat strong { color: var(--ink); }
+.layout-body {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr 280px;
+  overflow: hidden;
+}
+.canvas-area {
+  overflow: auto;
+  background: var(--paper-warm);
+  background-image: radial-gradient(circle, #e8d9bd 1px, transparent 1px);
+  background-size: 24px 24px;
+  position: relative;
+}
+.canvas-inner { min-width: 720px; min-height: 500px; position: relative; padding: 2rem; }
+
+/* Table visual */
+.vis-table { position: absolute; }
+.vis-table-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.vis-table-body {
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.85rem;
+  text-align: center;
+  cursor: grab; box-shadow: var(--shadow-sm);
+  transition: all 0.15s;
+}
+.vis-table-body:hover, .vis-table-body.selected {
+  border-color: var(--gold); box-shadow: 0 0 0 3px rgba(157,124,63,0.15);
+}
+.vis-table-name {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 11px; font-weight: 600; color: var(--ink-light);
+  margin-bottom: 5px; letter-spacing: 0.06em;
+}
+.vis-table-body.selected .vis-table-name { color: var(--gold); }
+.vis-table-seats { display: flex; gap: 3px; justify-content: center; }
+.vis-seat {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--paper-cream); border: 1.5px solid var(--border);
+}
+.vis-seat.f { background: #d0ead8; border-color: #8cb89a; }
+.side-panel {
+  background: var(--paper);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.side-panel-header {
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Noto Serif JP', serif;
+  font-size: 12px; font-weight: 600; color: var(--ink-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.side-panel-body { flex: 1; overflow-y: auto; padding: 0.5rem; }
+.table-list-item {
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer; transition: background 0.12s;
+  display: flex; align-items: center; gap: 0.6rem;
+  border: 1px solid transparent;
+}
+.table-list-item:hover { background: var(--paper-warm); }
+.table-list-item.active { background: var(--gold-light); border-color: var(--gold-border); }
+.table-list-icon {
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  background: var(--paper-cream);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Noto Serif JP', serif;
+  font-size: 11px; font-weight: 600; color: var(--ink-muted);
+}
+.table-list-item.active .table-list-icon { background: var(--gold); color: white; }
+.table-list-info { flex: 1; }
+.table-list-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+.table-list-meta { font-size: 11px; color: var(--ink-muted); }
+.side-panel-divider { height: 1px; background: var(--border); margin: 0.5rem; }
+.side-form { padding: 0.75rem 0.75rem; }
+.sf-label { font-size: 11.5px; font-weight: 500; color: var(--ink-muted); display: block; margin-bottom: 0.3rem; }
+.sf-input {
+  width: 100%; padding: 0.45rem 0.65rem;
+  font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper-warm); color: var(--ink);
+  margin-bottom: 0.75rem;
+}
+.sf-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(157,124,63,0.12); }
+.shape-toggle { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; }
+.shape-btn {
+  flex: 1; padding: 0.4rem; font-size: 12px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper-warm); color: var(--ink-muted); cursor: pointer;
+}
+.shape-btn.active { border-color: var(--gold); background: var(--gold-light); color: var(--gold); }
+
+/* ── Assign Screen ─────────────────────────────────────── */
+.assign-shell {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.assign-banner {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 0.7rem 1.5rem;
+  display: flex; align-items: center; gap: 1.25rem;
+  flex-shrink: 0;
+}
+.assign-prog {
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.prog-ring-wrap {
+  position: relative; width: 40px; height: 40px;
+}
+.prog-ring {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: conic-gradient(var(--sage) 0% 83%, var(--paper-dark) 83% 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.prog-ring-inner {
+  width: 28px; height: 28px; background: var(--paper); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: var(--ink);
+}
+.assign-prog-text { font-size: 13px; }
+.assign-prog-num {
+  font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em;
+  display: block; line-height: 1.1;
+}
+.assign-prog-label { font-size: 11px; color: var(--ink-muted); }
+.assign-warning {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--danger); background: var(--danger-light);
+  padding: 0.3rem 0.75rem; border-radius: 9999px;
+  border: 1px solid #fde68a;
+}
+.assign-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+.assign-layout {
+  flex: 1; display: grid;
+  grid-template-columns: 240px 1fr;
+  overflow: hidden;
+}
+.assign-sidebar {
+  background: var(--paper);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 12px; font-weight: 600; color: var(--ink-muted);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.sidebar-search {
+  width: 100%; padding: 0.4rem 0.65rem;
+  font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: 9999px;
+  background: var(--paper-warm); color: var(--ink);
+}
+.sidebar-search:focus { outline: none; border-color: var(--gold); }
+.sidebar-filter {
+  padding: 0.5rem 1rem; border-bottom: 1px solid var(--border);
+}
+.sidebar-filter select {
+  width: 100%; font-family: inherit; font-size: 12.5px;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border); border-radius: 9999px;
+  background: var(--paper-warm);
+}
+.guest-list { flex: 1; overflow-y: auto; }
+.guest-item {
+  padding: 0.55rem 1rem;
+  display: flex; align-items: center; gap: 0.6rem;
+  cursor: pointer; transition: background 0.12s;
+  border-bottom: 1px solid var(--border-light);
+}
+.guest-item:hover { background: var(--paper-warm); }
+.guest-item.selected { background: var(--gold-light); }
+.guest-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--paper-cream);
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--ink-light);
+  flex-shrink: 0;
+}
+.guest-item.selected .guest-avatar { background: var(--gold); border-color: var(--gold); color: white; }
+.guest-item.assigned .guest-avatar { background: #d0ead8; border-color: #8cb89a; color: var(--sage); }
+.guest-name { font-size: 13px; font-weight: 500; flex: 1; color: var(--ink); }
+.guest-item.assigned .guest-name { color: var(--ink-muted); }
+.guest-check { color: var(--sage); font-size: 11px; }
+.guest-tag {
+  font-size: 10px; padding: 0.1rem 0.4rem; border-radius: 9999px;
+  background: var(--gold-light); color: var(--gold); border: 1px solid var(--gold-border);
+}
+
+/* Floor visualization */
+.assign-floor {
+  overflow: auto; background: var(--paper-warm);
+  background-image: radial-gradient(circle, rgba(232,217,189,0.5) 1px, transparent 1px);
+  background-size: 28px 28px;
+  padding: 1.5rem;
+}
+.floor-grid {
+  display: flex; flex-wrap: wrap; gap: 1.5rem;
+  align-content: flex-start;
+}
+.venue-table {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s;
+  min-width: 220px;
+}
+.venue-table:hover { box-shadow: var(--shadow-md); }
+.venue-table-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.7rem;
+}
+.venue-table-name {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 13.5px; font-weight: 700; color: var(--ink);
+  letter-spacing: 0.04em;
+}
+.venue-table-cap {
+  font-size: 11px; color: var(--ink-muted);
+  background: var(--paper-warm); padding: 0.15rem 0.5rem;
+  border-radius: 9999px; border: 1px solid var(--border);
+}
+.venue-seats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+}
+.venue-seat {
+  height: 38px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1.3; text-align: center; padding: 0 2px;
+  cursor: pointer; transition: all 0.12s;
+  border: 1.5px dashed var(--border);
+  background: var(--paper-warm); color: var(--ink-muted);
+}
+.venue-seat:hover { border-color: var(--gold); background: var(--gold-light); color: var(--gold); border-style: solid; }
+.venue-seat.filled {
+  background: #e8f5ee; border: 1.5px solid #8cb89a; border-style: solid;
+  color: var(--ink); font-weight: 500;
+}
+.venue-seat.violation {
+  background: var(--danger-light); border: 1.5px solid #fde68a; border-style: solid;
+  color: var(--danger);
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(28,26,23,0.35);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.modal {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: min(460px, 92vw);
+  display: flex; flex-direction: column;
+}
+.modal-header {
+  padding: 1.5rem 1.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1.05rem; font-weight: 700; color: var(--ink);
+  letter-spacing: 0.02em;
+}
+.modal-close {
+  width: 30px; height: 30px; border-radius: var(--radius-sm);
+  border: none; background: transparent; cursor: pointer;
+  color: var(--ink-muted); font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-close:hover { background: var(--paper-cream); }
+.modal-body {
+  padding: 1.25rem 1.75rem; display: flex; flex-direction: column; gap: 1rem;
+}
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-label { font-size: 12.5px; font-weight: 500; color: var(--ink-light); }
+.form-input {
+  padding: 0.55rem 0.85rem; font-size: 14px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper-warm);
+}
+.form-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(157,124,63,0.12); }
+.modal-footer {
+  padding: 1.1rem 1.75rem; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 0.6rem;
+}
+
+/* Demo nav */
+.demo-bar {
+  position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+  background: var(--ink);
+  border-radius: 9999px; padding: 0.4rem 0.6rem;
+  display: flex; gap: 0.2rem; z-index: 300;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.demo-btn {
+  padding: 0.35rem 0.9rem; font-size: 12px; font-weight: 500;
+  border-radius: 9999px; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.55); background: transparent;
+  font-family: inherit; transition: all 0.15s;
+}
+.demo-btn.active { background: var(--gold); color: white; }
+.demo-btn:hover:not(.active) { color: white; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .topbar { padding: 0 1rem; }
+  .topbar-nav { display: none; }
+  .events-screen { padding: 2rem 1rem; }
+  .events-grid { grid-template-columns: 1fr; }
+  .layout-body { grid-template-columns: 1fr; }
+  .side-panel { display: none; }
+  .assign-layout { grid-template-columns: 1fr; }
+  .assign-sidebar { display: none; }
+  .events-hero-title { font-size: 1.35rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ====================== TOPBAR ====================== -->
+<header class="topbar" id="topbar">
+  <a href="#" class="topbar-logo">
+    <span class="logo-ornament">✦</span>
+    TheSEKI
+    <span class="logo-ornament">✦</span>
+  </a>
+  <!-- Events page nav -->
+  <nav class="topbar-nav" id="topbar-events-nav">
+    <span class="topbar-nav-item active">イベント一覧</span>
+    <span class="topbar-nav-item">ヘルプ</span>
+  </nav>
+  <!-- Subpage breadcrumb -->
+  <div class="topbar-breadcrumb" id="topbar-sub-nav" style="display:none;">
+    <span onclick="showScreen('events')" style="cursor:pointer;color:var(--ink-light);">一覧</span>
+    <span class="sep">✦</span>
+    <span class="current">結婚式パーティー 2025</span>
+    <div class="subnav-tabs" style="display:flex;gap:0.25rem;margin-left:1.5rem;" id="subnav-inline">
+      <button class="subnav-tab active" onclick="showSub('layout')">席配置</button>
+      <button class="subnav-tab" onclick="showSub('assign')">配置</button>
+      <button class="subnav-tab" onclick="showSub('attendees')">招待客</button>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span class="topbar-save-status" id="save-status" style="display:none;">保存済</span>
+    <button class="btn btn-ghost btn-sm">田中</button>
+    <button class="btn btn-gold btn-sm" onclick="document.getElementById('new-modal').style.display='flex'" id="new-btn">
+      ＋ 新規
+    </button>
+  </div>
+</header>
+
+<!-- ====================== EVENTS SCREEN ====================== -->
+<div class="app-shell screen active" id="screen-events">
+  <div class="events-screen">
+    <div class="events-hero">
+      <h1 class="events-hero-title">
+        <span class="ornament">✦</span>My Events<span class="ornament">✦</span>
+      </h1>
+      <p class="events-hero-sub">イベントを選んで席割を始めましょう</p>
+    </div>
+
+    <div class="events-grid">
+      <div class="event-card" onclick="showScreen('subpage')">
+        <div class="event-card-header theme-blush">
+          <span class="event-card-header-ornament">💐</span>
+          <span class="event-card-header-date">2025/04/12</span>
+        </div>
+        <div class="event-card-body">
+          <h2 class="event-card-title">結婚式パーティー 2025</h2>
+          <div class="event-card-meta">
+            <span class="event-card-stat">👥 48名</span>
+            <span class="event-card-divider">✦</span>
+            <span class="event-card-stat">🍽 5卓 / 40席</span>
+            <span class="event-card-divider">✦</span>
+            <span style="color:var(--danger)">⚠ 8名未配置</span>
+          </div>
+          <div class="event-card-actions">
+            <button class="event-card-main-btn" onclick="event.stopPropagation();showScreen('subpage');">
+              席次を編集する →
+            </button>
+            <div class="event-card-sub-btns">
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="event.stopPropagation()">✏</button>
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="event.stopPropagation()">⧉</button>
+              <button class="btn btn-danger-soft btn-sm btn-icon" onclick="event.stopPropagation()">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header theme-sage">
+          <span class="event-card-header-ornament">🌿</span>
+          <span class="event-card-header-date">2025/03/28</span>
+        </div>
+        <div class="event-card-body">
+          <h2 class="event-card-title">社内懇親会 春</h2>
+          <div class="event-card-meta">
+            <span class="event-card-stat">👥 32名</span>
+            <span class="event-card-divider">✦</span>
+            <span class="event-card-stat">🍽 4卓 / 32席</span>
+            <span class="event-card-divider">✦</span>
+            <span style="color:var(--sage)">✓ 配置完了</span>
+          </div>
+          <div class="event-card-actions">
+            <button class="event-card-main-btn">席次を見る →</button>
+            <div class="event-card-sub-btns">
+              <button class="btn btn-ghost btn-sm btn-icon">✏</button>
+              <button class="btn btn-ghost btn-sm btn-icon">⧉</button>
+              <button class="btn btn-danger-soft btn-sm btn-icon">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header theme-navy">
+          <span class="event-card-header-ornament">🎓</span>
+          <span class="event-card-header-date">2025/03/15</span>
+        </div>
+        <div class="event-card-body">
+          <h2 class="event-card-title">卒業パーティー</h2>
+          <div class="event-card-meta">
+            <span class="event-card-stat">👥 28名</span>
+            <span class="event-card-divider">✦</span>
+            <span style="color:var(--ink-muted)">席未設定</span>
+          </div>
+          <div class="event-card-actions">
+            <button class="event-card-main-btn">席次を設定する →</button>
+            <div class="event-card-sub-btns">
+              <button class="btn btn-ghost btn-sm btn-icon">✏</button>
+              <button class="btn btn-ghost btn-sm btn-icon">⧉</button>
+              <button class="btn btn-danger-soft btn-sm btn-icon">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card-new" onclick="document.getElementById('new-modal').style.display='flex'">
+        <span class="event-card-new-icon">＋</span>
+        <span class="event-card-new-text">新規イベントを作成</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== SUBPAGE ====================== -->
+<div class="app-shell screen" id="screen-subpage">
+  <div class="subpage-shell">
+
+    <!-- Layout screen -->
+    <div class="layout-shell screen active" id="sub-layout">
+      <div class="layout-toolbar">
+        <button class="btn btn-gold btn-sm">＋ 卓を追加</button>
+        <select><option>テーマ: デフォルト</option><option>シンプル</option><option>キュート</option><option>スタイリッシュ</option></select>
+        <span class="toolbar-stat"><strong>5卓</strong></span>
+        <span class="toolbar-stat"><strong>40席</strong></span>
+        <span class="toolbar-stat" style="color:var(--sage);"><strong>38名</strong>配置済</span>
+      </div>
+      <div class="layout-body">
+        <div class="canvas-area">
+          <div class="canvas-inner">
+            <div class="vis-table" style="left:60px;top:50px;">
+              <div class="vis-table-wrap">
+                <div class="vis-table-body selected">
+                  <div class="vis-table-name">A 卓</div>
+                  <div class="vis-table-seats">
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat"></div><div class="vis-seat"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="vis-table" style="left:250px;top:50px;">
+              <div class="vis-table-wrap">
+                <div class="vis-table-body">
+                  <div class="vis-table-name">B 卓</div>
+                  <div class="vis-table-seats">
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="vis-table" style="left:420px;top:50px;">
+              <div class="vis-table-wrap">
+                <div class="vis-table-body">
+                  <div class="vis-table-name">C 卓</div>
+                  <div class="vis-table-seats">
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="vis-table" style="left:150px;top:190px;">
+              <div class="vis-table-wrap">
+                <div class="vis-table-body">
+                  <div class="vis-table-name">D 卓</div>
+                  <div class="vis-table-seats">
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="vis-table" style="left:350px;top:200px;">
+              <div class="vis-table-wrap">
+                <div class="vis-table-body">
+                  <div class="vis-table-name">E 卓</div>
+                  <div class="vis-table-seats">
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                    <div class="vis-seat f"></div><div class="vis-seat f"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="side-panel">
+          <div class="side-panel-header">
+            <span>卓リスト</span>
+            <button class="btn btn-ghost btn-sm btn-icon" style="font-size:16px;">+</button>
+          </div>
+          <div class="side-panel-body">
+            <div class="table-list-item active">
+              <div class="table-list-icon">A</div>
+              <div class="table-list-info">
+                <div class="table-list-name">A卓</div>
+                <div class="table-list-meta">8席・6名配置</div>
+              </div>
+            </div>
+            <div class="table-list-item">
+              <div class="table-list-icon">B</div>
+              <div class="table-list-info">
+                <div class="table-list-name">B卓</div>
+                <div class="table-list-meta">6席・6名配置</div>
+              </div>
+            </div>
+            <div class="table-list-item">
+              <div class="table-list-icon">C</div>
+              <div class="table-list-info">
+                <div class="table-list-name">C卓</div>
+                <div class="table-list-meta">8席・8名配置</div>
+              </div>
+            </div>
+            <div class="table-list-item">
+              <div class="table-list-icon">D</div>
+              <div class="table-list-info">
+                <div class="table-list-name">D卓</div>
+                <div class="table-list-meta">6席・5名配置</div>
+              </div>
+            </div>
+            <div class="table-list-item">
+              <div class="table-list-icon">E</div>
+              <div class="table-list-info">
+                <div class="table-list-name">E卓</div>
+                <div class="table-list-meta">8席・8名配置</div>
+              </div>
+            </div>
+          </div>
+          <div class="side-panel-divider"></div>
+          <div class="side-form">
+            <div style="font-family:'Noto Serif JP',serif;font-size:12px;color:var(--ink-muted);margin-bottom:0.75rem;">選択中: A卓</div>
+            <label class="sf-label">卓の名前</label>
+            <input class="sf-input" value="A卓">
+            <label class="sf-label">席数</label>
+            <input class="sf-input" type="number" value="8">
+            <label class="sf-label">形状</label>
+            <div class="shape-toggle">
+              <button class="shape-btn active">○ 円形</button>
+              <button class="shape-btn">□ 角形</button>
+            </div>
+            <div style="display:flex;gap:0.4rem;">
+              <button class="btn btn-outline btn-sm" style="flex:1;">複製</button>
+              <button class="btn btn-danger-soft btn-sm" style="flex:1;">削除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assign screen -->
+    <div class="assign-shell screen" id="sub-assign" style="display:none;">
+      <div class="assign-banner">
+        <div class="assign-prog">
+          <div class="prog-ring-wrap">
+            <div class="prog-ring">
+              <div class="prog-ring-inner">83%</div>
+            </div>
+          </div>
+          <div class="assign-prog-text">
+            <span class="assign-prog-num">40 <span style="font-size:12px;font-weight:400;color:var(--ink-muted);">/ 48名</span></span>
+            <span class="assign-prog-label">配置済</span>
+          </div>
+        </div>
+        <div class="assign-warning">⚠ NG違反 2件</div>
+        <div class="assign-actions">
+          <button class="btn btn-gold btn-sm">ランダム配置</button>
+          <button class="btn btn-outline btn-sm">カスタム配置</button>
+        </div>
+      </div>
+      <div class="assign-layout">
+        <div class="assign-sidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-title">招待客リスト</div>
+            <input class="sidebar-search" placeholder="名前で検索...">
+          </div>
+          <div class="sidebar-filter">
+            <select><option>すべてのタグ</option><option>新郎側</option><option>新婦側</option></select>
+          </div>
+          <div class="guest-list">
+            <div class="guest-item selected">
+              <div class="guest-avatar">田</div>
+              <div class="guest-name">田中 太郎</div>
+              <span class="guest-tag">新郎</span>
+            </div>
+            <div class="guest-item">
+              <div class="guest-avatar">鈴</div>
+              <div class="guest-name">鈴木 花子</div>
+              <span class="guest-tag">新婦</span>
+            </div>
+            <div class="guest-item assigned">
+              <div class="guest-avatar">佐</div>
+              <div class="guest-name">佐藤 一郎</div>
+              <span class="guest-check">✓ A卓</span>
+            </div>
+            <div class="guest-item assigned">
+              <div class="guest-avatar">山</div>
+              <div class="guest-name">山本 誠</div>
+              <span class="guest-check">✓ A卓</span>
+            </div>
+            <div class="guest-item assigned">
+              <div class="guest-avatar">吉</div>
+              <div class="guest-name">吉田 美香</div>
+              <span class="guest-check">✓ A卓</span>
+            </div>
+            <div class="guest-item assigned">
+              <div class="guest-avatar">木</div>
+              <div class="guest-name">木村 次郎</div>
+              <span class="guest-check">✓ A卓</span>
+            </div>
+            <div class="guest-item">
+              <div class="guest-avatar">中</div>
+              <div class="guest-name">中野 さくら</div>
+              <span class="guest-tag">新郎</span>
+            </div>
+            <div class="guest-item assigned">
+              <div class="guest-avatar">加</div>
+              <div class="guest-name">加藤 健太</div>
+              <span class="guest-check">✓ B卓</span>
+            </div>
+          </div>
+        </div>
+        <div class="assign-floor">
+          <div class="floor-grid">
+            <div class="venue-table">
+              <div class="venue-table-header">
+                <div class="venue-table-name">A 卓</div>
+                <div class="venue-table-cap">6 / 8席</div>
+              </div>
+              <div class="venue-seats">
+                <div class="venue-seat filled">佐藤<br>一郎</div>
+                <div class="venue-seat filled">山本<br>誠</div>
+                <div class="venue-seat filled">吉田<br>美香</div>
+                <div class="venue-seat filled">木村<br>次郎</div>
+                <div class="venue-seat violation">林<br>芳夫</div>
+                <div class="venue-seat filled">渡辺<br>京子</div>
+                <div class="venue-seat"></div>
+                <div class="venue-seat"></div>
+              </div>
+            </div>
+            <div class="venue-table">
+              <div class="venue-table-header">
+                <div class="venue-table-name">B 卓</div>
+                <div class="venue-table-cap">6 / 6席</div>
+              </div>
+              <div class="venue-seats">
+                <div class="venue-seat filled">加藤<br>健太</div>
+                <div class="venue-seat filled">松本<br>優</div>
+                <div class="venue-seat filled">石田<br>誠</div>
+                <div class="venue-seat filled">田村<br>聡</div>
+                <div class="venue-seat filled">小林<br>恵</div>
+                <div class="venue-seat filled">中島<br>亮</div>
+              </div>
+            </div>
+            <div class="venue-table">
+              <div class="venue-table-header">
+                <div class="venue-table-name">C 卓</div>
+                <div class="venue-table-cap">8 / 8席</div>
+              </div>
+              <div class="venue-seats">
+                <div class="venue-seat filled">大野<br>拓</div>
+                <div class="venue-seat filled">清水<br>里</div>
+                <div class="venue-seat filled">原<br>大輔</div>
+                <div class="venue-seat filled">村田<br>梨</div>
+                <div class="venue-seat filled">近藤<br>司</div>
+                <div class="venue-seat filled">藤田<br>莉</div>
+                <div class="venue-seat filled">岡田<br>修</div>
+                <div class="venue-seat filled">西村<br>葵</div>
+              </div>
+            </div>
+            <div class="venue-table">
+              <div class="venue-table-header">
+                <div class="venue-table-name">D 卓</div>
+                <div class="venue-table-cap">5 / 6席</div>
+              </div>
+              <div class="venue-seats">
+                <div class="venue-seat filled">上田<br>幸</div>
+                <div class="venue-seat filled">森<br>達也</div>
+                <div class="venue-seat filled">長谷川</div>
+                <div class="venue-seat filled">池田<br>咲</div>
+                <div class="venue-seat violation">橋本<br>隆</div>
+                <div class="venue-seat"></div>
+              </div>
+            </div>
+            <div class="venue-table">
+              <div class="venue-table-header">
+                <div class="venue-table-name">E 卓</div>
+                <div class="venue-table-cap">8 / 8席</div>
+              </div>
+              <div class="venue-seats">
+                <div class="venue-seat filled">永田<br>裕</div>
+                <div class="venue-seat filled">三浦<br>楓</div>
+                <div class="venue-seat filled">和田<br>正</div>
+                <div class="venue-seat filled">坂本<br>菜</div>
+                <div class="venue-seat filled">丸山<br>翔</div>
+                <div class="venue-seat filled">福田<br>唯</div>
+                <div class="venue-seat filled">横山<br>剛</div>
+                <div class="venue-seat filled">菊池<br>凛</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ====================== NEW EVENT MODAL ====================== -->
+<div class="modal-backdrop" id="new-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">✦ 新規イベント</h2>
+      <button class="modal-close" onclick="document.getElementById('new-modal').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">イベント名</label>
+        <input class="form-input" type="text" placeholder="例：結婚披露宴" autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label">開催日時</label>
+        <input class="form-input" type="datetime-local">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('new-modal').style.display='none'">キャンセル</button>
+      <button class="btn btn-gold">作成する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== DEMO NAV ====================== -->
+<div class="demo-bar">
+  <button class="demo-btn active" onclick="showScreen('events')">① 一覧</button>
+  <button class="demo-btn" onclick="showScreen('subpage');showSub('layout')">② 席配置</button>
+  <button class="demo-btn" onclick="showScreen('subpage');showSub('assign')">③ 配置</button>
+</div>
+
+<script>
+function showScreen(name) {
+  document.querySelectorAll('.app-shell.screen').forEach(s => s.classList.remove('active'));
+  const t = document.getElementById('screen-' + name);
+  if (t) t.classList.add('active');
+
+  const isEvents = (name === 'events');
+  document.getElementById('topbar-events-nav').style.display = isEvents ? '' : 'none';
+  document.getElementById('topbar-sub-nav').style.display = isEvents ? 'none' : '';
+  document.getElementById('new-btn').style.display = isEvents ? '' : 'none';
+  document.getElementById('save-status').style.display = isEvents ? 'none' : '';
+
+  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+  if (isEvents) document.querySelectorAll('.demo-btn')[0].classList.add('active');
+}
+
+function showSub(name) {
+  document.querySelectorAll('#screen-subpage .screen').forEach(s => {
+    s.style.display = 'none'; s.classList.remove('active');
+  });
+  const t = document.getElementById('sub-' + name);
+  if (t) { t.style.display = 'flex'; t.classList.add('active'); }
+
+  const tabs = document.querySelectorAll('#subnav-inline .subnav-tab');
+  const m = {layout:0, assign:1, attendees:2};
+  tabs.forEach((tab, i) => tab.classList.toggle('active', i === (m[name] ?? -1)));
+
+  const demoMap = {layout:1, assign:2};
+  if (demoMap[name] !== undefined) {
+    document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.demo-btn')[demoMap[name]]?.classList.add('active');
+  }
+}
+</script>
+
+</body>
+</html>

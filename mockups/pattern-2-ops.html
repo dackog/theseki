@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TheSEKI — Pattern 2: 操作特化型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Pattern 2: 操作特化型（業務ツール最適化）
+   コンセプト: 「迷わず、速く、確実に」
+   操作の流れを画面設計に直接反映。情報密度重視。
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:          #1c1917;  /* stone-900 */
+  --ink-light:    #57534e;  /* stone-600 */
+  --ink-muted:    #a8a29e;  /* stone-400 */
+  --paper:        #fafaf9;  /* stone-50 */
+  --paper-warm:   #f5f5f4;  /* stone-100 */
+  --paper-dark:   #e7e5e4;  /* stone-200 */
+  --sidebar-bg:   #292524;  /* stone-800 */
+  --sidebar-text: #d6d3d1;
+  --sidebar-muted:#78716c;
+  --accent:       #ea580c;  /* orange-600 */
+  --accent-hover: #c2410c;
+  --accent-light: #fff7ed;
+  --accent-border:#fed7aa;  /* orange-200 */
+  --green:        #16a34a;  /* green-600 */
+  --green-light:  #dcfce7;  /* green-100 */
+  --blue:         #2563eb;  /* blue-600 */
+  --blue-light:   #dbeafe;
+  --border:       #d6d3d1;  /* stone-300 */
+  --danger:       #dc2626;
+  --danger-light: #fee2e2;
+  --warning:      #d97706;
+  --warning-light:#fef3c7;
+  --shadow-sm:    0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md:    0 2px 6px rgba(0,0,0,0.08);
+  --radius-sm:    3px;
+  --radius-md:    6px;
+  --topbar-h:     48px;
+  --sidenav-w:    200px;
+  --step-h:       36px;
+}
+
+body {
+  font-family: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: var(--sidebar-bg);
+  display: flex; align-items: center;
+  padding: 0 0.75rem 0 0;
+  z-index: 100;
+}
+.topbar-logo {
+  width: var(--sidenav-w);
+  flex-shrink: 0;
+  padding: 0 1rem;
+  font-size: 1rem; font-weight: 700; letter-spacing: -0.02em;
+  color: white;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.topbar-logo .logo-icon {
+  width: 24px; height: 24px; border-radius: var(--radius-sm);
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+}
+.topbar-event-select {
+  margin-left: 0.25rem;
+  padding: 0.3rem 0.6rem;
+  font-family: inherit; font-size: 12.5px; font-weight: 500;
+  color: white; background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-width: 200px;
+}
+.topbar-event-select option { background: var(--sidebar-bg); }
+.topbar-spacer { flex: 1; }
+.topbar-status {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 12px; color: var(--sidebar-text);
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #22c55e;
+}
+.status-dot.warning { background: var(--warning); }
+.topbar-user {
+  padding: 0.25rem 0.75rem; margin-left: 0.5rem;
+  font-size: 12px; color: rgba(255,255,255,0.7);
+  border-left: 1px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+}
+
+/* ── App Layout ─────────────────────────────────────────── */
+.app-layout {
+  display: flex;
+  padding-top: var(--topbar-h);
+  min-height: 100dvh;
+}
+
+/* ── Side Nav ───────────────────────────────────────────── */
+.sidenav {
+  width: var(--sidenav-w);
+  background: var(--sidebar-bg);
+  flex-shrink: 0;
+  display: flex; flex-direction: column;
+  position: fixed; top: var(--topbar-h); left: 0; bottom: 0;
+  z-index: 90;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+.sidenav-section-label {
+  padding: 1rem 1rem 0.4rem;
+  font-size: 10.5px; font-weight: 600;
+  color: var(--sidebar-muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+.sidenav-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  color: var(--sidebar-text);
+  cursor: pointer; border: none; background: none; width: 100%;
+  text-align: left; font-family: inherit; font-size: 13px;
+  border-radius: var(--radius-sm); margin: 1px 0.375rem;
+  width: calc(100% - 0.75rem);
+  transition: background 0.1s;
+}
+.sidenav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+.sidenav-item.active {
+  background: var(--accent);
+  color: white;
+}
+.sidenav-item .nav-icon {
+  width: 16px; text-align: center; flex-shrink: 0;
+  font-size: 12px;
+}
+.sidenav-item .nav-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,0.15);
+  font-size: 10px; padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+}
+.sidenav-item.active .nav-badge {
+  background: rgba(255,255,255,0.25);
+}
+.sidenav-divider {
+  height: 1px; background: rgba(255,255,255,0.08);
+  margin: 0.5rem 1rem;
+}
+.sidenav-bottom {
+  margin-top: auto;
+  padding-bottom: 0.75rem;
+}
+
+/* ── Main Content ─────────────────────────────────────────── */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidenav-w);
+  display: flex; flex-direction: column;
+  height: calc(100dvh - var(--topbar-h));
+  overflow: hidden;
+}
+
+/* ── Step Indicator ─────────────────────────────────────── */
+.step-bar {
+  background: var(--paper-warm);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.25rem;
+  display: flex; align-items: center; gap: 0;
+  height: var(--step-h);
+  flex-shrink: 0;
+}
+.step-item {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0 1rem 0 0.5rem; height: 100%;
+  font-size: 12px; font-weight: 500;
+  color: var(--ink-muted);
+  cursor: pointer; position: relative;
+  white-space: nowrap;
+}
+.step-item::after {
+  content: '›'; position: absolute; right: 0;
+  color: var(--ink-muted); font-size: 14px;
+}
+.step-item:last-child::after { display: none; }
+.step-num {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--paper-dark); color: var(--ink-muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; flex-shrink: 0;
+}
+.step-item.done .step-num {
+  background: var(--green-light); color: var(--green);
+}
+.step-item.done .step-num::before { content: '✓'; }
+.step-item.done { color: var(--green); }
+.step-item.active .step-num {
+  background: var(--accent); color: white;
+}
+.step-item.active { color: var(--accent); }
+
+/* ── Events Screen ─────────────────────────────────────── */
+.screen { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; }
+.content-area {
+  flex: 1; overflow-y: auto; padding: 1.25rem;
+}
+
+/* Content header */
+.content-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.content-title {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 12.5px; font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer; transition: all 0.12s;
+  font-family: inherit; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-primary {
+  background: var(--accent); color: white;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-outline {
+  background: var(--paper); color: var(--ink);
+  border-color: var(--border);
+}
+.btn-outline:hover { background: var(--paper-warm); border-color: #a8a29e; }
+.btn-ghost {
+  background: transparent; color: var(--ink-light);
+  border-color: transparent;
+}
+.btn-ghost:hover { background: var(--paper-dark); color: var(--ink); }
+.btn-danger {
+  background: transparent; color: var(--danger);
+  border-color: transparent;
+}
+.btn-danger:hover { background: var(--danger-light); }
+.btn-sm { padding: 0.25rem 0.55rem; font-size: 12px; }
+.btn-icon { padding: 0.3rem; min-width: 28px; justify-content: center; }
+
+/* Events table */
+.data-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.data-table th {
+  background: var(--paper-warm);
+  padding: 0.5rem 0.85rem;
+  text-align: left; font-size: 11.5px; font-weight: 600;
+  color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+}
+.data-table td {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tbody tr { cursor: pointer; transition: background 0.1s; }
+.data-table tbody tr:hover { background: #fff7ed; }
+.event-name-cell {
+  font-weight: 600; color: var(--ink);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.event-indicator {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+}
+.event-indicator.inactive { background: var(--ink-muted); }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 11px; font-weight: 500; border-radius: 9999px;
+}
+.status-pill.complete { background: var(--green-light); color: var(--green); }
+.status-pill.partial { background: var(--warning-light); color: var(--warning); }
+.status-pill.empty { background: var(--paper-dark); color: var(--ink-muted); }
+.td-actions { display: flex; gap: 0.25rem; }
+
+/* ── Assign Screen ─────────────────────────────────────── */
+.assign-topbar {
+  background: var(--paper-warm);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  flex-shrink: 0;
+}
+.assign-stat {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 12.5px;
+}
+.assign-stat-num {
+  font-weight: 700; font-size: 15px; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.assign-stat-label { color: var(--ink-muted); }
+.stat-divider { width: 1px; height: 20px; background: var(--border); }
+.ng-alert {
+  display: flex; align-items: center; gap: 0.3rem;
+  background: var(--warning-light); color: var(--warning);
+  padding: 0.25rem 0.6rem; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 600;
+  border: 1px solid var(--accent-border);
+}
+.assign-main {
+  flex: 1; display: grid;
+  grid-template-columns: 200px 1fr;
+  overflow: hidden;
+}
+
+/* Left: Attendee panel */
+.attendee-panel {
+  background: var(--paper);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.panel-tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+}
+.panel-tab {
+  flex: 1; padding: 0.45rem 0.5rem;
+  font-size: 12px; font-weight: 500;
+  border: none; background: none; cursor: pointer;
+  color: var(--ink-muted); border-bottom: 2px solid transparent;
+  transition: all 0.1s;
+}
+.panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--accent-light); }
+.panel-search {
+  padding: 0.5rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.panel-search input {
+  width: 100%; padding: 0.3rem 0.5rem;
+  font-size: 12px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper-warm);
+}
+.panel-search input:focus { outline: none; border-color: var(--accent); }
+.panel-section-header {
+  padding: 0.35rem 0.6rem;
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--ink-muted);
+  background: var(--paper-warm);
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between;
+}
+.attendee-list { overflow-y: auto; flex: 1; }
+.attendee-row {
+  padding: 0.4rem 0.6rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  cursor: pointer; border-bottom: 1px solid var(--border);
+  font-size: 12.5px; transition: background 0.1s;
+}
+.attendee-row:hover { background: var(--accent-light); }
+.attendee-row.selected { background: var(--accent); color: white; }
+.attendee-row.assigned { color: var(--ink-muted); }
+.attendee-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--paper-dark); flex-shrink: 0;
+}
+.attendee-row.assigned .attendee-dot { background: var(--green); }
+.attendee-row.selected .attendee-dot { background: rgba(255,255,255,0.7); }
+.attendee-row-name { flex: 1; font-weight: 500; }
+.attendee-tag {
+  font-size: 10px; padding: 0.1rem 0.35rem;
+  border-radius: 9999px; background: var(--paper-dark);
+  color: var(--ink-muted);
+}
+.attendee-row.selected .attendee-tag { background: rgba(255,255,255,0.2); color: white; }
+
+/* Right: Floor area */
+.floor-area {
+  overflow-y: auto; background: var(--paper-warm);
+  padding: 0.75rem;
+}
+.floor-table-section {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+}
+.floor-table-header {
+  padding: 0.45rem 0.75rem;
+  background: var(--paper-warm);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.table-label {
+  font-size: 12px; font-weight: 700; color: var(--ink);
+}
+.table-fill-bar {
+  flex: 1; height: 4px; border-radius: 9999px;
+  background: var(--paper-dark); overflow: hidden; max-width: 80px;
+}
+.table-fill-bar-inner {
+  height: 100%; border-radius: 9999px; background: var(--green);
+}
+.table-fill-text {
+  font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums;
+}
+.seats-row {
+  display: flex; gap: 4px; padding: 0.5rem 0.75rem; flex-wrap: wrap;
+}
+.seat-chip {
+  min-width: 52px; height: 28px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500;
+  cursor: pointer; transition: all 0.1s;
+  border: 1px solid var(--border);
+  background: var(--paper-warm); color: var(--ink-muted);
+  padding: 0 4px;
+}
+.seat-chip:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+.seat-chip.filled {
+  background: var(--green-light); border-color: #86efac;
+  color: var(--ink); font-size: 10.5px;
+}
+.seat-chip.violation {
+  background: var(--danger-light); border-color: #fca5a5;
+  color: var(--danger);
+}
+.seat-chip.drop-target {
+  border: 2px dashed var(--accent); background: var(--accent-light);
+}
+
+/* Layout screen */
+.layout-wrap {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr 240px;
+  overflow: hidden;
+}
+.layout-toolbar {
+  background: var(--paper-warm);
+  border-bottom: 1px solid var(--border);
+  padding: 0.45rem 0.75rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  flex-shrink: 0;
+}
+.layout-toolbar select {
+  font-family: inherit; font-size: 12.5px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+.layout-canvas-area {
+  overflow: auto; position: relative;
+  background: white;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.layout-canvas-inner { min-width: 700px; min-height: 450px; position: relative; padding: 1.5rem; }
+.tbl {
+  position: absolute;
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.6rem;
+  cursor: grab; box-shadow: var(--shadow-sm);
+}
+.tbl.active { border-color: var(--accent); background: var(--accent-light); }
+.tbl-name {
+  font-size: 11px; font-weight: 700; color: var(--ink-light);
+  margin-bottom: 4px; text-align: center;
+}
+.tbl.active .tbl-name { color: var(--accent); }
+.tbl-seats { display: flex; gap: 3px; }
+.tbl-seat {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--paper-dark); border: 1px solid var(--border);
+}
+.tbl-seat.f { background: var(--green-light); border-color: #86efac; }
+.right-panel {
+  background: var(--paper);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+}
+.rp-header {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 11.5px; font-weight: 600; color: var(--ink-muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.rp-table-list-item {
+  padding: 0.4rem 0.75rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; font-size: 12.5px;
+  transition: background 0.1s;
+}
+.rp-table-list-item:hover { background: var(--paper-warm); }
+.rp-table-list-item.active { background: var(--accent-light); }
+.rp-table-num {
+  width: 22px; height: 22px; border-radius: var(--radius-sm);
+  background: var(--paper-dark); color: var(--ink-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; flex-shrink: 0;
+}
+.rp-table-list-item.active .rp-table-num { background: var(--accent); color: white; }
+.rp-form { padding: 0.75rem; border-top: 1px solid var(--border); margin-top: 0.25rem; }
+.rp-label { font-size: 11px; font-weight: 600; color: var(--ink-muted); display: block; margin-bottom: 0.25rem; }
+.rp-input {
+  width: 100%; padding: 0.3rem 0.5rem;
+  font-size: 12.5px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper); margin-bottom: 0.6rem;
+}
+.rp-input:focus { outline: none; border-color: var(--accent); }
+.rp-shape-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 0.6rem; }
+.rp-shape-toggle button {
+  flex: 1; padding: 0.3rem; font-size: 12px;
+  border: none; background: var(--paper); cursor: pointer; color: var(--ink-light);
+}
+.rp-shape-toggle button.active { background: var(--accent); color: white; }
+
+/* Modal */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.modal {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  width: min(420px, 92vw);
+  display: flex; flex-direction: column;
+}
+.modal-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-size: 14px; font-weight: 700; }
+.modal-close {
+  width: 26px; height: 26px; border-radius: var(--radius-sm);
+  border: none; background: transparent; cursor: pointer;
+  color: var(--ink-muted); display: flex; align-items: center; justify-content: center;
+}
+.modal-close:hover { background: var(--paper-dark); }
+.modal-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.form-row { display: flex; flex-direction: column; gap: 0.3rem; }
+.form-label { font-size: 12px; font-weight: 500; color: var(--ink-light); }
+.form-input {
+  padding: 0.4rem 0.6rem; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+.form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(234,88,12,0.12); }
+.modal-footer {
+  padding: 0.75rem 1.25rem; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 0.4rem;
+}
+
+/* Demo nav */
+.demo-bar {
+  position: fixed; bottom: 0.75rem; left: calc(var(--sidenav-w) + 50%); transform: translateX(-50%);
+  background: var(--sidebar-bg);
+  border-radius: 9999px; padding: 0.35rem 0.5rem;
+  display: flex; gap: 0.2rem; z-index: 300;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.demo-btn {
+  padding: 0.3rem 0.75rem; font-size: 11.5px; font-weight: 500;
+  border-radius: 9999px; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.55); background: transparent;
+  transition: all 0.15s; font-family: inherit;
+}
+.demo-btn.active { background: var(--accent); color: white; }
+.demo-btn:hover:not(.active) { color: white; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .sidenav { display: none; }
+  .main-content { margin-left: 0; }
+  .assign-main { grid-template-columns: 1fr; }
+  .attendee-panel { display: none; }
+  .layout-wrap { grid-template-columns: 1fr; }
+  .right-panel { display: none; }
+  .demo-bar { left: 50%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ====================== TOPBAR ====================== -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-icon">S</div>
+    TheSEKI
+  </div>
+  <select class="topbar-event-select">
+    <option>結婚式パーティー 2025</option>
+    <option>社内懇親会 春</option>
+    <option>卒業パーティー</option>
+  </select>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-status" id="topbar-status-indicator">
+    <span class="status-dot warning"></span>
+    <span>未配置 8名</span>
+  </div>
+  <div class="topbar-user">田中 T.</div>
+</header>
+
+<!-- ====================== SIDE NAV ====================== -->
+<nav class="sidenav">
+  <div class="sidenav-section-label">ナビゲーション</div>
+  <button class="sidenav-item active" onclick="switchScreen('events')">
+    <span class="nav-icon">≡</span> イベント一覧
+  </button>
+  <button class="sidenav-item" onclick="switchScreen('attendees')">
+    <span class="nav-icon">👥</span> 招待客管理
+    <span class="nav-badge">48</span>
+  </button>
+  <button class="sidenav-item" onclick="switchScreen('layout')">
+    <span class="nav-icon">◻</span> 席配置設定
+    <span class="nav-badge">5</span>
+  </button>
+  <button class="sidenav-item" onclick="switchScreen('assign')">
+    <span class="nav-icon">↔</span> 配置作業
+    <span class="nav-badge" style="background:rgba(234,88,12,0.3);">8</span>
+  </button>
+  <div class="sidenav-divider"></div>
+  <div class="sidenav-bottom">
+    <button class="sidenav-item">
+      <span class="nav-icon">⚙</span> 設定
+    </button>
+  </div>
+</nav>
+
+<!-- ====================== MAIN CONTENT ====================== -->
+<div class="app-layout">
+  <div class="main-content">
+
+    <!-- Step Bar (visible on subpages) -->
+    <div class="step-bar" id="step-bar" style="display:none;">
+      <div class="step-item done" onclick="switchScreen('attendees')">
+        <div class="step-num"></div>招待客登録
+      </div>
+      <div class="step-item done" onclick="switchScreen('layout')">
+        <div class="step-num"></div>席配置設定
+      </div>
+      <div class="step-item active" onclick="switchScreen('assign')">
+        <div class="step-num">3</div>配置作業
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>確認・共有
+      </div>
+    </div>
+
+    <!-- ── Events Screen ── -->
+    <div class="screen active" id="screen-events">
+      <div class="content-area">
+        <div class="content-header">
+          <h1 class="content-title">イベント一覧</h1>
+          <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-modal').style.display='flex'">+ 新規作成</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>イベント名</th>
+              <th>開催日時</th>
+              <th>招待客</th>
+              <th>席数</th>
+              <th>配置状況</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr onclick="switchScreen('assign')">
+              <td><div class="event-name-cell"><span class="event-indicator"></span>結婚式パーティー 2025</div></td>
+              <td>2025/04/12 12:00</td>
+              <td>48名</td>
+              <td>40席 / 5卓</td>
+              <td><span class="status-pill partial">⚠ 一部未配置</span></td>
+              <td><div class="td-actions"><button class="btn btn-ghost btn-sm">編集</button><button class="btn btn-danger btn-sm">削除</button></div></td>
+            </tr>
+            <tr>
+              <td><div class="event-name-cell"><span class="event-indicator inactive"></span>社内懇親会 春</div></td>
+              <td>2025/03/28 18:30</td>
+              <td>32名</td>
+              <td>32席 / 4卓</td>
+              <td><span class="status-pill complete">✓ 配置完了</span></td>
+              <td><div class="td-actions"><button class="btn btn-ghost btn-sm">編集</button><button class="btn btn-danger btn-sm">削除</button></div></td>
+            </tr>
+            <tr>
+              <td><div class="event-name-cell"><span class="event-indicator inactive"></span>卒業パーティー</div></td>
+              <td>2025/03/15 15:00</td>
+              <td>28名</td>
+              <td>—</td>
+              <td><span class="status-pill empty">未設定</span></td>
+              <td><div class="td-actions"><button class="btn btn-ghost btn-sm">編集</button><button class="btn btn-danger btn-sm">削除</button></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Layout Screen ── -->
+    <div class="screen" id="screen-layout" style="display:none;">
+      <div class="layout-toolbar">
+        <button class="btn btn-primary btn-sm">+ 卓を追加</button>
+        <select><option>テーマ: デフォルト</option><option>シンプル</option></select>
+        <span style="font-size:12px;color:var(--ink-muted);margin-left:auto;">5卓・40席</span>
+      </div>
+      <div class="layout-wrap">
+        <div class="layout-canvas-area">
+          <div class="layout-canvas-inner">
+            <div class="tbl active" style="left:50px;top:40px;">
+              <div class="tbl-name">A卓</div>
+              <div class="tbl-seats">
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat"></div><div class="tbl-seat"></div>
+              </div>
+            </div>
+            <div class="tbl" style="left:220px;top:40px;">
+              <div class="tbl-name">B卓</div>
+              <div class="tbl-seats">
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+              </div>
+            </div>
+            <div class="tbl" style="left:370px;top:40px;">
+              <div class="tbl-name">C卓</div>
+              <div class="tbl-seats">
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+              </div>
+            </div>
+            <div class="tbl" style="left:120px;top:160px;">
+              <div class="tbl-name">D卓</div>
+              <div class="tbl-seats">
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat"></div>
+              </div>
+            </div>
+            <div class="tbl" style="left:300px;top:170px;">
+              <div class="tbl-name">E卓</div>
+              <div class="tbl-seats">
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+                <div class="tbl-seat f"></div><div class="tbl-seat f"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="right-panel">
+          <div class="rp-header">卓リスト</div>
+          <div class="rp-table-list-item active">
+            <div class="rp-table-num">A</div>
+            <div style="flex:1;">
+              <div style="font-weight:600;">A卓</div>
+              <div style="font-size:11px;color:var(--ink-muted);">8席・6名配置</div>
+            </div>
+          </div>
+          <div class="rp-table-list-item">
+            <div class="rp-table-num">B</div>
+            <div style="flex:1;">
+              <div style="font-weight:600;">B卓</div>
+              <div style="font-size:11px;color:var(--ink-muted);">6席・6名配置</div>
+            </div>
+          </div>
+          <div class="rp-table-list-item">
+            <div class="rp-table-num">C</div>
+            <div style="flex:1;">
+              <div style="font-weight:600;">C卓</div>
+              <div style="font-size:11px;color:var(--ink-muted);">8席・8名配置</div>
+            </div>
+          </div>
+          <div class="rp-table-list-item">
+            <div class="rp-table-num">D</div>
+            <div style="flex:1;">
+              <div style="font-weight:600;">D卓</div>
+              <div style="font-size:11px;color:var(--ink-muted);">6席・5名配置</div>
+            </div>
+          </div>
+          <div class="rp-table-list-item">
+            <div class="rp-table-num">E</div>
+            <div style="flex:1;">
+              <div style="font-weight:600;">E卓</div>
+              <div style="font-size:11px;color:var(--ink-muted);">8席・8名配置</div>
+            </div>
+          </div>
+          <div class="rp-form">
+            <div style="font-size:11.5px;font-weight:600;color:var(--ink-muted);margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.04em;">選択中: A卓</div>
+            <label class="rp-label">卓名</label>
+            <input class="rp-input" value="A卓">
+            <label class="rp-label">席数</label>
+            <input class="rp-input" type="number" value="8">
+            <label class="rp-label">形状</label>
+            <div class="rp-shape-toggle">
+              <button class="active">○丸</button>
+              <button>□角</button>
+            </div>
+            <div style="display:flex;gap:0.3rem;">
+              <button class="btn btn-outline btn-sm" style="flex:1;">複製</button>
+              <button class="btn btn-danger btn-sm" style="flex:1;">削除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Assign Screen ── -->
+    <div class="screen" id="screen-assign" style="display:none;">
+      <div class="assign-topbar">
+        <div class="assign-stat">
+          <span class="assign-stat-num">40</span>
+          <span class="assign-stat-label">/ 48名 配置済</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="assign-stat">
+          <span class="assign-stat-num" style="color:var(--ink-muted);">8</span>
+          <span class="assign-stat-label">名 未配置</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="ng-alert">⚠ NG違反 2件</div>
+        <div style="margin-left:auto;display:flex;gap:0.4rem;">
+          <button class="btn btn-primary btn-sm">ランダム配置</button>
+          <button class="btn btn-outline btn-sm">カスタム配置</button>
+          <button class="btn btn-outline btn-sm">ルール設定</button>
+        </div>
+      </div>
+      <div class="assign-main">
+        <div class="attendee-panel">
+          <div class="panel-tabs">
+            <button class="panel-tab active">未配置 (8)</button>
+            <button class="panel-tab">全員 (48)</button>
+          </div>
+          <div class="panel-search">
+            <input placeholder="検索...">
+          </div>
+          <div class="attendee-list">
+            <div class="panel-section-header"><span>未配置</span><span>8名</span></div>
+            <div class="attendee-row selected">
+              <div class="attendee-dot"></div>
+              <div class="attendee-row-name">田中 太郎</div>
+              <span class="attendee-tag">新郎</span>
+            </div>
+            <div class="attendee-row">
+              <div class="attendee-dot"></div>
+              <div class="attendee-row-name">鈴木 花子</div>
+              <span class="attendee-tag">新婦</span>
+            </div>
+            <div class="attendee-row">
+              <div class="attendee-dot"></div>
+              <div class="attendee-row-name">中野 さくら</div>
+              <span class="attendee-tag">新郎</span>
+            </div>
+            <div class="attendee-row">
+              <div class="attendee-dot"></div>
+              <div class="attendee-row-name">伊藤 健</div>
+            </div>
+            <div class="attendee-row">
+              <div class="attendee-dot"></div>
+              <div class="attendee-row-name">高橋 恵</div>
+              <span class="attendee-tag">新婦</span>
+            </div>
+            <div class="panel-section-header" style="margin-top:0.25rem;"><span>配置済</span><span>40名</span></div>
+            <div class="attendee-row assigned">
+              <div class="attendee-dot"></div>
+              <div class="attendee-row-name">佐藤 一郎</div>
+              <span class="attendee-tag">A卓</span>
+            </div>
+            <div class="attendee-row assigned">
+              <div class="attendee-dot"></div>
+              <div class="attendee-row-name">山本 誠</div>
+              <span class="attendee-tag">A卓</span>
+            </div>
+            <div class="attendee-row assigned">
+              <div class="attendee-dot"></div>
+              <div class="attendee-row-name">吉田 美香</div>
+              <span class="attendee-tag">A卓</span>
+            </div>
+          </div>
+        </div>
+        <div class="floor-area">
+          <div class="floor-table-section">
+            <div class="floor-table-header">
+              <span class="table-label">A卓</span>
+              <div class="table-fill-bar"><div class="table-fill-bar-inner" style="width:75%;"></div></div>
+              <span class="table-fill-text">6 / 8席</span>
+            </div>
+            <div class="seats-row">
+              <div class="seat-chip filled">佐藤 一郎</div>
+              <div class="seat-chip filled">山本 誠</div>
+              <div class="seat-chip filled">吉田 美香</div>
+              <div class="seat-chip filled">木村 次郎</div>
+              <div class="seat-chip violation">林 芳夫 ⚠</div>
+              <div class="seat-chip filled">渡辺 京子</div>
+              <div class="seat-chip drop-target">+ 配置</div>
+              <div class="seat-chip">空席</div>
+            </div>
+          </div>
+          <div class="floor-table-section">
+            <div class="floor-table-header">
+              <span class="table-label">B卓</span>
+              <div class="table-fill-bar"><div class="table-fill-bar-inner" style="width:100%;"></div></div>
+              <span class="table-fill-text">6 / 6席</span>
+            </div>
+            <div class="seats-row">
+              <div class="seat-chip filled">加藤 健太</div>
+              <div class="seat-chip filled">松本 優</div>
+              <div class="seat-chip filled">石田 誠</div>
+              <div class="seat-chip filled">田村 聡</div>
+              <div class="seat-chip filled">小林 恵</div>
+              <div class="seat-chip filled">中島 亮</div>
+            </div>
+          </div>
+          <div class="floor-table-section">
+            <div class="floor-table-header">
+              <span class="table-label">C卓</span>
+              <div class="table-fill-bar"><div class="table-fill-bar-inner" style="width:100%;"></div></div>
+              <span class="table-fill-text">8 / 8席</span>
+            </div>
+            <div class="seats-row">
+              <div class="seat-chip filled">大野 拓</div>
+              <div class="seat-chip filled">清水 里</div>
+              <div class="seat-chip filled">原 大輔</div>
+              <div class="seat-chip filled">村田 梨</div>
+              <div class="seat-chip filled">近藤 司</div>
+              <div class="seat-chip filled">藤田 莉</div>
+              <div class="seat-chip filled">岡田 修</div>
+              <div class="seat-chip filled">西村 葵</div>
+            </div>
+          </div>
+          <div class="floor-table-section">
+            <div class="floor-table-header">
+              <span class="table-label">D卓</span>
+              <div class="table-fill-bar"><div class="table-fill-bar-inner" style="width:83%;background:var(--warning);"></div></div>
+              <span class="table-fill-text">5 / 6席</span>
+            </div>
+            <div class="seats-row">
+              <div class="seat-chip filled">上田 幸</div>
+              <div class="seat-chip filled">森 達也</div>
+              <div class="seat-chip filled">長谷川</div>
+              <div class="seat-chip filled">池田 咲</div>
+              <div class="seat-chip violation">橋本 隆 ⚠</div>
+              <div class="seat-chip">空席</div>
+            </div>
+          </div>
+          <div class="floor-table-section">
+            <div class="floor-table-header">
+              <span class="table-label">E卓</span>
+              <div class="table-fill-bar"><div class="table-fill-bar-inner" style="width:100%;"></div></div>
+              <span class="table-fill-text">8 / 8席</span>
+            </div>
+            <div class="seats-row">
+              <div class="seat-chip filled">永田 裕</div>
+              <div class="seat-chip filled">三浦 楓</div>
+              <div class="seat-chip filled">和田 正</div>
+              <div class="seat-chip filled">坂本 菜</div>
+              <div class="seat-chip filled">丸山 翔</div>
+              <div class="seat-chip filled">福田 唯</div>
+              <div class="seat-chip filled">横山 剛</div>
+              <div class="seat-chip filled">菊池 凛</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Attendees Screen (placeholder) ── -->
+    <div class="screen" id="screen-attendees" style="display:none;">
+      <div class="content-area">
+        <div class="content-header">
+          <h1 class="content-title">招待客管理</h1>
+          <div style="display:flex;gap:0.4rem;">
+            <button class="btn btn-outline btn-sm">CSV読込</button>
+            <button class="btn btn-outline btn-sm">CSV出力</button>
+            <button class="btn btn-primary btn-sm">+ 追加</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>名前</th>
+              <th>タグ</th>
+              <th>NGペア</th>
+              <th>配置状況</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>田中 太郎</td><td><span class="status-pill" style="background:#dbeafe;color:#1d4ed8;">新郎</span></td><td>—</td><td><span class="status-pill empty">未配置</span></td><td><div class="td-actions"><button class="btn btn-ghost btn-sm">編集</button><button class="btn btn-danger btn-sm">削除</button></div></td></tr>
+            <tr><td>鈴木 花子</td><td><span class="status-pill" style="background:#fce7f3;color:#be185d;">新婦</span></td><td>—</td><td><span class="status-pill empty">未配置</span></td><td><div class="td-actions"><button class="btn btn-ghost btn-sm">編集</button><button class="btn btn-danger btn-sm">削除</button></div></td></tr>
+            <tr><td>佐藤 一郎</td><td><span class="status-pill" style="background:#dbeafe;color:#1d4ed8;">新郎</span></td><td>林 芳夫</td><td><span class="status-pill complete">A卓</span></td><td><div class="td-actions"><button class="btn btn-ghost btn-sm">編集</button><button class="btn btn-danger btn-sm">削除</button></div></td></tr>
+            <tr><td>山本 誠</td><td>—</td><td>—</td><td><span class="status-pill complete">A卓</span></td><td><div class="td-actions"><button class="btn btn-ghost btn-sm">編集</button><button class="btn btn-danger btn-sm">削除</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ====================== NEW EVENT MODAL ====================== -->
+<div class="modal-backdrop" id="new-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">新規イベント作成</h2>
+      <button class="modal-close" onclick="document.getElementById('new-modal').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">イベント名</label>
+        <input class="form-input" type="text" placeholder="例：結婚披露宴" autofocus>
+      </div>
+      <div class="form-row">
+        <label class="form-label">開催日時</label>
+        <input class="form-input" type="datetime-local">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('new-modal').style.display='none'">キャンセル</button>
+      <button class="btn btn-primary btn-sm">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== DEMO NAV ====================== -->
+<div class="demo-bar">
+  <button class="demo-btn active" onclick="switchScreen('events')">① 一覧</button>
+  <button class="demo-btn" onclick="switchScreen('attendees')">② 招待客</button>
+  <button class="demo-btn" onclick="switchScreen('layout')">③ 席配置</button>
+  <button class="demo-btn" onclick="switchScreen('assign')">④ 配置</button>
+</div>
+
+<script>
+const navMap = {
+  events: 0, attendees: 1, layout: 2, assign: 3
+};
+
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+  const target = document.getElementById('screen-' + name);
+  if (target) { target.style.display = 'flex'; target.classList.add('active'); }
+
+  // Update sidenav
+  document.querySelectorAll('.sidenav-item').forEach((item, i) => {
+    item.classList.toggle('active', i === navMap[name]);
+  });
+
+  // Step bar visibility
+  const stepBar = document.getElementById('step-bar');
+  stepBar.style.display = (name !== 'events') ? 'flex' : 'none';
+
+  // Update step bar active
+  const stepItems = document.querySelectorAll('.step-item');
+  const stepNameMap = { attendees: 0, layout: 1, assign: 2 };
+  const activeIdx = stepNameMap[name] ?? -1;
+  stepItems.forEach((item, i) => {
+    item.classList.remove('active', 'done');
+    if (i < activeIdx) item.classList.add('done');
+    else if (i === activeIdx) item.classList.add('active');
+  });
+
+  // Demo btns
+  document.querySelectorAll('.demo-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === navMap[name]);
+  });
+}
+</script>
+
+</body>
+</html>
