@@ -731,6 +731,18 @@
   /* デスクトップではスマホ専用UIを非表示 */
   .floor-table-move-btns { display: none; }
 
+  /* ═══════════════════════════════════════════════
+     デスクトップではモバイル専用UIを非表示
+  ═══════════════════════════════════════════════ */
+  @media (min-width: 769px) {
+    .mobile-bottom-nav        { display: none !important; }
+    .assign-mobile-minimap    { display: none !important; }
+    .assign-mobile-sheet      { display: none !important; }
+    .event-card-progress      { display: none !important; }
+    /* デスクトップではサイドバーの席タブを表示 */
+    .assign-sidebar-seat-mobile-hide { display: block !important; }
+  }
+
   /* ═══════════════════════════════════════
      スマホ対応 (max-width: 768px)
   ═══════════════════════════════════════ */
@@ -1356,3 +1368,397 @@
   /* モーダル: よりすっきり */
   .modal-header { padding: 1rem 1.5rem 0.875rem; }
   .modal-title { font-size: 1rem; }
+
+  /* ═══════════════════════════════════════════════════════════
+     ■ モバイルUI刷新 — FOCUS SHEET (案B採用)
+       PC版のカラートークンをそのまま継承
+  ═══════════════════════════════════════════════════════════ */
+
+  /* ── BottomNav ── */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
+    background: var(--ink);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: flex-start;
+    padding: 7px 0 0;
+    z-index: 200;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 8px;
+    min-height: 44px;
+    color: rgba(255,255,255,0.38);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: color 0.15s;
+  }
+  .mobile-nav-item svg {
+    width: 21px; height: 21px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    flex-shrink: 0;
+  }
+  .mobile-nav-item.active {
+    color: #fff;
+  }
+  .mobile-nav-item.active svg {
+    stroke: var(--accent);
+  }
+
+  /* ── BottomNav分のコンテンツ下余白 ── */
+  @media (max-width: 768px) {
+    body {
+      padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+    /* 通知トーストをBottomNavの上に出す */
+    .notification {
+      bottom: calc(0.85rem + 56px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    /* サブページシェル高さをBottomNav分縮める */
+    .event-subpage-shell {
+      height: calc(100dvh - 52px - 56px - env(safe-area-inset-bottom, 0px)) !important;
+    }
+    /* InnerNavのタブをBottomNavに統合 → 非表示 */
+    .inner-nav-tabs { display: none !important; }
+    /* InnerNav: back + title だけのシンプルバー */
+    .inner-nav-wrap {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.5rem !important;
+      flex-wrap: nowrap !important;
+      padding: 0.55rem 0.85rem !important;
+    }
+    #assign-header-portal { display: none !important; }
+  }
+
+  /* ── イベントカード刷新 ── */
+  @media (max-width: 768px) {
+    .events-grid {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      gap: 10px;
+      margin-top: 0.75rem;
+    }
+    .event-card {
+      background: var(--paper);
+      border: 1px solid var(--border) !important;
+      border-radius: var(--radius-md) !important;
+      box-shadow: 0 2px 8px var(--shadow);
+      overflow: hidden;
+      padding: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      grid-template-columns: unset !important;
+      grid-template-areas: unset !important;
+    }
+    .event-card:last-child { border-bottom: 1px solid var(--border) !important; }
+    /* アクセントバー(上部の色帯) */
+    .event-card::before {
+      display: block !important;
+      content: '' !important;
+      height: 4px !important;
+      width: 100% !important;
+      background: var(--accent) !important;
+      border-radius: 0 !important;
+      position: static !important;
+    }
+    .event-card-inner {
+      padding: 11px 13px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .event-card-title {
+      font-size: 15px !important;
+      font-weight: 700;
+      margin-bottom: 3px;
+      padding-left: 0;
+    }
+    .event-card-title::before { display: none !important; }
+    .event-card-meta {
+      font-size: 11px;
+      color: var(--ink-light);
+      margin-bottom: 8px;
+    }
+    /* 割当進捗バー */
+    .event-card-progress {
+      margin-bottom: 10px;
+    }
+    .event-card-progress-bar-outer {
+      height: 5px;
+      background: var(--paper-dark);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 3px;
+    }
+    .event-card-progress-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+    .event-card-progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--ink-light);
+    }
+    .event-card-progress-label strong {
+      color: var(--green);
+      font-weight: 700;
+    }
+    .event-action-btns {
+      flex-direction: row !important;
+      gap: 6px !important;
+    }
+    .event-action-btns .btn-main {
+      flex: 1;
+      padding: 8px 6px !important;
+      font-size: 12px !important;
+      min-height: 40px !important;
+      border-radius: var(--radius-sm) !important;
+    }
+    .event-sub-btns {
+      opacity: 1 !important;
+      gap: 5px !important;
+      padding-top: 8px !important;
+      border-top: 1px solid var(--border) !important;
+      margin-top: 0 !important;
+    }
+    .event-sub-btns .btn {
+      flex: 1;
+      min-height: 38px !important;
+      font-size: 11px !important;
+    }
+    /* 認証バナー */
+    .event-auth-banner {
+      margin: 0 0 10px;
+      padding: 8px 12px;
+      font-size: 11px;
+      background: var(--paper-warm);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--ink-light);
+    }
+    .page-header {
+      padding-bottom: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .main { padding: 0.85rem !important; }
+  }
+
+  /* ── 参加者管理 刷新 ── */
+  @media (max-width: 768px) {
+    .attendee-row {
+      grid-template-columns: 1fr !important;
+      gap: 8px !important;
+      padding: 11px 13px !important;
+      background: var(--paper);
+      border-radius: 0;
+    }
+    .attendee-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .attendee-flags {
+      gap: 4px;
+      margin-top: 3px;
+    }
+    .attendee-row-actions {
+      opacity: 1 !important;
+      display: flex !important;
+      gap: 6px !important;
+    }
+    .attendee-row-actions .btn {
+      flex: 1;
+      min-height: 40px !important;
+      justify-content: center;
+      font-size: 11px !important;
+    }
+    /* 検索バー */
+    .mb-3 input {
+      border-radius: var(--radius-md);
+    }
+  }
+
+  /* ── 席割: モバイルミニマップ ── */
+  .assign-mobile-minimap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 12px 6px;
+    flex-shrink: 0;
+  }
+  .assign-minimap-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 11px 9px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .assign-minimap-card:active { background: var(--paper-warm); }
+  .assign-minimap-card.has-violation { border-color: var(--accent); }
+  .assign-minimap-card.full-card { border-color: var(--green); }
+  .assign-minimap-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: 'Noto Serif JP', serif;
+    margin-bottom: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .assign-minimap-sub {
+    font-size: 10px;
+    color: var(--ink-light);
+    margin-bottom: 6px;
+  }
+  .assign-minimap-bar {
+    height: 4px;
+    background: var(--paper-dark);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .assign-minimap-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--green);
+    transition: width 0.3s;
+  }
+  .assign-minimap-bar-fill.viol { background: var(--accent); }
+  .assign-minimap-footer {
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .assign-minimap-footer.full { color: var(--green); }
+  .assign-minimap-footer.empty { color: var(--accent); }
+  .assign-minimap-footer.partial { color: var(--ink-light); }
+  .assign-minimap-footer.viol { color: var(--accent); }
+
+  /* ── 席割: モバイルボトムシート（未割当パネル） ── */
+  .assign-mobile-sheet {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    background: var(--paper);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -3px 20px var(--shadow-deep);
+    z-index: 160;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: height 0.28s cubic-bezier(0.32,0.72,0,1);
+    height: 72px;
+  }
+  .assign-mobile-sheet.sheet-expanded {
+    height: 52vh;
+  }
+  .assign-mobile-sheet-handle-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .assign-mobile-sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--paper-dark);
+    border-radius: 2px;
+  }
+  .assign-mobile-sheet-peek {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 16px 5px;
+    flex-shrink: 0;
+  }
+  .assign-mobile-sheet-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: 'Noto Serif JP', serif;
+  }
+  .assign-mobile-sheet-badge {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(192,57,43,0.1);
+    color: var(--accent);
+    padding: 2px 9px;
+    border-radius: 10px;
+  }
+  .assign-mobile-sheet-badge.all-assigned {
+    background: rgba(45,106,79,0.1);
+    color: var(--green);
+  }
+  .assign-mobile-sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  /* BottomSheetが開いているときのメインコンテンツ余白 */
+  @media (max-width: 768px) {
+    .assign-page-shell {
+      padding-bottom: calc(72px + 56px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    .assign-page-shell.sheet-expanded {
+      padding-bottom: calc(52vh + 56px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    /* サイドバーをモバイルでは完全に非表示（BottomSheetに統合） */
+    .assign-sidebar { display: none !important; }
+    /* モバイルツールバーのレイアウト調整 */
+    .assign-mobile-toolbar {
+      padding: 8px 12px !important;
+      border-bottom: 1px solid var(--border) !important;
+      background: var(--paper-warm) !important;
+    }
+    /* フロアキャンバスをミニマップの下にフロー */
+    .assign-layout {
+      grid-template-columns: 1fr !important;
+      gap: 0 !important;
+    }
+    .assign-floor-view {
+      border-radius: 0 !important;
+      min-height: 280px !important;
+    }
+    /* 卓割当カードをモバイル用にコンパクト化 */
+    .table-assign-card {
+      margin: 0 12px 10px !important;
+    }
+    .seats-grid {
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+      gap: 5px !important;
+      padding: 8px !important;
+    }
+    .seat-slot {
+      min-height: 50px !important;
+      font-size: 0.68rem !important;
+    }
+  }

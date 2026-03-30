@@ -25,6 +25,8 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   const [search,    setSearch]    = useState('');
   // サイドバータブ（卓管理 / 席割）
   const [sideTab, setSideTab] = useState(initialSideTab); // 'seat' | 'table'
+  // モバイル: 未割当ボトムシートの開閉
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [showAddTable, setShowAddTable] = useState(false);
   const [newTableDraft, setNewTableDraft] = useState({ name:'', seatCount:6, shape:'rect' });
   const [newTableSeatInput, setNewTableSeatInput] = useState('6');
@@ -446,7 +448,39 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   };
 
   return (
-    <div className="main assign-page-shell" onClick={handlePageClick}>
+    <div className={`main assign-page-shell${mobileSheetOpen?' sheet-expanded':''}`} onClick={handlePageClick}>
+      {/* ── モバイル専用ミニマップ（デスクトップでは非表示） ── */}
+      <div className="assign-mobile-minimap">
+        {tables.map(t => {
+          const tSeats = seats.filter(s=>s.tableId===t.id);
+          const occ = tSeats.filter(s=>assignments[s.id]).length;
+          const total = t.seatCount;
+          const pct = total > 0 ? Math.round(occ/total*100) : 0;
+          const hasV = violationTableIds.has(t.id);
+          const isFull = total > 0 && occ === total;
+          const isEmpty = occ === 0;
+          return (
+            <div key={t.id}
+              className={`assign-minimap-card${hasV?' has-violation':isFull?' full-card':''}`}
+              onClick={()=>{ const el=document.getElementById(`table-assign-${t.id}`); el?.scrollIntoView({behavior:'smooth',block:'start'}); }}>
+              <div className="assign-minimap-name">{hasV?'⚠️ ':''}{t.name}</div>
+              <div className="assign-minimap-sub">{total}席</div>
+              <div className="assign-minimap-bar">
+                <div className={`assign-minimap-bar-fill${hasV?' viol':''}`} style={{width:`${pct}%`}}/>
+              </div>
+              <div className={`assign-minimap-footer${hasV?' viol':isFull?' full':isEmpty?' empty':' partial'}`}>
+                {hasV ? `NG違反` : isFull ? `満席 ✓` : isEmpty ? `空席 ${total}` : `空席 ${total-occ}`}
+              </div>
+            </div>
+          );
+        })}
+        {tables.length===0 && (
+          <div style={{gridColumn:'1/-1',textAlign:'center',padding:'1rem',color:'var(--ink-light)',fontSize:'0.82rem'}}>
+            卓がまだありません
+          </div>
+        )}
+      </div>
+
       {/* 統計・アクションボタンを InnerNav の #assign-header-portal に注入 */}
       {(()=>{ const t=document.getElementById('assign-header-portal'); return t ? createPortal(
         <>
@@ -745,6 +779,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
               const tViol  = violations.filter(v=>v.tableId===table.id);
               return (
                 <div key={table.id}
+                  id={`table-assign-${table.id}`}
                   className="assign-table-drag-wrap"
                   style={{position:'absolute', left:posX, top:posY, cursor:'grab', userSelect:'none'}}
                   onMouseDown={e => startTableDrag(e, table.id)}
@@ -779,6 +814,59 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           <div><label>テーブル形状</label><div style={{display:'flex',gap:'0.75rem',marginTop:'0.25rem'}}>{[{v:'rect',icon:'⬛',label:'四角（デフォルト）'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn ${newTableDraft.shape===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,flexDirection:'column',gap:'0.3rem',padding:'0.75rem 0.5rem',fontSize:'0.82rem'}} onClick={()=>setNewTableDraft(f=>({...f,shape:s.v}))}><span style={{fontSize:'1.5rem'}}>{s.icon}</span>{s.label}</button>))}</div></div>
         </Modal>
       )}
+
+      {/* ── モバイル専用: 未割当ゲスト ボトムシート（デスクトップでは非表示） ── */}
+      <div className={`assign-mobile-sheet${mobileSheetOpen?' sheet-expanded':''}`}>
+        <div className="assign-mobile-sheet-handle-area" onClick={()=>setMobileSheetOpen(v=>!v)}>
+          <div className="assign-mobile-sheet-handle"/>
+          <div className="assign-mobile-sheet-peek">
+            <span className="assign-mobile-sheet-title">
+              {selName ? `👆 ${selName} を選択中` : `未割当ゲスト`}
+            </span>
+            <span className={`assign-mobile-sheet-badge${unassigned.length===0?' all-assigned':''}`}>
+              {unassigned.length===0 ? '全員割当済 ✓' : `${unassigned.length}名`}
+            </span>
+          </div>
+        </div>
+        {mobileSheetOpen && (
+          <div className="assign-mobile-sheet-body">
+            {selName && (
+              <div style={{padding:'6px 10px',background:'rgba(192,57,43,0.08)',borderRadius:6,fontSize:'0.76rem',color:'var(--accent)',fontWeight:600,marginBottom:4}}>
+                席をタップして配置・入れ替え
+                <button onClick={clearSelection} style={{marginLeft:8,background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'1px 8px',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>解除</button>
+              </div>
+            )}
+            <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginBottom:'0.4rem'}}>
+              <button className={`btn btn-sm ${!filterTag?'btn-primary':'btn-outline'}`} onClick={()=>setFilterTag('')}>すべて</button>
+              {allTags.map(t=>(
+                <button key={t} className={`btn btn-sm ${filterTag===t?'btn-primary':'btn-outline'}`}
+                  onClick={()=>setFilterTag(p=>p===t?'':t)}
+                  style={filterTag===t?{background:'var(--accent-gold)',borderColor:'var(--accent-gold)',color:'#fff'}:{}}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:'4px',overflowY:'auto'}}>
+              {filteredUnassigned.length===0 && (
+                <div style={{textAlign:'center',padding:'1rem',color:'var(--ink-light)',fontSize:'0.82rem'}}>全員割当済です</div>
+              )}
+              {filteredUnassigned.map(a=>{
+                const isHL = filterTag && a.flags.includes(filterTag);
+                return (
+                  <div key={a.id}
+                    className={`attendee-item ${selected===a.id?'selected':''}`}
+                    onClick={()=>{ setSelected(s=>s===a.id?null:a.id); }}
+                    style={isHL?{borderColor:'var(--accent-gold)',background:'rgba(184,134,11,0.07)'}:{}}>
+                    {isHL && <span style={{color:'var(--accent-gold)',marginRight:4}}>★</span>}
+                    <span>{a.name}</span>
+                    {a.flags.length>0 && <div className="item-flags">{a.flags.map(f=><span key={f} className="tag" style={{fontSize:'0.65rem',padding:'0.1rem 0.4rem'}}>{f}</span>)}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
