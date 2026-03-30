@@ -10,8 +10,9 @@ import { reducer, DEFAULT_STATE } from './reducer.js';
 import { loadState, saveState, clearState, sanitizeEvent } from './lib/storage.js';
 import { exportEventJSON, parseImportedEvent, loadSharedEvent } from './lib/share.js';
 import { onAuthChange, getSession, signOut, signIn, signUp, resetPasswordForEmail, updatePassword } from './lib/auth.js';
-import { syncLocalEvents, listEvents, createEvent } from './lib/eventRepository.js';
+import { syncLocalEvents, listEvents, createEvent, syncDirtyEvents } from './lib/eventRepository.js';
 import { createShare, getSharedEvent } from './lib/shareRepository.js';
+import { loadSyncMeta, saveSyncMeta, clearSyncMeta, markSynced, getUnsyncedEvents } from './lib/syncMeta.js';
 import AuthModal from './components/AuthModal.jsx';
 import EventsPage from './components/EventsPage.jsx';
 import LayoutPage from './components/LayoutPage.jsx';
@@ -57,8 +58,10 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('idle'); // 'idle'|'syncing'|'done'|'error'
-  const [syncResult, setSyncResult] = useState(null);   // { succeeded, failed } | null
+  const [dbSyncStatus, setDbSyncStatus] = useState('idle'); // 'idle'|'syncing'|'done'|'error'
+  const [syncResult, setSyncResult] = useState(null);       // { succeeded, failed } | null
+  const autoSyncTimer = useRef(null);
+  const dbSyncDoneTimer = useRef(null);
 
   const dispatch = useCallback((action) => dispatch_(action), []);
 
@@ -115,9 +118,8 @@ export default function App() {
     const { error } = await signIn(email, password);
     if (!error) {
       setShowAuthModal(false);
-      // state は起動時に localStorage から復元済みなので、ここで events が揃っている
       if (state.events.length > 0) {
-        handleAutoSync();
+        handleAutoSyncDirty();
       }
     }
     return { error };
@@ -129,7 +131,7 @@ export default function App() {
       // Email Confirmation OFF: 即ログイン
       setShowAuthModal(false);
       if (state.events.length > 0) {
-        handleAutoSync();
+        handleAutoSyncDirty();
       }
     }
     return { session, error };
@@ -150,30 +152,56 @@ export default function App() {
   }
 
   async function handleSignOut() {
+    clearTimeout(autoSyncTimer.current); // 遅延中の自動同期をキャンセル
+    clearTimeout(dbSyncDoneTimer.current);
     await signOut();
-    clearState();                      // localStorage 削除（次回起動時に空スタート）
-    dispatch({ type: 'RESET_STATE' }); // 画面クリア
-    setIsPasswordRecovery(false);      // リセットフロー中でもログアウトしたら解除
+    clearState();                        // localStorage 削除（次回起動時に空スタート）
+    clearSyncMeta();                     // 差分同期メタも削除
+    dispatch({ type: 'RESET_STATE' });   // 画面クリア
+    setDbSyncStatus('idle');
+    setIsPasswordRecovery(false);
     setPage('events');
     setShowAuthModal(false);
   }
 
-  // ローカルイベントを DB に一括同期（ログイン時の自動同期 + 手動同期ボタン）
+  // 手動同期ボタン（AuthModal）: 全件一括同期
   async function handleSync() {
-    setSyncStatus('syncing');
+    setDbSyncStatus('syncing');
     setSyncResult(null);
     const result = await syncLocalEvents(state.events);
     setSyncResult({ succeeded: result.succeeded, failed: result.failed, errorMessage: result.firstErrorMessage });
-    setSyncStatus(result.failed > 0 && result.succeeded === 0 ? 'error' : 'done');
+    if (result.failed === 0) {
+      // 全件成功時は syncMeta も一括更新
+      const meta = loadSyncMeta();
+      const updated = markSynced(meta, state.events.map(e => e.id));
+      saveSyncMeta(updated);
+      setDbSyncStatus('done');
+      clearTimeout(dbSyncDoneTimer.current);
+      dbSyncDoneTimer.current = setTimeout(() => setDbSyncStatus('idle'), 4000);
+    } else {
+      setDbSyncStatus(result.succeeded === 0 ? 'error' : 'done');
+    }
   }
 
-  // ログイン時の自動同期（通知バナーで結果表示）
-  async function handleAutoSync() {
-    const result = await syncLocalEvents(state.events);
-    if (result.failed === 0 && result.succeeded > 0) {
-      notify(`${result.succeeded} 件をDBに同期しました`);
-    } else if (result.failed > 0) {
-      notify(`同期: ${result.succeeded} 件成功 / ${result.failed} 件失敗`, 'error');
+  // 差分自動同期（編集後 3s debounce / ログイン直後）
+  async function handleAutoSyncDirty() {
+    if (!authUser) return;
+    const meta = loadSyncMeta();
+    const dirty = getUnsyncedEvents(state.events, meta);
+    if (dirty.length === 0) return;
+    setDbSyncStatus('syncing');
+    const result = await syncDirtyEvents(dirty);
+    if (result.syncedClientIds.length > 0) {
+      const updated = markSynced(meta, result.syncedClientIds);
+      saveSyncMeta(updated);
+    }
+    if (result.failed > 0) {
+      console.error('[App] handleAutoSyncDirty: partial failure', result.errors);
+      setDbSyncStatus('error');
+    } else {
+      setDbSyncStatus('done');
+      clearTimeout(dbSyncDoneTimer.current);
+      dbSyncDoneTimer.current = setTimeout(() => setDbSyncStatus('idle'), 4000);
     }
   }
 
@@ -204,15 +232,24 @@ export default function App() {
     notify(`${events.length} 件のイベントをDBから復元しました`);
   }
 
-  // 自動保存（デバウンス100ms）— ログイン不問で保存（未ログイン時のイベントも保持）
+  // 自動保存（デバウンス100ms）+ DB自動同期（デバウンス3000ms）
+  // localStorage 保存はログイン不問。DB同期はログイン中のみ。
   useEffect(() => {
     setSaveStatus('saving');
     clearTimeout(saveTimer.current);
+    clearTimeout(autoSyncTimer.current);
+
     saveTimer.current = setTimeout(() => {
       saveState(state);
       setSaveStatus('saved');
     }, 100);
-  }, [state]);
+
+    if (authUser && state.events.length > 0) {
+      autoSyncTimer.current = setTimeout(() => {
+        handleAutoSyncDirty();
+      }, 3000);
+    }
+  }, [state, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // localStorage容量超過エラー
   useEffect(() => {
@@ -281,6 +318,9 @@ export default function App() {
 
   const statusColor = saveStatus==='error'?'var(--accent)': saveStatus==='saving'?'var(--accent-gold)':'#4caf82';
   const statusLabel = saveStatus==='error'?'保存エラー ⚠️': saveStatus==='saving'?'保存中…':'保存済 ✓';
+
+  const dbSyncColor = dbSyncStatus==='error'?'var(--accent)': dbSyncStatus==='syncing'?'var(--accent-gold,#c9a227)':'#4caf82';
+  const dbSyncLabel = dbSyncStatus==='syncing'?'クラウド同期中…': dbSyncStatus==='done'?'クラウド同期済 ✓':'同期エラー ⚠';
 
   // ニックネーム優先表示（nickname → email ローカルパート → 'ログイン'）
   const displayName = authUser
@@ -370,6 +410,9 @@ export default function App() {
             </button>
           )}
           <span className="topbar-status" style={{color:statusColor}}>{statusLabel}</span>
+          {authUser && dbSyncStatus !== 'idle' && (
+            <span style={{color:dbSyncColor,fontSize:'0.75rem'}}>{dbSyncLabel}</span>
+          )}
           <label className="btn btn-ghost btn-sm" style={{cursor:'pointer',color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>
             📂 復元<input type="file" accept=".json" onChange={handleImportJSON} style={{display:'none'}}/>
           </label>
@@ -397,7 +440,7 @@ export default function App() {
           onSignOut={handleSignOut}
           onClose={() => setShowAuthModal(false)}
           eventCount={state.events.length}
-          syncStatus={syncStatus}
+          syncStatus={dbSyncStatus}
           syncResult={syncResult}
           onSync={handleSync}
           isPasswordRecovery={isPasswordRecovery}

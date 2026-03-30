@@ -184,6 +184,54 @@ export async function syncLocalEvents(events) {
   return { succeeded, failed, errors, firstErrorMessage };
 }
 
+/**
+ * 差分同期: dirty なイベント（未同期または更新済み）のみを DB に upsert する。
+ * syncMeta との比較は呼び出し側（getUnsyncedEvents）が行う想定だが、
+ * 念のため events が空の場合は即リターンする。
+ *
+ * syncLocalEvents との違い:
+ *   - 渡された events を全件 upsert する（差分フィルタは呼び出し側の責任）
+ *   - 成功した event の client_id 配列 syncedClientIds を返す（markSynced に渡す）
+ *
+ * @param {object[]} events  dirty events（getUnsyncedEvents でフィルタ済み）
+ * @returns {Promise<{ succeeded: number, failed: number, errors: Array, firstErrorMessage: string|null, syncedClientIds: string[] }>}
+ */
+export async function syncDirtyEvents(events) {
+  const userId = await _currentUserId();
+  if (!userId) {
+    _log('syncDirtyEvents: not authenticated, skipping');
+    return { succeeded: 0, failed: 0, errors: [], firstErrorMessage: null, syncedClientIds: [] };
+  }
+  if (events.length === 0) {
+    return { succeeded: 0, failed: 0, errors: [], firstErrorMessage: null, syncedClientIds: [] };
+  }
+  _log('syncDirtyEvents', { count: events.length });
+
+  const results = await Promise.allSettled(
+    events.map(ev => createEvent(ev.name, ev))
+  );
+
+  let succeeded = 0;
+  const syncedClientIds = [];
+  const errors = [];
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    if (r.status === 'fulfilled' && !r.value.error) {
+      succeeded++;
+      syncedClientIds.push(events[i].id);
+    } else {
+      errors.push(r.reason ?? r.value?.error ?? new Error('unknown'));
+    }
+  }
+
+  const failed = results.length - succeeded;
+  const firstErrorMessage = errors[0]?.message ?? errors[0]?.toString() ?? null;
+  if (failed > 0) console.error('[eventRepository] syncDirtyEvents errors:', errors);
+  _log('syncDirtyEvents result', { succeeded, failed, syncedClientIds });
+  return { succeeded, failed, errors, firstErrorMessage, syncedClientIds };
+}
+
 export async function getEvent(id) {
   _log('getEvent', { id });
   const { data, error } = await supabase
