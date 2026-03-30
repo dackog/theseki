@@ -88,7 +88,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   // 卓ドラッグ配置（mousemove/mouseup on window）
   const startTableDrag = useCallback((e, tableId) => {
     if (e.button !== 0) return;
-    if (e.target.closest('[draggable="true"]')) return; // 席クリック時は卓ドラッグしない
+    if (e.target.closest('[draggable]')) return; // 席クリック時は卓ドラッグしない（locked席はdraggable="false"なので"true"だけでは不十分）
     e.preventDefault();
     const wrapperRect = e.currentTarget.getBoundingClientRect();
     const startOffsetX = e.clientX - wrapperRect.left;
@@ -203,6 +203,19 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
       return;
     }
     dispatch({ type: 'BATCH_ASSIGN', eventId: event.id, updates: { [seatId]: attendeeId } });
+    clearSelection();
+  };
+
+  const handleSeatDropToUnassign = (e) => {
+    e.preventDefault();
+    const seatId = e.dataTransfer.getData('seat-id');
+    if (!seatId) return;
+    const aId = assignments[seatId];
+    if (aId && lockedAttendees[aId]) {
+      notify('🔒 ロック中の参加者は解除できません', 'warning');
+      return;
+    }
+    dispatch({ type: 'ASSIGN', eventId: event.id, seatId, attendeeId: null });
     clearSelection();
   };
 
@@ -425,8 +438,15 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
 
   const selName = selected ? attendees.find(a=>a.id===selected)?.name : null;
 
+  const handlePageClick = (e) => {
+    if (!selected) return;
+    if (!e.target.closest('[draggable], button, input, select, .attendee-item, .modal, .assign-fullscreen-btn')) {
+      clearSelection();
+    }
+  };
+
   return (
-    <div className="main assign-page-shell">
+    <div className="main assign-page-shell" onClick={handlePageClick}>
       {/* 統計・アクションボタンを InnerNav の #assign-header-portal に注入 */}
       {(()=>{ const t=document.getElementById('assign-header-portal'); return t ? createPortal(
         <>
@@ -626,7 +646,10 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                       ★ 「{filterTag}」をハイライト中 — 金色の席が対象者
                     </div>
                   )}
-                  <div className="assign-attendee-list">
+                  <div className="assign-attendee-list"
+                    onDragOver={e => { if (e.dataTransfer.types.includes('seat-id')) e.preventDefault(); }}
+                    onDrop={handleSeatDropToUnassign}
+                  >
                     {filteredUnassigned.length===0 && <div className="text-sm text-muted" style={{padding:'0.5rem 0'}}>全員割当済</div>}
                     {filteredUnassigned.map(a=>{
                       const isHL = filterTag && a.flags.includes(filterTag);
@@ -634,7 +657,17 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                         <div key={a.id}
                           className={`attendee-item ${selected===a.id?'selected':''}`}
                           draggable={true}
-                          onDragStart={e => { e.dataTransfer.setData('attendee-id', a.id); e.dataTransfer.effectAllowed = 'move'; }}
+                          onDragStart={e => {
+                            e.dataTransfer.setData('attendee-id', a.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                            // カスタムドラッグ画像：緑の正方形席デザイン
+                            const el = document.createElement('div');
+                            el.style.cssText = 'position:fixed;top:-200px;left:-200px;width:48px;height:48px;border-radius:8px;background:radial-gradient(circle at 40% 35%,#5a8a6a,#2d5a3d);border:2px solid rgba(120,200,140,0.4);color:#d0f0dc;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;overflow:hidden;';
+                            el.textContent = a.name.slice(0, 4);
+                            document.body.appendChild(el);
+                            e.dataTransfer.setDragImage(el, 24, 24);
+                            setTimeout(() => document.body.removeChild(el), 0);
+                          }}
                           onClick={()=>setSelected(s=>s===a.id?null:a.id)}
                           style={isHL ? {borderColor:'var(--accent-gold)',background:'rgba(184,134,11,0.07)'} : {}}>
                           {isHL && <span style={{color:'var(--accent-gold)',marginRight:4,fontSize:'0.8rem'}}>★</span>}
@@ -675,7 +708,6 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
         </div>
 
         <div ref={floorViewRef} className="assign-floor-view assign-floor-canvas"
-          onClick={e=>{ if(e.target===e.currentTarget) setSelected(null); }}
         >
           {/* 全画面トグルボタン（sticky で常時表示、スマホでは非表示） */}
           <div className="assign-fullscreen-btn" style={{position:'sticky',top:'0.5rem',height:0,zIndex:20,display:'flex',justifyContent:'flex-end',paddingRight:'0.75rem',overflow:'visible'}}>
