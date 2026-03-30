@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo, useCallback, useReducer, useRef } from 'react';
 import { reducer, DEFAULT_STATE } from './reducer.js';
 import { loadState, saveState, clearState, sanitizeEvent } from './lib/storage.js';
-import { exportEventJSON, parseImportedEvent, loadSharedEvent } from './lib/share.js';
+import { loadSharedEvent } from './lib/share.js';
 import { onAuthChange, getSession, signOut, signIn, signUp, resetPasswordForEmail, updatePassword } from './lib/auth.js';
 import { listEvents, createEvent, syncDirtyEvents, deleteEventByClientId } from './lib/eventRepository.js';
 import { createShare, getSharedEvent } from './lib/shareRepository.js';
@@ -301,31 +301,6 @@ export default function App() {
 
   const currentEvent = state.events.find(e=>e.id===state.currentEventId);
 
-  // JSONバックアップ
-  const handleExportJSON = () => {
-    if (!currentEvent) return;
-    exportEventJSON(currentEvent);
-    notify('JSONバックアップをダウンロードしました');
-  };
-
-  // JSONインポート
-  const handleImportJSON = (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const imported = parseImportedEvent(ev.target.result);
-        dispatch({type:'IMPORT_EVENT', payload:imported});
-        setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');
-        notify(`「${imported.name}」をインポートしました`, 'success');
-      } catch(err) {
-        notify(`インポート失敗: ${err.message}`, 'error');
-      }
-    };
-    reader.readAsText(file,'UTF-8');
-    e.target.value='';
-  };
-
   // 閲覧用共有リンク作成（DB方式）
   async function handleCreateShare() {
     if (!currentEvent) return;
@@ -451,10 +426,6 @@ export default function App() {
           {authUser && dbSyncStatus !== 'idle' && (
             <span style={{color:dbSyncColor,fontSize:'0.75rem'}}>{dbSyncLabel}</span>
           )}
-          <label className="btn btn-ghost btn-sm" style={{cursor:'pointer',color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>
-            📂 復元<input type="file" accept=".json" onChange={handleImportJSON} style={{display:'none'}}/>
-          </label>
-          {currentEvent && <button className="btn btn-ghost btn-sm" onClick={handleExportJSON} style={{color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>💾 バックアップ</button>}
           {currentEvent && <button className="btn btn-ghost btn-sm" onClick={handleCreateShare} style={{color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>🔗 共有URL</button>}
         </div>
       </div>

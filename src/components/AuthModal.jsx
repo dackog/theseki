@@ -291,7 +291,7 @@ export default function AuthModal({
     return (
       <Modal
         title="新しいパスワードを設定"
-        onClose={onClose}
+        onClose={null}
         footer={
           <button
             className="btn btn-primary btn-sm"
