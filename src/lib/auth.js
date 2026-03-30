@@ -70,6 +70,16 @@ export async function getSession() {
 }
 
 /**
+ * ニックネームを更新する（ログイン中に呼ぶ）。
+ * user_metadata.nickname を上書きする。
+ */
+export async function updateNickname(nickname) {
+  const trimmed = nickname.trim().slice(0, 20);
+  const { data, error } = await supabase.auth.updateUser({ data: { nickname: trimmed } });
+  return { user: data?.user ?? null, error: error ?? null };
+}
+
+/**
  * auth 状態の変化を購読する。
  * useEffect 内で呼び出し、返り値の unsubscribe 関数を cleanup に渡す。
  * PASSWORD_RECOVERY / SIGNED_IN / SIGNED_OUT などを検知できる。

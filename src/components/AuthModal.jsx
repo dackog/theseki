@@ -2,6 +2,7 @@
 // email/password 認証 UI（ログイン / 新規登録 / パスワードリセット / パスワード更新 / アカウント）
 import { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
+import { updateNickname } from '../lib/auth.js';
 
 const inkMuted = 'var(--ink-muted,rgba(0,0,0,0.5))';
 
@@ -23,16 +24,13 @@ export default function AuthModal({
   user,
   onSignOut,
   onClose,
-  eventCount,
   syncStatus,
-  syncResult,
-  onSync,
   isPasswordRecovery,
   onLogin,
   onSignUp,
   onResetPassword,
   onUpdatePassword,
-  onRestoreFromDB,
+  onNicknameUpdate,
 }) {
   const initialView = isPasswordRecovery ? 'update_password'
     : user ? 'account'
@@ -46,6 +44,9 @@ export default function AuthModal({
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   function validatePassword(pw) {
     if (!pw) return 'パスワードを入力してください';
@@ -73,6 +74,25 @@ export default function AuthModal({
     setPasswordConfirm('');
     setNewPassword('');
     setNickname('');
+    setEditingNickname(false);
+    setNicknameInput('');
+    setChangingPassword(false);
+  }
+
+  async function doUpdateNickname() {
+    if (!nicknameInput.trim() || loading) return;
+    setLoading(true);
+    setResult(null);
+    const { user: newUser, error } = await updateNickname(nicknameInput);
+    setLoading(false);
+    if (error) {
+      console.warn('[AuthModal] updateNickname error:', error);
+      setResult({ type: 'error', message: 'ニックネームの更新に失敗しました' });
+    } else {
+      setEditingNickname(false);
+      setNicknameInput('');
+      if (newUser) onNicknameUpdate?.(newUser);
+    }
   }
 
   async function doLogin() {
@@ -138,6 +158,9 @@ export default function AuthModal({
       console.warn('[AuthModal] updatePassword error:', error);
       setResult({ type: 'error', message: 'パスワードの更新に失敗しました。もう一度お試しください' });
     } else {
+      setChangingPassword(false);
+      setNewPassword('');
+      setPasswordConfirm('');
       setResult({ type: 'success', message: 'パスワードを更新しました。' });
     }
   }
@@ -299,6 +322,8 @@ export default function AuthModal({
   }
 
   // ---- account (logged in) ----
+  const currentNickname = user.user_metadata?.nickname ?? '';
+
   return (
     <Modal
       title="アカウント"
@@ -310,49 +335,96 @@ export default function AuthModal({
       }
     >
       <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+
+        {/* パスワード更新成功メッセージ（account ビューに戻った直後） */}
+        {result && !editingNickname && !changingPassword && <ResultMsg result={result} />}
+
+        {/* ユーザー情報 */}
         <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
           <span style={{fontSize:'0.8rem',color:inkMuted}}>ログイン中</span>
-          {user.user_metadata?.nickname && (
-            <span style={{fontSize:'1rem',fontWeight:600}}>{user.user_metadata.nickname}</span>
+          {currentNickname && !editingNickname && (
+            <span style={{fontSize:'1rem',fontWeight:600}}>{currentNickname}</span>
           )}
           <span style={{fontSize:'0.85rem',color:inkMuted,wordBreak:'break-all'}}>{user.email}</span>
-        </div>
-
-        {/* DB復元 */}
-        <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',paddingTop:'0.5rem',borderTop:'1px solid var(--border,#e5e5e5)'}}>
-          <button className="btn btn-outline btn-sm" onClick={onRestoreFromDB}>
-            DBからイベントを復元
-          </button>
-        </div>
-
-        {/* Supabase 同期 */}
-        {eventCount > 0 && (
-          <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
-            <span style={{fontSize:'0.8rem',color:inkMuted}}>
-              ローカルイベント: {eventCount} 件
+          {syncStatus !== 'idle' && (
+            <span style={{fontSize:'0.75rem',color:syncStatus==='error'?'var(--danger,#c93535)':syncStatus==='syncing'?'var(--accent-gold,#c9a227)':'#4caf82'}}>
+              {syncStatus==='syncing'?'クラウド同期中…':syncStatus==='done'?'クラウド同期済 ✓':'同期エラー ⚠'}
             </span>
+          )}
+        </div>
+
+        {/* ニックネーム変更 */}
+        <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',paddingTop:'0.5rem',borderTop:'1px solid var(--border,#e5e5e5)'}}>
+          {!editingNickname && !changingPassword && (
             <button
-              className="btn btn-outline btn-sm"
-              onClick={onSync}
-              disabled={syncStatus === 'syncing'}
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{fontSize:'0.8rem',color:'var(--accent,#7c4fc4)',textDecoration:'underline',textUnderlineOffset:'3px',padding:'0.2rem 0',textAlign:'left',justifyContent:'flex-start'}}
+              onClick={() => { setEditingNickname(true); setNicknameInput(currentNickname); setResult(null); }}
             >
-              {syncStatus === 'syncing' ? '同期中...' : 'Supabase に同期'}
+              ニックネームを変更
             </button>
-            {syncResult && (
-              <div style={{
-                padding:'0.5rem 0.625rem', borderRadius:'6px', fontSize:'0.8rem', lineHeight:1.5,
-                background: syncResult.failed === 0 ? 'rgba(76,175,130,0.12)' : syncResult.succeeded === 0 ? 'rgba(201,53,53,0.1)' : 'rgba(230,180,0,0.1)',
-                color: syncResult.failed === 0 ? '#2e7d5e' : syncResult.succeeded === 0 ? 'var(--danger,#c93535)' : '#7a5c00',
-              }}>
-                {syncResult.failed === 0
-                  ? `${syncResult.succeeded} 件を同期しました`
-                  : syncResult.succeeded === 0
-                    ? `同期に失敗しました。ネットワーク接続を確認してください`
-                    : `${syncResult.succeeded} 件同期しました（${syncResult.failed} 件失敗）`}
+          )}
+          {editingNickname && (
+            <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
+              <label style={{fontSize:'0.8rem',fontWeight:600}}>ニックネーム（20文字以内）</label>
+              <input
+                type="text"
+                value={nicknameInput}
+                onChange={e => setNicknameInput(e.target.value)}
+                placeholder="例: たろう"
+                maxLength={20}
+                disabled={loading}
+                autoFocus
+              />
+              <ResultMsg result={result} />
+              <div style={{display:'flex',gap:'0.5rem'}}>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => { setEditingNickname(false); setResult(null); }} disabled={loading}>
+                  キャンセル
+                </button>
+                <button type="button" className="btn btn-primary btn-sm" style={{flex:1}} onClick={doUpdateNickname} disabled={loading || !nicknameInput.trim()}>
+                  {loading ? '保存中...' : '保存'}
+                </button>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+
+        {/* パスワード変更 */}
+        <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',borderTop:'1px solid var(--border,#e5e5e5)',paddingTop:'0.5rem'}}>
+          {!changingPassword && !editingNickname && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{fontSize:'0.8rem',color:'var(--accent,#7c4fc4)',textDecoration:'underline',textUnderlineOffset:'3px',padding:'0.2rem 0',textAlign:'left',justifyContent:'flex-start'}}
+              onClick={() => { setChangingPassword(true); setResult(null); }}
+            >
+              パスワードを変更
+            </button>
+          )}
+          {changingPassword && (
+            <form onSubmit={e => { e.preventDefault(); doUpdatePassword(); }} style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
+              <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+                <label style={{fontSize:'0.8rem',fontWeight:600}}>新しいパスワード（6〜64文字、英小文字・数字を含む）</label>
+                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="例: abc123" autoFocus disabled={loading} />
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:'0.375rem'}}>
+                <label style={{fontSize:'0.8rem',fontWeight:600}}>パスワード（確認）</label>
+                <input type="password" value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)} placeholder="もう一度入力" disabled={loading} />
+              </div>
+              <ResultMsg result={result} />
+              <div style={{display:'flex',gap:'0.5rem'}}>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => { setChangingPassword(false); setResult(null); setNewPassword(''); setPasswordConfirm(''); }} disabled={loading}>
+                  キャンセル
+                </button>
+                <button type="submit" className="btn btn-primary btn-sm" style={{flex:1}} disabled={loading || !newPassword || !passwordConfirm}>
+                  {loading ? '更新中...' : 'パスワードを更新'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
       </div>
     </Modal>
   );

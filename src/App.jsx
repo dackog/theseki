@@ -10,7 +10,7 @@ import { reducer, DEFAULT_STATE } from './reducer.js';
 import { loadState, saveState, clearState, sanitizeEvent } from './lib/storage.js';
 import { exportEventJSON, parseImportedEvent, loadSharedEvent } from './lib/share.js';
 import { onAuthChange, getSession, signOut, signIn, signUp, resetPasswordForEmail, updatePassword } from './lib/auth.js';
-import { syncLocalEvents, listEvents, createEvent, syncDirtyEvents, deleteEventByClientId } from './lib/eventRepository.js';
+import { listEvents, createEvent, syncDirtyEvents, deleteEventByClientId } from './lib/eventRepository.js';
 import { createShare, getSharedEvent } from './lib/shareRepository.js';
 import { loadSyncMeta, saveSyncMeta, clearSyncMeta, markSynced, getUnsyncedEvents } from './lib/syncMeta.js';
 import AuthModal from './components/AuthModal.jsx';
@@ -59,7 +59,6 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [dbSyncStatus, setDbSyncStatus] = useState('idle'); // 'idle'|'syncing'|'done'|'error'
-  const [syncResult, setSyncResult] = useState(null);       // { succeeded, failed } | null
   const autoSyncTimer = useRef(null);
   const dbSyncDoneTimer = useRef(null);
   const authUserRef = useRef(authUser);
@@ -139,6 +138,7 @@ export default function App() {
     const newState = { events: merged, currentEventId: currentEventId ?? null };
     dispatch_({ type: 'LOAD_STATE', payload: newState });
     saveState(newState);
+    return dbWonClientIds.length; // 呼び出し側で通知に使う
   }
 
   // ?share= の場合は DB からイベントを取得
@@ -170,7 +170,8 @@ export default function App() {
       setAuthUser(user);
       if (user) {
         // Phase C: 既存セッションあり → DB と newer wins マージ
-        await mergeWithDB(initialLocalEvents, initialCurrentId);
+        const dbWonCount = await mergeWithDB(initialLocalEvents, initialCurrentId);
+        if (dbWonCount > 0) notify(`クラウドから ${dbWonCount} 件のイベントを取り込みました`);
       }
       setAuthLoading(false);
     });
@@ -202,7 +203,8 @@ export default function App() {
     if (!error) {
       setShowAuthModal(false);
       // Phase B: ログイン直後に DB とマージ（newer wins）
-      await mergeWithDB(state.events, state.currentEventId);
+      const dbWonCount = await mergeWithDB(state.events, state.currentEventId);
+      if (dbWonCount > 0) notify(`クラウドから ${dbWonCount} 件のイベントを取り込みました`);
     }
     return { error };
   }
@@ -212,8 +214,9 @@ export default function App() {
     if (!error && session) {
       // Email Confirmation OFF: 即ログイン
       setShowAuthModal(false);
-      // Phase B: 即ログイン時は DB に何もないので mergeWithDB は no-op だが統一する
-      await mergeWithDB(state.events, state.currentEventId);
+      // Phase B: 即ログイン時は DB に何もないので通常 0 件だが統一する
+      const dbWonCount = await mergeWithDB(state.events, state.currentEventId);
+      if (dbWonCount > 0) notify(`クラウドから ${dbWonCount} 件のイベントを取り込みました`);
     }
     return { session, error };
   }
@@ -245,25 +248,6 @@ export default function App() {
     setShowAuthModal(false);
   }
 
-  // 手動同期ボタン（AuthModal）: 全件一括同期
-  async function handleSync() {
-    setDbSyncStatus('syncing');
-    setSyncResult(null);
-    const result = await syncLocalEvents(state.events);
-    setSyncResult({ succeeded: result.succeeded, failed: result.failed, errorMessage: result.firstErrorMessage });
-    if (result.failed === 0) {
-      // 全件成功時は syncMeta も一括更新
-      const meta = loadSyncMeta();
-      const updated = markSynced(meta, state.events.map(e => e.id));
-      saveSyncMeta(updated);
-      setDbSyncStatus('done');
-      clearTimeout(dbSyncDoneTimer.current);
-      dbSyncDoneTimer.current = setTimeout(() => setDbSyncStatus('idle'), 4000);
-    } else {
-      setDbSyncStatus(result.succeeded === 0 ? 'error' : 'done');
-    }
-  }
-
   // 差分自動同期（編集後 3s debounce / ログイン直後）
   async function handleAutoSyncDirty() {
     if (!authUser) return;
@@ -284,33 +268,6 @@ export default function App() {
       clearTimeout(dbSyncDoneTimer.current);
       dbSyncDoneTimer.current = setTimeout(() => setDbSyncStatus('idle'), 4000);
     }
-  }
-
-  // DB からイベントを復元（再ログイン後などに使用）
-  async function handleRestoreFromDB() {
-    if (!confirm('DBからイベントを復元します。\n現在のローカルデータは上書きされます。よろしいですか？')) return;
-    const { data, error } = await listEvents();
-    if (error) {
-      notify('DBからの復元に失敗しました', 'error');
-      return;
-    }
-    if (!data.length) {
-      notify('復元できるイベントがDBに見つかりませんでした', 'error');
-      return;
-    }
-    const events = data
-      .map(row => {
-        if (!row.payload_json) return null;
-        return sanitizeEvent({
-          tables: [], attendees: [], ngPairs: [], assignments: {},
-          ...row.payload_json,
-        });
-      })
-      .filter(Boolean);
-    const restored = { events, currentEventId: null };
-    dispatch({ type: 'LOAD_STATE', payload: restored });
-    saveState(restored);
-    notify(`${events.length} 件のイベントをDBから復元しました`);
   }
 
   // 自動保存（デバウンス100ms）+ DB自動同期（デバウンス3000ms）
@@ -520,16 +477,13 @@ export default function App() {
           user={authUser}
           onSignOut={handleSignOut}
           onClose={() => setShowAuthModal(false)}
-          eventCount={state.events.length}
           syncStatus={dbSyncStatus}
-          syncResult={syncResult}
-          onSync={handleSync}
           isPasswordRecovery={isPasswordRecovery}
           onLogin={handleLogin}
           onSignUp={handleSignUp}
           onResetPassword={handleResetPassword}
           onUpdatePassword={handleUpdatePassword}
-          onRestoreFromDB={handleRestoreFromDB}
+          onNicknameUpdate={(newUser) => setAuthUser(newUser)}
         />
       )}
     </>
