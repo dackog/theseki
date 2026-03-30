@@ -193,14 +193,20 @@
   /* Tags/Chips */
   .tag {
     display: inline-flex; align-items: center; gap: 0.3rem;
-    background: var(--accent-light); color: var(--ink-light);
+    background: var(--paper-dark); color: var(--ink-light);
     border: 1px solid var(--border);
-    border-radius: 20px; padding: 0.18rem 0.65rem;
-    font-size: 0.72rem; font-weight: 500;
+    border-radius: 20px; padding: 0.12rem 0.55rem;
+    font-size: 0.7rem; font-weight: 500;
   }
   .tag-remove { cursor: pointer; color: var(--ink-light); opacity: 0.5; font-size: 0.9rem; }
   .tag-remove:hover { opacity: 1; color: var(--accent); }
-  .tag-ng { background: #fde8e8; border-color: #f5a5a5; color: var(--accent); }
+  /* NGタグ: フラグと明確に区別できる赤系 */
+  .tag-ng {
+    background: rgba(192,57,43,0.09);
+    border-color: rgba(192,57,43,0.28);
+    color: var(--accent);
+    font-size: 0.7rem;
+  }
 
   /* Page: Events */
   .events-grid {
@@ -289,15 +295,15 @@
   .attendee-row {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 0.75rem; align-items: center;
-    padding: 0.75rem 1.1rem;
+    gap: 0.5rem 0.75rem; align-items: center;
+    padding: 0.65rem 1.1rem;
     border-bottom: 1px solid var(--border);
     transition: background 0.1s;
   }
   .attendee-row:last-child { border-bottom: none; }
   .attendee-row:hover { background: var(--paper-warm); }
-  .attendee-name { font-weight: 500; font-size: 0.9rem; line-height: 1.4; }
-  .attendee-flags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
+  .attendee-name { font-weight: 500; font-size: 0.87rem; line-height: 1.4; }
+  .attendee-flags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.2rem; }
 
   /* Page: Assign */
   .assign-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; align-items: start; }
@@ -490,7 +496,20 @@
   .tag-input-area { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; padding: 0.4rem 0.5rem; border: 1px solid var(--border); border-radius: 5px; background: #fff; cursor: text; min-height: 38px; transition: border-color 0.15s, box-shadow 0.15s; }
   .tag-input-area:focus-within { border-color: var(--ink-light); box-shadow: 0 0 0 3px rgba(74,63,53,0.12); }
   .tag-input-area input { border: none; outline: none; background: none; font-size: 0.83rem; min-width: 80px; flex: 1; padding: 0.1rem 0; box-shadow: none !important; }
-  .filter-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .filter-row {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+    margin-bottom: 0.75rem; align-items: center;
+  }
+  /* 検索フィールドを洗練 */
+  .filter-row input {
+    border-radius: var(--radius-md);
+    background: var(--paper);
+    border-color: var(--border);
+    max-width: 300px;
+  }
+  .filter-row input:focus {
+    border-color: var(--ink-light);
+  }
   .stat-pill { background: var(--paper-warm); border: 1px solid var(--border); border-radius: 20px; padding: 0.2rem 0.6rem; font-size: 0.73rem; color: var(--ink-light); }
 
   /* ═══════════════════════════════════════════════════
@@ -649,8 +668,13 @@
   /* Topbar — auto-save status indicator */
   .topbar-status { font-size: 0.72rem; transition: color 0.3s; min-width: 56px; white-space: nowrap; }
 
-  /* Attendee row action buttons */
-  .attendee-row-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  /* Attendee row action buttons: デスクトップではホバー時のみ表示 */
+  .attendee-row-actions {
+    display: flex; gap: 0.4rem; flex-wrap: wrap;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .attendee-row:hover .attendee-row-actions,
+  .attendee-row:focus-within .attendee-row-actions { opacity: 1; }
 
   /* Inner navigation bar (breadcrumb + tab switcher) */
   .inner-nav-wrap {
@@ -692,6 +716,19 @@
   .inner-nav-tabs .btn-outline:hover {
     background: var(--paper-warm);
     border-color: var(--ink-light);
+  }
+
+  /* page-header内のCSV操作ボタンをセカンダリに（追加ボタンを目立たせる） */
+  .page-header .btn-outline {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.65rem;
+    color: var(--ink-light);
+    border-color: var(--border);
+  }
+  .page-header .btn-outline:hover {
+    background: var(--paper-warm);
+    border-color: var(--ink-light);
+    color: var(--ink);
   }
 
   /* デスクトップではスマホ専用UIを非表示 */
@@ -775,8 +812,9 @@
     .event-sub-btn { gap: 0.28rem; }
 
     /* ── 参加者管理 ── */
-    .attendee-row { grid-template-columns: 1fr; gap: 0.5rem; padding: 0.875rem 1rem; }
-    .attendee-row-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .attendee-row { grid-template-columns: 1fr; gap: 0.5rem; padding: 0.85rem 1rem; }
+    /* モバイルでは常時表示 */
+    .attendee-row-actions { opacity: 1 !important; display: flex; gap: 0.4rem; flex-wrap: wrap; }
     .attendee-row-actions .btn { flex: 1; min-height: var(--ctrl-h-mobile); justify-content: center; }
 
     /* ── 席割り ── */
@@ -1074,19 +1112,38 @@
   .floor-table-item {
     background: var(--paper);
     border: 1px solid var(--border);
-    border-radius: 7px; padding: 0.7rem 0.9rem;
+    border-radius: var(--radius-sm); padding: 0.55rem 0.75rem;
     cursor: pointer; transition: all 0.15s;
   }
-  .floor-table-item:hover { border-color: var(--ink-light); }
-  .floor-table-item.active { border-color: var(--accent-gold); background: #fdf8ee; box-shadow: 0 0 0 2px rgba(184,134,11,0.15); }
-  .floor-table-item-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
-  .floor-table-item-name { font-family: 'Noto Serif JP', serif; font-weight: 600; font-size: 0.88rem; }
-  .floor-edit-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+  .floor-table-item:hover { border-color: var(--ink-light); background: var(--paper-warm); }
+  .floor-table-item.active {
+    border-color: var(--ink-light);
+    background: var(--paper-warm);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .floor-table-item-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
+  .floor-table-item-name { font-family: 'Noto Serif JP', serif; font-weight: 600; font-size: 0.85rem; }
+  /* 選択時の編集フォームエリアを視覚的に区切る */
+  .floor-table-item.active .floor-edit-row:first-of-type {
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--border);
+  }
+  .floor-edit-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.45rem; }
   .floor-edit-row label { margin: 0; white-space: nowrap; font-size: 0.75rem; }
-  .floor-seat-bar { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 0.4rem; }
-  .floor-seat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--floor-dot-empty); }
-  .floor-seat-dot.occ { background: var(--floor-dot-occupied); }
-  .floor-seat-dot.viol { background: var(--floor-dot-violation); }
+  /* floor-seat-bar: ドット列をプログレスバーに変換 */
+  .floor-seat-bar {
+    display: flex; gap: 0; flex-wrap: nowrap;
+    height: 3px; margin-top: 5px;
+    border-radius: 9999px; overflow: hidden;
+    background: var(--paper-dark);
+  }
+  .floor-seat-dot {
+    width: auto; height: 100%; flex: 1;
+    border-radius: 0; background: var(--paper-dark); margin: 0;
+  }
+  .floor-seat-dot.occ { background: var(--green); }
+  .floor-seat-dot.viol { background: var(--accent); }
 
   @media (max-width: 1200px), (max-height: 820px) {
     .floor-panel-toggle { display: inline-flex; align-items:center; }
