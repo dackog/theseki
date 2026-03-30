@@ -443,11 +443,11 @@ export default function App() {
       )}
 
       {note && <div className={`notification ${note.type}`}>{note.msg}</div>}
-      {showAuthModal && (
+      {(showAuthModal || isPasswordRecovery) && (
         <AuthModal
           user={authUser}
           onSignOut={handleSignOut}
-          onClose={() => setShowAuthModal(false)}
+          onClose={isPasswordRecovery ? null : () => setShowAuthModal(false)}
           syncStatus={dbSyncStatus}
           isPasswordRecovery={isPasswordRecovery}
           onLogin={handleLogin}
