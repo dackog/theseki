@@ -196,6 +196,16 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
     clearSelection();
   };
 
+  const handleAttendeeAssign = (attendeeId, seatId) => {
+    const currentOccupant = assignments[seatId];
+    if (currentOccupant && lockedAttendees[currentOccupant]) {
+      notify('🔒 ロック中の参加者は移動できません', 'warning');
+      return;
+    }
+    dispatch({ type: 'BATCH_ASSIGN', eventId: event.id, updates: { [seatId]: attendeeId } });
+    clearSelection();
+  };
+
   const handleSeatClick = (seatId) => {
     const cur = assignments[seatId];
     if (selected) {
@@ -623,6 +633,8 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                       return (
                         <div key={a.id}
                           className={`attendee-item ${selected===a.id?'selected':''}`}
+                          draggable={true}
+                          onDragStart={e => { e.dataTransfer.setData('attendee-id', a.id); e.dataTransfer.effectAllowed = 'move'; }}
                           onClick={()=>setSelected(s=>s===a.id?null:a.id)}
                           style={isHL ? {borderColor:'var(--accent-gold)',background:'rgba(184,134,11,0.07)'} : {}}>
                           {isHL && <span style={{color:'var(--accent-gold)',marginRight:4,fontSize:'0.8rem'}}>★</span>}
@@ -677,17 +689,20 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
               <div>会場に卓を追加してください</div>
             </div>
           )}
-          {selName && (
-            <div className="assign-status-banner sel">
-              👆 <b>{selName}</b> を選択中 — 席をクリックして配置・入れ替え
-            </div>
-          )}
-          {filterTag && !selName && (
-            <div className="assign-status-banner filter">
-              ★ 「<b>{filterTag}</b>」ハイライト中
-              <span style={{marginLeft:8,opacity:0.85,fontWeight:400}}>{flagHighlightIds ? flagHighlightIds.size : 0}名 — 金色の席が対象者</span>
-            </div>
-          )}
+          <div style={{position:'sticky',top:'0.5rem',height:0,zIndex:10,overflow:'visible',
+            display:'flex',flexDirection:'column',gap:'0.4rem',padding:'0 0.75rem',pointerEvents:'none'}}>
+            {selName && (
+              <div className="assign-status-banner sel" style={{pointerEvents:'auto'}}>
+                👆 <b>{selName}</b> を選択中 — 席をクリックして配置・入れ替え
+              </div>
+            )}
+            {filterTag && !selName && (
+              <div className="assign-status-banner filter" style={{pointerEvents:'auto'}}>
+                ★ 「<b>{filterTag}</b>」ハイライト中
+                <span style={{marginLeft:8,opacity:0.85,fontWeight:400}}>{flagHighlightIds ? flagHighlightIds.size : 0}名 — 金色の席が対象者</span>
+              </div>
+            )}
+          </div>
           <div className="assign-floor-canvas-inner">
             {tables.map((table, index) => {
               const cols = 5;
@@ -713,6 +728,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                     onSeatClick={handleSeatClick}
                     onUnassign={unassignSeat}
                     onDragDrop={handleDragDrop}
+                    onAttendeeAssign={handleAttendeeAssign}
                     onDragCancel={clearSelection}
                   />
                 </div>

@@ -8,7 +8,7 @@ import { useState, Fragment } from 'react';
 
 export default function AssignFloorTable({ table, seats, assignments, attendees, violationSeatIds,
   selectedId, hasViolation, tableViolations, flagHighlightIds, lockedAttendees,
-  onSeatClick, onUnassign, onDragDrop, onDragCancel }) {
+  onSeatClick, onUnassign, onDragDrop, onAttendeeAssign, onDragCancel }) {
 
   const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
   const [draggingSeatId, setDraggingSeatId] = useState(null);
@@ -82,7 +82,8 @@ export default function AssignFloorTable({ table, seats, assignments, attendees,
     const handleDragOver = (e) => {
       // Use dataTransfer.types so cross-table drags work.
       // draggingSeatId is per-table local state and is null in other tables.
-      if (!e.dataTransfer.types.includes('seat-id')) return;
+      const types = e.dataTransfer.types;
+      if (!types.includes('seat-id') && !types.includes('attendee-id')) return;
       e.preventDefault();
       setDropTargetSeatId(seat.id);
     };
@@ -91,9 +92,12 @@ export default function AssignFloorTable({ table, seats, assignments, attendees,
     };
     const handleDrop = (e) => {
       e.preventDefault();
-      const srcId = e.dataTransfer.getData('seat-id') || draggingSeatId;
-      if (srcId && srcId !== seat.id) {
-        onDragDrop(srcId, seat.id);
+      const attendeeId = e.dataTransfer.getData('attendee-id');
+      const srcSeatId = e.dataTransfer.getData('seat-id') || draggingSeatId;
+      if (attendeeId) {
+        onAttendeeAssign && onAttendeeAssign(attendeeId, seat.id);
+      } else if (srcSeatId && srcSeatId !== seat.id) {
+        onDragDrop(srcSeatId, seat.id);
       }
       setDraggingSeatId(null);
       setDropTargetSeatId(null);
@@ -126,7 +130,7 @@ export default function AssignFloorTable({ table, seats, assignments, attendees,
           userSelect:'none', overflow:'hidden', padding: 2, lineHeight: 1.2,
           animation: violationSeatIds.has(seat.id) ? 'pulseRed 1.5s ease-in-out infinite' : 'none',
         }}
-        onMouseEnter={e => { if (!isDragging) e.currentTarget.style.transform = 'scale(1.12)'; }}
+        onMouseEnter={e => { if (!isDragging && canDrag) e.currentTarget.style.transform = 'scale(1.12)'; }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
       >
         <span style={{pointerEvents:'none'}}>{att ? att.name.slice(0,4) : seat.index}</span>

@@ -559,10 +559,7 @@
   }
 
   .assign-status-banner {
-    position: sticky;
-    top: 0;
     z-index: 10;
-    margin-bottom: 1rem;
     color: #fff;
     padding: 0.4rem 1rem;
     border-radius: var(--radius-sm);
@@ -850,7 +847,6 @@
     .floor-table-move-btns { display: flex !important; gap: 3px; }
     /* 未割当リストの最大高さをスマホ向けに縮小 */
     .assign-attendee-list { max-height: 30vh !important; }
-    .assign-status-banner { position: static; }
     .main { padding-bottom: 2rem; }
 
     .floor-fab { display: none !important; }
