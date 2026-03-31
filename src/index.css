@@ -1672,11 +1672,21 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
+  /* 専用スワイプ検出ゾーン（ハンドルバーのみ、タブと分離） */
+  .assign-mobile-sheet-drag-zone {
+    width: 100%;
+    padding: 10px 0 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: grab;
+    touch-action: pan-x;
+    -webkit-tap-highlight-color: transparent;
+  }
   .assign-mobile-sheet-handle {
     width: 36px; height: 4px;
     background: var(--paper-dark);
     border-radius: 2px;
-    margin-bottom: 6px;
   }
   /* タブ切替行（折りたたみ時も常時表示） */
   .assign-mobile-sheet-tabs {
@@ -1769,12 +1779,8 @@
     .assign-table-drag-wrap { scroll-margin-top: 8px; }
     /* サイドバーをモバイルでは完全に非表示（BottomSheetに統合） */
     .assign-sidebar { display: none !important; }
-    /* モバイルツールバーのレイアウト調整 */
-    .assign-mobile-toolbar {
-      padding: 8px 12px !important;
-      border-bottom: 1px solid var(--border) !important;
-      background: var(--paper-warm) !important;
-    }
+    /* モバイルツールバーはボトムシートに移植したので非表示 */
+    .assign-mobile-toolbar { display: none !important; }
     /* フロアキャンバスをミニマップの下にフロー */
     .assign-layout {
       grid-template-columns: 1fr !important;

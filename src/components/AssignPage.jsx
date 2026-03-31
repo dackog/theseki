@@ -818,18 +818,22 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
       )}
 
       {/* ── モバイル専用: ボトムシート（卓管理 / 未割当ゲスト）（デスクトップでは非表示） ── */}
-      <div
-        className={`assign-mobile-sheet${mobileSheetOpen?' sheet-expanded':''}`}
-        onTouchStart={e=>{ touchStartY.current = e.touches[0].clientY; }}
-        onTouchEnd={e=>{
-          const delta = touchStartY.current - e.changedTouches[0].clientY;
-          if (delta > 40) setMobileSheetOpen(true);
-          if (delta < -40) setMobileSheetOpen(false);
-        }}
-      >
-        {/* ── ハンドルエリア（常時表示: ハンドル＋タブ＋ステータス） ── */}
-        <div className="assign-mobile-sheet-handle-area" onClick={()=>setMobileSheetOpen(v=>!v)}>
+      <div className={`assign-mobile-sheet${mobileSheetOpen?' sheet-expanded':''}`}>
+        {/* ── ドラッグゾーン（スワイプ検出はここだけ、タブとは分離） ── */}
+        <div
+          className="assign-mobile-sheet-drag-zone"
+          onClick={()=>setMobileSheetOpen(v=>!v)}
+          onTouchStart={e=>{ touchStartY.current = e.touches[0].clientY; }}
+          onTouchEnd={e=>{
+            const delta = touchStartY.current - e.changedTouches[0].clientY;
+            if (delta > 20) setMobileSheetOpen(true);
+            if (delta < -20) setMobileSheetOpen(false);
+          }}
+        >
           <div className="assign-mobile-sheet-handle"/>
+        </div>
+        {/* ── 折りたたみ時も常時表示: タブ＋ステータス ── */}
+        <div className="assign-mobile-sheet-handle-area">
           {/* タブ切替（タップでトグルをブロック） */}
           <div className="assign-mobile-sheet-tabs" onClick={e=>e.stopPropagation()}>
             <button
@@ -908,8 +912,22 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                 </div>
               </div>
             ) : (
-              /* 席割タブ: 未割当ゲストリスト */
+              /* 席割タブ: 配置ツール + 未割当ゲストリスト */
               <>
+                {/* 統計＋配置ボタン（assign-mobile-toolbarの代替） */}
+                <div style={{padding:'7px 10px',background:'var(--paper-warm)',borderRadius:6,marginBottom:8,border:'1px solid var(--border)'}}>
+                  <div style={{display:'flex',justifyContent:'center',gap:'0.6rem',marginBottom:'0.3rem',fontSize:'0.72rem'}}>
+                    <span style={{color:'var(--ink-light)'}}>卓: {tables.length}</span>
+                    <span style={{color:'var(--ink-light)'}}>席: {totalSeats}</span>
+                    <span style={{color:'#4caf82',fontWeight:700}}>割当: {assignedCount}/{totalSeats}</span>
+                  </div>
+                  <div style={{display:'flex',justifyContent:'center',gap:'0.35rem',flexWrap:'wrap'}}>
+                    <button className="btn btn-outline btn-sm" onClick={randomAssign}>🎲 ランダム</button>
+                    <button className="btn btn-green btn-sm" onClick={customAssign}>✨ カスタム</button>
+                    <button className="btn btn-outline btn-sm" onClick={()=>setCustomRuleModalOpen(true)}>⚙️ 設定</button>
+                    <button className="btn btn-danger btn-sm" onClick={clearAll}>全解除</button>
+                  </div>
+                </div>
                 {selName && (
                   <div style={{padding:'6px 10px',background:'rgba(192,57,43,0.08)',borderRadius:6,fontSize:'0.76rem',color:'var(--accent)',fontWeight:600,marginBottom:4}}>
                     席をタップして配置・入れ替え

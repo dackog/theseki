@@ -458,15 +458,6 @@ export default function App() {
           <span>一覧</span>
         </button>
         <button
-          className={`mobile-nav-item ${page==='attendees'?'active':''}`}
-          onClick={()=>{ if(currentEvent){ setPage('attendees'); } else { setPage('events'); } }}
-          aria-label="ゲスト管理"
-          style={!currentEvent?{opacity:0.3}:{}}
-        >
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span>ゲスト</span>
-        </button>
-        <button
           className={`mobile-nav-item ${(page==='assign'||page==='layout')?'active':''}`}
           onClick={()=>{ if(currentEvent){ setAssignInitTab('seat'); setAssignKey(k=>k+1); setPage('assign'); } else { setPage('events'); } }}
           aria-label="席割"
