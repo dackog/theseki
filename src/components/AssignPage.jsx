@@ -25,8 +25,10 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   const [search,    setSearch]    = useState('');
   // サイドバータブ（卓管理 / 席割）
   const [sideTab, setSideTab] = useState(initialSideTab); // 'seat' | 'table'
-  // モバイル: 未割当ボトムシートの開閉
+  // モバイル: 未割当ボトムシートの開閉・タブ
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [mobileSheetTab, setMobileSheetTab] = useState('seat'); // 'seat' | 'table'
+  const touchStartY = useRef(0);
   const [showAddTable, setShowAddTable] = useState(false);
   const [newTableDraft, setNewTableDraft] = useState({ name:'', seatCount:6, shape:'rect' });
   const [newTableSeatInput, setNewTableSeatInput] = useState('6');
@@ -755,7 +757,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
               <div>会場に卓を追加してください</div>
             </div>
           )}
-          <div style={{position:'sticky',top:'0.5rem',height:0,zIndex:10,overflow:'visible',
+          <div className="assign-status-container" style={{position:'sticky',top:'0.5rem',height:0,zIndex:10,overflow:'visible',
             display:'flex',flexDirection:'column',gap:'0.4rem',padding:'0 0.75rem',pointerEvents:'none'}}>
             {selName && (
               <div className="assign-status-banner sel" style={{pointerEvents:'auto'}}>
@@ -815,55 +817,137 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
         </Modal>
       )}
 
-      {/* ── モバイル専用: 未割当ゲスト ボトムシート（デスクトップでは非表示） ── */}
-      <div className={`assign-mobile-sheet${mobileSheetOpen?' sheet-expanded':''}`}>
+      {/* ── モバイル専用: ボトムシート（卓管理 / 未割当ゲスト）（デスクトップでは非表示） ── */}
+      <div
+        className={`assign-mobile-sheet${mobileSheetOpen?' sheet-expanded':''}`}
+        onTouchStart={e=>{ touchStartY.current = e.touches[0].clientY; }}
+        onTouchEnd={e=>{
+          const delta = touchStartY.current - e.changedTouches[0].clientY;
+          if (delta > 40) setMobileSheetOpen(true);
+          if (delta < -40) setMobileSheetOpen(false);
+        }}
+      >
+        {/* ── ハンドルエリア（常時表示: ハンドル＋タブ＋ステータス） ── */}
         <div className="assign-mobile-sheet-handle-area" onClick={()=>setMobileSheetOpen(v=>!v)}>
           <div className="assign-mobile-sheet-handle"/>
+          {/* タブ切替（タップでトグルをブロック） */}
+          <div className="assign-mobile-sheet-tabs" onClick={e=>e.stopPropagation()}>
+            <button
+              className={`assign-mobile-sheet-tab-btn${mobileSheetTab==='table'?' active':''}`}
+              onClick={e=>{ e.stopPropagation(); setMobileSheetTab('table'); }}>
+              🪑 卓
+            </button>
+            <button
+              className={`assign-mobile-sheet-tab-btn${mobileSheetTab==='seat'?' active':''}`}
+              onClick={e=>{ e.stopPropagation(); setMobileSheetTab('seat'); }}>
+              👥 席割
+            </button>
+          </div>
+          {/* ステータス行 */}
           <div className="assign-mobile-sheet-peek">
-            <span className="assign-mobile-sheet-title">
-              {selName ? `👆 ${selName} を選択中` : `未割当ゲスト`}
-            </span>
-            <span className={`assign-mobile-sheet-badge${unassigned.length===0?' all-assigned':''}`}>
-              {unassigned.length===0 ? '全員割当済 ✓' : `${unassigned.length}名`}
-            </span>
+            {selName ? (
+              <>
+                <span className="assign-mobile-sheet-title sel">選択中: {selName}</span>
+                <button className="assign-mobile-sheet-clear-btn" onClick={e=>{ e.stopPropagation(); clearSelection(); }}>× 解除</button>
+              </>
+            ) : (
+              <>
+                <span className="assign-mobile-sheet-title">
+                  {mobileSheetTab==='table' ? `卓管理 (${tables.length}卓)` : `未割当ゲスト`}
+                </span>
+                <span className={`assign-mobile-sheet-badge${unassigned.length===0?' all-assigned':''}`}>
+                  {unassigned.length===0 ? '全員割当済 ✓' : `${unassigned.length}名`}
+                </span>
+              </>
+            )}
           </div>
         </div>
+
+        {/* ── シートボディ（展開時のみ表示） ── */}
         {mobileSheetOpen && (
           <div className="assign-mobile-sheet-body">
-            {selName && (
-              <div style={{padding:'6px 10px',background:'rgba(192,57,43,0.08)',borderRadius:6,fontSize:'0.76rem',color:'var(--accent)',fontWeight:600,marginBottom:4}}>
-                席をタップして配置・入れ替え
-                <button onClick={clearSelection} style={{marginLeft:8,background:'none',border:'1px solid var(--border)',borderRadius:4,padding:'1px 8px',cursor:'pointer',fontSize:'0.72rem',color:'var(--ink-light)'}}>解除</button>
+            {mobileSheetTab === 'table' ? (
+              /* 卓管理タブ */
+              <div>
+                <button className="btn btn-accent btn-sm w-full" style={{marginBottom:'0.75rem'}} onClick={()=>setShowAddTable(true)}>＋ 卓を追加</button>
+                {tables.length===0 && <div className="text-sm text-muted" style={{textAlign:'center',padding:'1rem 0'}}>卓がありません</div>}
+                {tables.map((t, index) => {
+                  const tSeats = seats.filter(s=>s.tableId===t.id);
+                  const occCount = tSeats.filter(s=>assignments[s.id]).length;
+                  const hasViol = violations.some(v=>v.tableId===t.id);
+                  const isExp = expandedTableId===t.id;
+                  return (
+                    <div key={t.id} className={`floor-table-item ${isExp?'active':''}`} onClick={()=>setExpandedTableId(isExp?null:t.id)}>
+                      <div className="floor-table-item-head">
+                        <span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span>
+                        <span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span>
+                        <div className="floor-table-move-btns">
+                          <button onClick={e=>{e.stopPropagation();dispatch({type:'MOVE_TABLE',eventId:event.id,idx:index,dir:-1});}} disabled={index===0} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,cursor:index===0?'default':'pointer',opacity:index===0?0.3:1,padding:'2px 7px',fontSize:'0.8rem',lineHeight:1,minHeight:32}}>▲</button>
+                          <button onClick={e=>{e.stopPropagation();dispatch({type:'MOVE_TABLE',eventId:event.id,idx:index,dir:+1});}} disabled={index===tables.length-1} style={{background:'none',border:'1px solid var(--border)',borderRadius:4,cursor:index===tables.length-1?'default':'pointer',opacity:index===tables.length-1?0.3:1,padding:'2px 7px',fontSize:'0.8rem',lineHeight:1,minHeight:32}}>▼</button>
+                        </div>
+                      </div>
+                      <div className="floor-seat-bar">
+                        {tSeats.map(s=>{ const viol=violationSeatIds.has(s.id); const occ=!!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}
+                      </div>
+                      {isExp && (
+                        <div onClick={e=>e.stopPropagation()}>
+                          <div className="floor-edit-row" style={{marginTop:'0.6rem'}}><label>卓名</label><input type="text" value={t.name} onChange={e=>updateTable(t.id,'name',e.target.value)} style={{flex:1}}/></div>
+                          <div className="floor-edit-row"><label>座席数</label><input type="number" min="1" max="30" value={editingSeatCounts[t.id]??String(t.seatCount)} onFocus={e=>e.target.select()} onChange={e=>setEditingSeatCounts(prev=>({...prev,[t.id]:e.target.value}))} onBlur={()=>commitTableSeatCount(t.id,t.seatCount)} onKeyDown={e=>{ if(e.key==='Enter'){commitTableSeatCount(t.id,t.seatCount);e.target.blur();} }} style={{width:60}}/></div>
+                          <div className="floor-edit-row"><label>形状</label><div style={{display:'flex',gap:'0.4rem',flex:1}}>{[{v:'rect',icon:'⬛',label:'四角'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn btn-sm ${(t.shape||'rect')===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,gap:'0.25rem'}} onClick={()=>updateTable(t.id,'shape',s.v)}>{s.icon} {s.label}</button>))}</div></div>
+                          {hasViol && <div style={{marginTop:'0.5rem',fontSize:'0.73rem',color:'var(--accent)',background:'#fde8e8',borderRadius:5,padding:'0.3rem 0.5rem'}}>{violations.filter(v=>v.tableId===t.id).map((v,i)=><div key={i}>NG: {v.aName} × {v.bName}</div>)}</div>}
+                          <button className="btn btn-outline btn-sm w-full" style={{marginTop:'0.6rem'}} onClick={()=>duplicateTable(t)}>この卓を複製</button>
+                          <button className="btn btn-danger btn-sm w-full" style={{marginTop:'0.4rem'}} onClick={()=>delTable(t.id)}>この卓を削除</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <div style={{marginTop:'0.75rem',padding:'0.45rem 0.75rem',background:'var(--paper-dark)',borderRadius:6,fontSize:'0.78rem',color:'var(--ink-light)'}}>
+                  卓: {tables.length}　総席: {totalSeats}　割当: {assignedCount}/{totalSeats}
+                  {violations.length>0 && <span style={{color:'var(--accent)',marginLeft:'0.5rem'}}>NG違反: {violations.length}件</span>}
+                </div>
               </div>
-            )}
-            <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginBottom:'0.4rem'}}>
-              <button className={`btn btn-sm ${!filterTag?'btn-primary':'btn-outline'}`} onClick={()=>setFilterTag('')}>すべて</button>
-              {allTags.map(t=>(
-                <button key={t} className={`btn btn-sm ${filterTag===t?'btn-primary':'btn-outline'}`}
-                  onClick={()=>setFilterTag(p=>p===t?'':t)}
-                  style={filterTag===t?{background:'var(--accent-gold)',borderColor:'var(--accent-gold)',color:'#fff'}:{}}>
-                  {t}
-                </button>
-              ))}
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:'4px',overflowY:'auto'}}>
-              {filteredUnassigned.length===0 && (
-                <div style={{textAlign:'center',padding:'1rem',color:'var(--ink-light)',fontSize:'0.82rem'}}>全員割当済です</div>
-              )}
-              {filteredUnassigned.map(a=>{
-                const isHL = filterTag && a.flags.includes(filterTag);
-                return (
-                  <div key={a.id}
-                    className={`attendee-item ${selected===a.id?'selected':''}`}
-                    onClick={()=>{ setSelected(s=>s===a.id?null:a.id); }}
-                    style={isHL?{borderColor:'var(--accent-gold)',background:'rgba(184,134,11,0.07)'}:{}}>
-                    {isHL && <span style={{color:'var(--accent-gold)',marginRight:4}}>★</span>}
-                    <span>{a.name}</span>
-                    {a.flags.length>0 && <div className="item-flags">{a.flags.map(f=><span key={f} className="tag" style={{fontSize:'0.65rem',padding:'0.1rem 0.4rem'}}>{f}</span>)}</div>}
+            ) : (
+              /* 席割タブ: 未割当ゲストリスト */
+              <>
+                {selName && (
+                  <div style={{padding:'6px 10px',background:'rgba(192,57,43,0.08)',borderRadius:6,fontSize:'0.76rem',color:'var(--accent)',fontWeight:600,marginBottom:4}}>
+                    席をタップして配置・入れ替え
                   </div>
-                );
-              })}
-            </div>
+                )}
+                <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginBottom:'0.4rem'}}>
+                  <button className={`btn btn-sm ${!filterTag?'btn-primary':'btn-outline'}`} onClick={()=>setFilterTag('')}>すべて</button>
+                  {allTags.map(t=>(
+                    <button key={t} className={`btn btn-sm ${filterTag===t?'btn-primary':'btn-outline'}`}
+                      onClick={()=>setFilterTag(p=>p===t?'':t)}
+                      style={filterTag===t?{background:'var(--accent-gold)',borderColor:'var(--accent-gold)',color:'#fff'}:{}}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:'4px',overflowY:'auto'}}>
+                  {filteredUnassigned.length===0 && (
+                    <div style={{textAlign:'center',padding:'1rem',color:'var(--ink-light)',fontSize:'0.82rem'}}>全員割当済です</div>
+                  )}
+                  {filteredUnassigned.map(a=>{
+                    const isHL = filterTag && a.flags.includes(filterTag);
+                    return (
+                      <div key={a.id}
+                        className={`attendee-item ${selected===a.id?'selected':''}`}
+                        onClick={()=>{
+                          if (selected === a.id) { setSelected(null); }
+                          else { setSelected(a.id); setMobileSheetOpen(false); }
+                        }}
+                        style={isHL?{borderColor:'var(--accent-gold)',background:'rgba(184,134,11,0.07)'}:{}}>
+                        {isHL && <span style={{color:'var(--accent-gold)',marginRight:4}}>★</span>}
+                        <span>{a.name}</span>
+                        {a.flags.length>0 && <div className="item-flags">{a.flags.map(f=><span key={f} className="tag" style={{fontSize:'0.65rem',padding:'0.1rem 0.4rem'}}>{f}</span>)}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

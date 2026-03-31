@@ -1522,17 +1522,6 @@
       color: var(--green);
       font-weight: 700;
     }
-    .event-action-btns {
-      flex-direction: row !important;
-      gap: 6px !important;
-    }
-    .event-action-btns .btn-main {
-      flex: 1;
-      padding: 8px 6px !important;
-      font-size: 12px !important;
-      min-height: 40px !important;
-      border-radius: var(--radius-sm) !important;
-    }
     .event-sub-btns {
       opacity: 1 !important;
       gap: 5px !important;
@@ -1668,10 +1657,10 @@
     flex-direction: column;
     overflow: hidden;
     transition: height 0.28s cubic-bezier(0.32,0.72,0,1);
-    height: 72px;
+    height: 88px;
   }
   .assign-mobile-sheet.sheet-expanded {
-    height: 52vh;
+    height: 55vh;
   }
   .assign-mobile-sheet-handle-area {
     display: flex;
@@ -1687,19 +1676,51 @@
     width: 36px; height: 4px;
     background: var(--paper-dark);
     border-radius: 2px;
+    margin-bottom: 6px;
+  }
+  /* タブ切替行（折りたたみ時も常時表示） */
+  .assign-mobile-sheet-tabs {
+    display: flex;
+    width: 100%;
+    padding: 0 12px;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .assign-mobile-sheet-tab-btn {
+    flex: 1;
+    padding: 5px 4px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink-light);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .assign-mobile-sheet-tab-btn.active {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
   }
   .assign-mobile-sheet-peek {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 7px 16px 5px;
+    padding: 5px 14px 4px;
     flex-shrink: 0;
+    min-height: 30px;
   }
   .assign-mobile-sheet-title {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--ink);
     font-family: 'Noto Serif JP', serif;
+  }
+  .assign-mobile-sheet-title.sel {
+    color: var(--accent);
   }
   .assign-mobile-sheet-badge {
     font-size: 10px;
@@ -1712,6 +1733,17 @@
   .assign-mobile-sheet-badge.all-assigned {
     background: rgba(45,106,79,0.1);
     color: var(--green);
+  }
+  .assign-mobile-sheet-clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: var(--ink-light);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .assign-mobile-sheet-body {
     flex: 1;
@@ -1726,11 +1758,15 @@
   /* BottomSheetが開いているときのメインコンテンツ余白 */
   @media (max-width: 768px) {
     .assign-page-shell {
-      padding-bottom: calc(72px + 56px + env(safe-area-inset-bottom, 0px)) !important;
+      padding-bottom: calc(88px + 56px + env(safe-area-inset-bottom, 0px)) !important;
     }
     .assign-page-shell.sheet-expanded {
-      padding-bottom: calc(52vh + 56px + env(safe-area-inset-bottom, 0px)) !important;
+      padding-bottom: calc(55vh + 56px + env(safe-area-inset-bottom, 0px)) !important;
     }
+    /* ステータスバナー（sticky）はモバイルでは非表示（BottomSheetpeekで代替） */
+    .assign-status-container { display: none !important; }
+    /* ミニマップからのスクロール時に卓名が隠れないよう余白 */
+    .assign-table-drag-wrap { scroll-margin-top: 8px; }
     /* サイドバーをモバイルでは完全に非表示（BottomSheetに統合） */
     .assign-sidebar { display: none !important; }
     /* モバイルツールバーのレイアウト調整 */
