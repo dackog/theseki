@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>案A: KANBAN STEEL モック</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: #1a1a1a; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 24px 16px 40px; font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif; }
+h1 { color: #fff; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; font-weight: 400; }
+.concept-label { color: #888; font-size: 11px; margin-bottom: 20px; letter-spacing: 0.08em; }
+.screen-nav { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
+.screen-btn { background: #2a2a2a; color: #999; border: 1px solid #333; border-radius: 4px; padding: 5px 12px; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.screen-btn.active { background: #c0392b; color: #fff; border-color: #c0392b; }
+
+/* Phone Frame */
+.phone { width: 375px; height: 812px; background: #F7F7F5; border-radius: 40px; overflow: hidden; position: relative; box-shadow: 0 0 0 8px #2a2a2a, 0 0 0 10px #111, 0 24px 64px rgba(0,0,0,0.6); }
+.phone-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 28px; background: #2a2a2a; border-radius: 0 0 18px 18px; z-index: 200; }
+.screen { position: absolute; inset: 0; display: none; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* ─── COMMON ─── */
+:root {
+  --accent: #C0392B;
+  --ink: #1A1A1A;
+  --ink2: #6B6B6B;
+  --paper: #FFFFFF;
+  --border: #D0CECA;
+  --bg: #F7F7F5;
+  --green: #2D6A4F;
+  --topbar-h: 52px;
+  --bottomnav-h: 60px;
+}
+
+/* TopBar */
+.topbar { height: var(--topbar-h); background: var(--paper); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 10px; flex-shrink: 0; padding-top: 28px; }
+.topbar-back { display: flex; align-items: center; gap: 4px; color: var(--accent); font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0; }
+.topbar-back svg { width: 16px; height: 16px; }
+.topbar-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-action { background: none; border: none; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 0; }
+
+/* Bottom Nav */
+.bottom-nav { height: var(--bottomnav-h); background: var(--paper); border-top: 1px solid var(--border); display: flex; align-items: flex-start; padding: 8px 0 0; flex-shrink: 0; position: absolute; bottom: 0; left: 0; right: 0; }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 2px 0; }
+.nav-item svg { width: 20px; height: 20px; stroke: #B0ABA8; stroke-width: 1.8; fill: none; }
+.nav-item span { font-size: 9px; color: #B0ABA8; letter-spacing: 0.04em; }
+.nav-item.active svg { stroke: var(--accent); }
+.nav-item.active span { color: var(--accent); font-weight: 600; }
+
+/* Scroll Content */
+.content { flex: 1; overflow-y: auto; padding-bottom: calc(var(--bottomnav-h) + 8px); -webkit-overflow-scrolling: touch; }
+.content-padded { padding: 12px; }
+
+/* ─── SCREEN 1: EVENT LIST ─── */
+.page-header { padding: 16px 16px 8px; }
+.page-title { font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+.page-sub { font-size: 11px; color: var(--ink2); margin-top: 2px; }
+
+.event-card { background: var(--paper); border: 1px solid var(--border); border-radius: 3px; margin: 0 12px 8px; overflow: hidden; cursor: pointer; }
+.event-card:active { background: #F0EFED; }
+.event-card-header { padding: 12px 14px 8px; border-bottom: 1px solid var(--border); }
+.event-card-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.event-card-meta { font-size: 11px; color: var(--ink2); margin-top: 3px; display: flex; gap: 10px; }
+.event-card-body { padding: 8px 14px 10px; }
+.assign-bar-wrap { margin-bottom: 8px; }
+.assign-bar-label { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.assign-bar-label span { font-size: 10px; color: var(--ink2); }
+.assign-bar-label strong { font-size: 10px; color: var(--green); font-weight: 600; }
+.assign-bar { height: 4px; background: #E8E6E3; border-radius: 2px; overflow: hidden; }
+.assign-bar-fill { height: 100%; background: var(--green); border-radius: 2px; }
+.event-card-actions { display: flex; gap: 6px; }
+.btn-outline { border: 1px solid var(--border); background: transparent; color: var(--ink2); font-size: 12px; padding: 7px 12px; border-radius: 2px; cursor: pointer; flex: 1; text-align: center; font-weight: 500; }
+.btn-primary { background: var(--accent); color: #fff; font-size: 12px; padding: 7px 14px; border-radius: 2px; cursor: pointer; flex: 1; text-align: center; font-weight: 600; border: none; letter-spacing: 0.03em; }
+.status-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 2px; letter-spacing: 0.05em; }
+.badge-done { background: #E8F4ED; color: var(--green); }
+.badge-wip { background: #FFF3E0; color: #B45309; }
+.badge-new { background: #F0EFED; color: var(--ink2); }
+
+.fab { position: absolute; right: 16px; bottom: calc(var(--bottomnav-h) + 16px); width: 48px; height: 48px; background: var(--accent); border-radius: 2px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(192,57,43,0.35); cursor: pointer; z-index: 10; }
+.fab svg { width: 22px; height: 22px; stroke: #fff; stroke-width: 2.5; fill: none; }
+
+/* ─── SCREEN 2: ASSIGN ─── */
+.assign-wrap { display: flex; flex-direction: column; height: 100%; }
+.unassigned-panel { background: var(--paper); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.unassigned-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; cursor: pointer; }
+.unassigned-title { font-size: 12px; font-weight: 600; color: var(--ink); letter-spacing: 0.04em; }
+.unassigned-count { font-size: 11px; color: var(--accent); font-weight: 700; background: #FDE8E6; padding: 1px 6px; border-radius: 2px; }
+.unassigned-toggle { font-size: 10px; color: var(--ink2); }
+.unassigned-chips { padding: 0 12px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.guest-chip { background: #fff; border: 1px solid var(--border); border-radius: 2px; padding: 5px 9px; font-size: 11px; color: var(--ink); cursor: pointer; white-space: nowrap; transition: all 0.1s; }
+.guest-chip:active, .guest-chip.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+.guest-chip.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.tables-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.table-section { margin: 10px 12px 0; }
+.table-header { display: flex; align-items: center; gap: 8px; padding: 6px 0 6px; border-bottom: 2px solid var(--ink); margin-bottom: 6px; }
+.table-name { font-size: 12px; font-weight: 700; color: var(--ink); letter-spacing: 0.06em; text-transform: uppercase; }
+.table-info { font-size: 10px; color: var(--ink2); }
+.table-status { margin-left: auto; font-size: 10px; font-weight: 600; color: var(--green); }
+.seats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 12px; }
+.seat { background: var(--paper); border: 1px solid var(--border); border-radius: 2px; padding: 5px 3px; text-align: center; cursor: pointer; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.seat:active { background: #F0EFED; }
+.seat.occupied { background: #F0EFED; border-color: #B0ABA8; }
+.seat.selected-seat { background: var(--accent); border-color: var(--accent); }
+.seat-num { font-size: 9px; color: var(--ink2); font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; }
+.seat.occupied .seat-num { color: #999; }
+.seat-name { font-size: 10px; color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; width: 100%; text-overflow: ellipsis; text-align: center; }
+.seat.selected-seat .seat-num, .seat.selected-seat .seat-name { color: #fff; }
+
+/* ─── SCREEN 3: ACTION SHEET ─── */
+.action-sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); z-index: 50; display: flex; flex-direction: column; justify-content: flex-end; }
+.action-sheet { background: var(--paper); border-radius: 8px 8px 0 0; padding: 0 0 calc(var(--bottomnav-h) + 4px); }
+.action-sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 0; }
+.action-sheet-title { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); }
+.action-sheet-title strong { font-size: 13px; color: var(--ink); display: block; }
+.action-sheet-title span { font-size: 11px; color: var(--ink2); }
+.action-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.action-item:active { background: #F0EFED; }
+.action-item svg { width: 18px; height: 18px; stroke-width: 1.8; fill: none; flex-shrink: 0; }
+.action-item span { font-size: 14px; color: var(--ink); }
+.action-item.danger svg, .action-item.danger span { color: var(--accent); stroke: var(--accent); }
+.action-cancel { text-align: center; padding: 14px; font-size: 14px; color: var(--ink2); cursor: pointer; font-weight: 500; }
+
+/* ─── SCREEN 4: ATTENDEES ─── */
+.attendee-search { margin: 10px 12px; display: flex; align-items: center; gap: 8px; background: var(--paper); border: 1px solid var(--border); border-radius: 2px; padding: 0 10px; }
+.attendee-search svg { width: 15px; height: 15px; stroke: var(--ink2); stroke-width: 2; fill: none; flex-shrink: 0; }
+.attendee-search input { border: none; background: transparent; font-size: 14px; color: var(--ink); padding: 10px 0; flex: 1; outline: none; }
+.attendee-row { background: var(--paper); border: 1px solid var(--border); border-radius: 2px; margin: 0 12px 6px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.attendee-avatar { width: 34px; height: 34px; border-radius: 50%; background: #E8E6E3; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--ink2); flex-shrink: 0; }
+.attendee-info { flex: 1; min-width: 0; }
+.attendee-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+.attendee-meta { font-size: 10px; color: var(--ink2); margin-top: 1px; }
+.attendee-badge { font-size: 10px; padding: 2px 6px; border-radius: 2px; border: 1px solid var(--border); color: var(--ink2); }
+.attendee-badge.assigned { border-color: var(--green); color: var(--green); background: #E8F4ED; }
+
+/* ─── SCREEN 5: MODAL EDIT ─── */
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); z-index: 60; display: flex; flex-direction: column; justify-content: flex-end; }
+.modal-sheet { background: var(--paper); border-radius: 8px 8px 0 0; max-height: 88vh; display: flex; flex-direction: column; }
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 0; }
+.modal-header { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-header strong { font-size: 15px; color: var(--ink); font-weight: 700; }
+.modal-close-btn { width: 28px; height: 28px; background: #F0EFED; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+.modal-close-btn svg { width: 14px; height: 14px; stroke: var(--ink2); stroke-width: 2.5; fill: none; }
+.modal-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+.form-row { margin-bottom: 14px; }
+.form-label { font-size: 11px; color: var(--ink2); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 5px; }
+.form-input { width: 100%; border: 1px solid var(--border); border-radius: 2px; padding: 10px 12px; font-size: 14px; color: var(--ink); background: var(--paper); outline: none; }
+.form-input:focus { border-color: var(--accent); }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.tag-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.tag-chip { background: #E8E6E3; border-radius: 2px; padding: 4px 8px; font-size: 11px; color: var(--ink2); display: flex; align-items: center; gap: 4px; }
+.tag-chip svg { width: 10px; height: 10px; stroke: var(--ink2); stroke-width: 2; fill: none; cursor: pointer; }
+.modal-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+.btn-cancel { flex: 1; background: #F0EFED; border: none; border-radius: 2px; padding: 12px; font-size: 13px; color: var(--ink2); cursor: pointer; font-weight: 600; }
+.btn-save { flex: 2; background: var(--accent); border: none; border-radius: 2px; padding: 12px; font-size: 13px; color: #fff; cursor: pointer; font-weight: 700; letter-spacing: 0.04em; }
+
+.section-divider { padding: 10px 12px 4px; font-size: 10px; font-weight: 700; color: var(--ink2); letter-spacing: 0.1em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<h1>案A — KANBAN STEEL</h1>
+<p class="concept-label">業務基盤型タスクUI — 読み取り最優先 × BottomNav</p>
+
+<div class="screen-nav">
+  <button class="screen-btn active" onclick="showScreen(0)">イベント一覧</button>
+  <button class="screen-btn" onclick="showScreen(1)">席割</button>
+  <button class="screen-btn" onclick="showScreen(2)">席アクション</button>
+  <button class="screen-btn" onclick="showScreen(3)">ゲスト一覧</button>
+  <button class="screen-btn" onclick="showScreen(4)">ゲスト編集</button>
+</div>
+
+<div class="phone">
+  <div class="phone-notch"></div>
+
+  <!-- SCREEN 0: EVENT LIST -->
+  <div class="screen active" id="s0">
+    <div class="topbar" style="padding-top:34px;">
+      <div class="topbar-title">TheSEKI</div>
+      <button class="topbar-action">+ 新規</button>
+    </div>
+    <div class="content">
+      <div class="page-header">
+        <div class="page-title">イベント一覧</div>
+        <div class="page-sub">3件のイベント</div>
+      </div>
+
+      <div class="event-card" onclick="showScreen(1)">
+        <div class="event-card-header">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <div class="event-card-title">春季総会 2026</div>
+            <span class="status-badge badge-wip">進行中</span>
+          </div>
+          <div class="event-card-meta">
+            <span>2026.04.01</span>
+            <span>卓 8</span>
+            <span>120名</span>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <div class="assign-bar-wrap">
+            <div class="assign-bar-label">
+              <span>割当進捗</span>
+              <strong>87名 / 120名</strong>
+            </div>
+            <div class="assign-bar"><div class="assign-bar-fill" style="width:72%"></div></div>
+          </div>
+          <div class="event-card-actions">
+            <button class="btn-outline">ゲスト</button>
+            <button class="btn-outline">レイアウト</button>
+            <button class="btn-primary">席割 →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <div class="event-card-title">忘年会 2025</div>
+            <span class="status-badge badge-done">完了</span>
+          </div>
+          <div class="event-card-meta">
+            <span>2025.12.20</span>
+            <span>卓 6</span>
+            <span>80名</span>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <div class="assign-bar-wrap">
+            <div class="assign-bar-label">
+              <span>割当進捗</span>
+              <strong>80名 / 80名</strong>
+            </div>
+            <div class="assign-bar"><div class="assign-bar-fill" style="width:100%"></div></div>
+          </div>
+          <div class="event-card-actions">
+            <button class="btn-outline">ゲスト</button>
+            <button class="btn-outline">レイアウト</button>
+            <button class="btn-primary">席割 →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <div class="event-card-title">新年懇親会 2026</div>
+            <span class="status-badge badge-new">未開始</span>
+          </div>
+          <div class="event-card-meta">
+            <span>2026.01.15</span>
+            <span>卓 5</span>
+            <span>60名</span>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <div class="assign-bar-wrap">
+            <div class="assign-bar-label">
+              <span>割当進捗</span>
+              <strong>0名 / 60名</strong>
+            </div>
+            <div class="assign-bar"><div class="assign-bar-fill" style="width:0%"></div></div>
+          </div>
+          <div class="event-card-actions">
+            <button class="btn-outline">ゲスト</button>
+            <button class="btn-outline">レイアウト</button>
+            <button class="btn-primary">席割 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>一覧</span>
+      </div>
+      <div class="nav-item" onclick="showScreen(3)">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>ゲスト</span>
+      </div>
+      <div class="nav-item" onclick="showScreen(1)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <span>席割</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        <span>設定</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: ASSIGN -->
+  <div class="screen" id="s1">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(0)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        一覧
+      </button>
+      <div class="topbar-title">席割 — 春季総会</div>
+      <button class="topbar-action">保存</button>
+    </div>
+
+    <div class="assign-wrap" style="height:calc(100% - 52px);">
+      <div class="unassigned-panel">
+        <div class="unassigned-header" onclick="toggleUnassigned()">
+          <span class="unassigned-title">未割当ゲスト</span>
+          <span class="unassigned-count" id="uncount">12名</span>
+          <span class="unassigned-toggle" id="untoggle">▲ 閉じる</span>
+        </div>
+        <div class="unassigned-chips" id="unchips">
+          <div class="guest-chip" onclick="selectGuest(this)">田中 一郎</div>
+          <div class="guest-chip" onclick="selectGuest(this)">佐藤 花子</div>
+          <div class="guest-chip" onclick="selectGuest(this)">鈴木 太郎</div>
+          <div class="guest-chip" onclick="selectGuest(this)">山田 次郎</div>
+          <div class="guest-chip" onclick="selectGuest(this)">高橋 三恵</div>
+          <div class="guest-chip" onclick="selectGuest(this)">渡辺 四郎</div>
+          <div class="guest-chip" onclick="selectGuest(this)">伊藤 五月</div>
+          <div class="guest-chip" onclick="selectGuest(this)">中村 六平</div>
+          <div class="guest-chip" onclick="selectGuest(this)">小林 七子</div>
+          <div class="guest-chip" onclick="selectGuest(this)">加藤 八郎</div>
+          <div class="guest-chip" onclick="selectGuest(this)">吉田 九美</div>
+          <div class="guest-chip" onclick="selectGuest(this)">山本 十志</div>
+        </div>
+      </div>
+
+      <div class="tables-scroll">
+        <div class="table-section">
+          <div class="table-header">
+            <span class="table-name">卓 01</span>
+            <span class="table-info">VIPテーブル · 10席</span>
+            <span class="table-status">空席 3</span>
+          </div>
+          <div class="seats-grid">
+            <div class="seat occupied" onclick="showScreen(2)">
+              <span class="seat-num">01</span>
+              <span class="seat-name">中川</span>
+            </div>
+            <div class="seat occupied" onclick="showScreen(2)">
+              <span class="seat-num">02</span>
+              <span class="seat-name">前田</span>
+            </div>
+            <div class="seat" id="empty-seat" onclick="assignSeat(this)">
+              <span class="seat-num">03</span>
+              <span class="seat-name" style="color:#C0C0BA">空席</span>
+            </div>
+            <div class="seat" onclick="assignSeat(this)">
+              <span class="seat-num">04</span>
+              <span class="seat-name" style="color:#C0C0BA">空席</span>
+            </div>
+            <div class="seat occupied" onclick="showScreen(2)">
+              <span class="seat-num">05</span>
+              <span class="seat-name">岡本</span>
+            </div>
+            <div class="seat occupied" onclick="showScreen(2)">
+              <span class="seat-num">06</span>
+              <span class="seat-name">清水</span>
+            </div>
+            <div class="seat occupied" onclick="showScreen(2)">
+              <span class="seat-num">07</span>
+              <span class="seat-name">松本</span>
+            </div>
+            <div class="seat" onclick="assignSeat(this)">
+              <span class="seat-num">08</span>
+              <span class="seat-name" style="color:#C0C0BA">空席</span>
+            </div>
+            <div class="seat occupied">
+              <span class="seat-num">09</span>
+              <span class="seat-name">井上</span>
+            </div>
+            <div class="seat occupied">
+              <span class="seat-num">10</span>
+              <span class="seat-name">木村</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-section">
+          <div class="table-header">
+            <span class="table-name">卓 02</span>
+            <span class="table-info">一般 · 8席</span>
+            <span class="table-status" style="color:var(--accent)">空席 8</span>
+          </div>
+          <div class="seats-grid">
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">01</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">02</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">03</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">04</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">05</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">06</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">07</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">08</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+          </div>
+        </div>
+
+        <div class="table-section" style="margin-bottom:16px;">
+          <div class="table-header">
+            <span class="table-name">卓 03</span>
+            <span class="table-info">一般 · 8席</span>
+            <span class="table-status">空席 1</span>
+          </div>
+          <div class="seats-grid">
+            <div class="seat occupied"><span class="seat-num">01</span><span class="seat-name">林</span></div>
+            <div class="seat occupied"><span class="seat-num">02</span><span class="seat-name">斎藤</span></div>
+            <div class="seat occupied"><span class="seat-num">03</span><span class="seat-name">池田</span></div>
+            <div class="seat occupied"><span class="seat-num">04</span><span class="seat-name">橋本</span></div>
+            <div class="seat occupied"><span class="seat-num">05</span><span class="seat-name">阿部</span></div>
+            <div class="seat occupied"><span class="seat-num">06</span><span class="seat-name">石川</span></div>
+            <div class="seat occupied"><span class="seat-num">07</span><span class="seat-name">山口</span></div>
+            <div class="seat" onclick="assignSeat(this)"><span class="seat-num">08</span><span class="seat-name" style="color:#C0C0BA">空席</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: ACTION SHEET -->
+  <div class="screen" id="s2">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        席割
+      </button>
+      <div class="topbar-title">席割 — 春季総会</div>
+      <button class="topbar-action">保存</button>
+    </div>
+    <div style="flex:1; background:rgba(0,0,0,0.01);"></div>
+    <div class="action-sheet-backdrop" onclick="showScreen(1)">
+      <div class="action-sheet" onclick="e=>e.stopPropagation()">
+        <div class="action-sheet-handle"></div>
+        <div class="action-sheet-title">
+          <strong>卓01 · 01番席</strong>
+          <span>中川 一郎 さん</span>
+        </div>
+        <div class="action-item">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          <span>ゲスト詳細を見る</span>
+        </div>
+        <div class="action-item" onclick="showScreen(4)">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span>ゲスト情報を編集</span>
+        </div>
+        <div class="action-item">
+          <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          <span>別の席に移動</span>
+        </div>
+        <div class="action-item danger">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <span>割当を解除</span>
+        </div>
+        <div class="action-cancel" onclick="showScreen(1)">キャンセル</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: ATTENDEES -->
+  <div class="screen" id="s3">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(0)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        一覧
+      </button>
+      <div class="topbar-title">ゲスト — 春季総会</div>
+      <button class="topbar-action">+ 追加</button>
+    </div>
+    <div class="content">
+      <div class="attendee-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="名前・タグで検索" type="text">
+      </div>
+      <div class="section-divider">割当済み (87名)</div>
+      <div class="attendee-row" onclick="showScreen(4)">
+        <div class="attendee-avatar">中</div>
+        <div class="attendee-info">
+          <div class="attendee-name">中川 一郎</div>
+          <div class="attendee-meta">VIPテーブル / 卓01 · 01番席</div>
+        </div>
+        <span class="attendee-badge assigned">割当済</span>
+      </div>
+      <div class="attendee-row" onclick="showScreen(4)">
+        <div class="attendee-avatar">前</div>
+        <div class="attendee-info">
+          <div class="attendee-name">前田 花子</div>
+          <div class="attendee-meta">VIPテーブル / 卓01 · 02番席</div>
+        </div>
+        <span class="attendee-badge assigned">割当済</span>
+      </div>
+      <div class="attendee-row" onclick="showScreen(4)">
+        <div class="attendee-avatar">岡</div>
+        <div class="attendee-info">
+          <div class="attendee-name">岡本 清美</div>
+          <div class="attendee-meta">一般 / 卓01 · 05番席</div>
+        </div>
+        <span class="attendee-badge assigned">割当済</span>
+      </div>
+      <div class="section-divider" style="margin-top:8px;">未割当 (12名)</div>
+      <div class="attendee-row" onclick="showScreen(4)">
+        <div class="attendee-avatar" style="background:#FDE8E6;color:#C0392B;">田</div>
+        <div class="attendee-info">
+          <div class="attendee-name">田中 一郎</div>
+          <div class="attendee-meta">一般ゲスト · タグなし</div>
+        </div>
+        <span class="attendee-badge">未割当</span>
+      </div>
+      <div class="attendee-row" onclick="showScreen(4)">
+        <div class="attendee-avatar" style="background:#FDE8E6;color:#C0392B;">佐</div>
+        <div class="attendee-info">
+          <div class="attendee-name">佐藤 花子</div>
+          <div class="attendee-meta">VIP · 要通路側</div>
+        </div>
+        <span class="attendee-badge">未割当</span>
+      </div>
+      <div class="attendee-row" onclick="showScreen(4)">
+        <div class="attendee-avatar" style="background:#FDE8E6;color:#C0392B;">鈴</div>
+        <div class="attendee-info">
+          <div class="attendee-name">鈴木 太郎</div>
+          <div class="attendee-meta">一般ゲスト</div>
+        </div>
+        <span class="attendee-badge">未割当</span>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="showScreen(0)">
+        <svg viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>一覧</span>
+      </div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>ゲスト</span>
+      </div>
+      <div class="nav-item" onclick="showScreen(1)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <span>席割</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        <span>設定</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: GUEST EDIT MODAL -->
+  <div class="screen" id="s4">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(3)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        ゲスト
+      </button>
+      <div class="topbar-title">ゲスト — 春季総会</div>
+      <button class="topbar-action">+ 追加</button>
+    </div>
+    <div style="flex:1; background:#F7F7F5;"></div>
+    <div class="modal-backdrop" onclick="showScreen(3)">
+      <div class="modal-sheet" onclick="e=>e.stopPropagation()">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+          <strong>田中 一郎 を編集</strong>
+          <button class="modal-close-btn" onclick="showScreen(3)">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row-2">
+            <div>
+              <div class="form-label">姓</div>
+              <input class="form-input" value="田中" type="text">
+            </div>
+            <div>
+              <div class="form-label">名</div>
+              <input class="form-input" value="一郎" type="text">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-label">よみがな</div>
+            <input class="form-input" value="たなか いちろう" type="text">
+          </div>
+          <div class="form-row">
+            <div class="form-label">所属 / 役職</div>
+            <input class="form-input" value="営業部 部長" type="text">
+          </div>
+          <div class="form-row">
+            <div class="form-label">タグ</div>
+            <div class="tag-chips">
+              <div class="tag-chip">VIP <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+              <div class="tag-chip">要通路側 <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+              <div class="tag-chip" style="background:transparent;border:1px dashed #C0CECA;color:#6B6B6B;">+ 追加</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-label">メモ</div>
+            <textarea class="form-input" style="resize:none;height:72px;" placeholder="備考・注意事項など"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="showScreen(3)">キャンセル</button>
+          <button class="btn-save" onclick="showScreen(3)">保存する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const screens = document.querySelectorAll('.screen');
+const btns = document.querySelectorAll('.screen-btn');
+function showScreen(i) {
+  screens.forEach((s,idx) => s.classList.toggle('active', idx===i));
+  btns.forEach((b,idx) => b.classList.toggle('active', idx===i));
+}
+
+let panelOpen = true;
+function toggleUnassigned() {
+  panelOpen = !panelOpen;
+  document.getElementById('unchips').style.display = panelOpen ? 'flex' : 'none';
+  document.getElementById('untoggle').textContent = panelOpen ? '▲ 閉じる' : '▼ 開く';
+}
+
+let selectedChip = null;
+function selectGuest(el) {
+  if (selectedChip) selectedChip.classList.remove('selected');
+  if (selectedChip === el) { selectedChip = null; return; }
+  el.classList.add('selected');
+  selectedChip = el;
+}
+
+function assignSeat(seatEl) {
+  if (!selectedChip) return;
+  const name = selectedChip.textContent.replace(/\s+/g, '').slice(0,2);
+  seatEl.classList.add('occupied');
+  seatEl.querySelector('.seat-name').textContent = name;
+  seatEl.querySelector('.seat-name').style.color = '';
+  selectedChip.remove();
+  selectedChip = null;
+}
+</script>
+</body>
+</html>

@@ -458,7 +458,7 @@ export default function App() {
           <span>一覧</span>
         </button>
         <button
-          className={`mobile-nav-item ${(page==='assign'||page==='layout')?'active':''}`}
+          className={`mobile-nav-item ${(page==='assign'||page==='layout'||page==='attendees')?'active':''}`}
           onClick={()=>{ if(currentEvent){ setAssignInitTab('seat'); setAssignKey(k=>k+1); setPage('assign'); } else { setPage('events'); } }}
           aria-label="席割"
           style={!currentEvent?{opacity:0.3}:{}}

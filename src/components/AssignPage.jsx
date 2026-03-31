@@ -833,7 +833,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           <div className="assign-mobile-sheet-handle"/>
         </div>
         {/* ── 折りたたみ時も常時表示: タブ＋ステータス ── */}
-        <div className="assign-mobile-sheet-handle-area">
+        <div className={`assign-mobile-sheet-handle-area${selName ? ' has-selection' : ''}`}>
           {/* タブ切替（タップでトグルをブロック） */}
           <div className="assign-mobile-sheet-tabs" onClick={e=>e.stopPropagation()}>
             <button

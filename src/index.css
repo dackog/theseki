@@ -1432,15 +1432,26 @@
     .event-subpage-shell {
       height: calc(100dvh - 52px - 56px - env(safe-area-inset-bottom, 0px)) !important;
     }
-    /* InnerNavのタブをBottomNavに統合 → 非表示 */
-    .inner-nav-tabs { display: none !important; }
-    /* InnerNav: back + title だけのシンプルバー */
+    /* InnerNavタブ: サブページ切替に必要なので表示維持 */
+    .inner-nav-tabs {
+      display: flex !important;
+      width: 100% !important;
+      margin: 0 !important;
+      gap: 0.35rem !important;
+      padding-bottom: 0.5rem;
+    }
+    .inner-nav-tabs button {
+      min-height: 36px !important;
+      font-size: 0.78rem !important;
+      padding: 0.4rem 0.5rem !important;
+    }
+    /* InnerNav: 2行構造（back+title行 ／ tabs行） */
     .inner-nav-wrap {
       display: flex !important;
       align-items: center !important;
-      gap: 0.5rem !important;
-      flex-wrap: nowrap !important;
-      padding: 0.55rem 0.85rem !important;
+      gap: 0.3rem 0.5rem !important;
+      flex-wrap: wrap !important;
+      padding: 0.5rem 0.85rem 0 !important;
     }
     #assign-header-portal { display: none !important; }
   }
@@ -1698,12 +1709,13 @@
   }
   .assign-mobile-sheet-tab-btn {
     flex: 1;
-    padding: 5px 4px;
+    padding: 9px 8px;
+    min-height: 40px;
     border: 1px solid var(--border);
     border-radius: 6px;
     background: transparent;
     color: var(--ink-light);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -1719,9 +1731,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 5px 14px 4px;
+    padding: 6px 14px 6px;
     flex-shrink: 0;
-    min-height: 30px;
+    min-height: 34px;
   }
   .assign-mobile-sheet-title {
     font-size: 12px;
@@ -1731,6 +1743,16 @@
   }
   .assign-mobile-sheet-title.sel {
     color: var(--accent);
+    font-size: 13px;
+  }
+  /* 選択中はハンドルエリアをアクセントカラーで強調 */
+  .assign-mobile-sheet-handle-area.has-selection {
+    border-top: 2px solid var(--accent);
+    background: rgba(192, 57, 43, 0.04);
+  }
+  .assign-mobile-sheet-handle-area.has-selection .assign-mobile-sheet-handle {
+    background: var(--accent);
+    opacity: 0.6;
   }
   .assign-mobile-sheet-badge {
     font-size: 10px;
@@ -1748,8 +1770,9 @@
     background: none;
     border: 1px solid var(--border);
     border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
+    padding: 4px 12px;
+    min-height: 32px;
+    font-size: 12px;
     color: var(--ink-light);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -1779,8 +1802,27 @@
     .assign-table-drag-wrap { scroll-margin-top: 8px; }
     /* サイドバーをモバイルでは完全に非表示（BottomSheetに統合） */
     .assign-sidebar { display: none !important; }
-    /* モバイルツールバーはボトムシートに移植したので非表示 */
-    .assign-mobile-toolbar { display: none !important; }
+    /* モバイルアクションバー: 配置操作の入口として上部に表示 */
+    .assign-mobile-toolbar {
+      display: flex !important;
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 0.3rem;
+      padding: 0.45rem 0.75rem;
+      background: var(--paper-warm);
+      border-bottom: 1px solid var(--border);
+    }
+    .assign-mobile-toolbar > div:last-child {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .assign-mobile-toolbar > div:last-child::-webkit-scrollbar { display: none; }
+    .assign-mobile-toolbar .btn-sm {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
     /* フロアキャンバスをミニマップの下にフロー */
     .assign-layout {
       grid-template-columns: 1fr !important;

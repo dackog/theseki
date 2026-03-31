@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>案B: FOCUS SHEET モック</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: #111; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 24px 16px 40px; font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif; }
+h1 { color: #fff; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; font-weight: 400; }
+.concept-label { color: #777; font-size: 11px; margin-bottom: 20px; letter-spacing: 0.08em; text-align: center; }
+.screen-nav { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
+.screen-btn { background: #222; color: #888; border: 1px solid #333; border-radius: 4px; padding: 5px 12px; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.screen-btn.active { background: #2A7AFF; color: #fff; border-color: #2A7AFF; }
+
+:root {
+  --accent: #C0392B;
+  --blue: #2A7AFF;
+  --ink: #1A1A1A;
+  --ink2: #6B6B6B;
+  --ink3: #B0ABA8;
+  --paper: #FFFFFF;
+  --border: #E0DEDA;
+  --bg: #EFEFED;
+  --green: #2D6A4F;
+  --topbar-h: 52px;
+  --sheet-peek: 88px;
+}
+
+.phone { width: 375px; height: 812px; background: var(--bg); border-radius: 40px; overflow: hidden; position: relative; box-shadow: 0 0 0 8px #222, 0 0 0 10px #111, 0 24px 64px rgba(0,0,0,0.7); }
+.phone-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 28px; background: #222; border-radius: 0 0 18px 18px; z-index: 300; }
+.screen { position: absolute; inset: 0; display: none; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* TopBar */
+.topbar { height: var(--topbar-h); background: var(--paper); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 14px; gap: 10px; flex-shrink: 0; padding-top: 28px; }
+.topbar-back { display: flex; align-items: center; gap: 4px; color: var(--blue); font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0; }
+.topbar-back svg { width: 16px; height: 16px; }
+.topbar-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-icon-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; border-radius: 50%; }
+.topbar-icon-btn svg { width: 18px; height: 18px; stroke: var(--ink2); stroke-width: 1.8; fill: none; }
+
+/* ─── EVENT LIST ─── */
+.event-list-bg { flex: 1; overflow-y: auto; padding: 10px; -webkit-overflow-scrolling: touch; }
+.page-section-label { font-size: 10px; font-weight: 700; color: var(--ink3); letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 4px 4px; }
+.ev-card { background: var(--paper); border-radius: 10px; margin-bottom: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; }
+.ev-card:active { opacity: 0.85; }
+.ev-card-accent { height: 3px; }
+.ev-card-body { padding: 12px 14px 10px; }
+.ev-card-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.ev-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.ev-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.04em; }
+.badge-active { background: #FFF0EE; color: var(--accent); }
+.badge-done { background: #E8F4ED; color: var(--green); }
+.badge-new { background: #F0F0EE; color: var(--ink2); }
+.ev-meta { font-size: 11px; color: var(--ink2); display: flex; gap: 8px; margin-bottom: 8px; }
+.ev-progress { }
+.ev-progress-bar { height: 5px; background: #E8E6E3; border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+.ev-progress-fill { height: 100%; border-radius: 3px; }
+.ev-progress-label { font-size: 10px; color: var(--ink2); display: flex; justify-content: space-between; }
+.ev-actions { display: flex; gap: 6px; margin-top: 10px; }
+.ev-btn { flex: 1; padding: 8px 6px; border-radius: 7px; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; }
+.ev-btn-ghost { background: var(--bg); color: var(--ink2); }
+.ev-btn-primary { background: var(--accent); color: #fff; }
+
+/* ─── MINIMAP ─── */
+.minimap-area { flex: 1; display: flex; flex-direction: column; padding: 12px; gap: 8px; overflow: hidden; }
+.minimap-label { font-size: 10px; font-weight: 700; color: var(--ink2); letter-spacing: 0.1em; text-transform: uppercase; padding: 0 2px; }
+.minimap-legend { display: flex; gap: 12px; padding: 0 2px; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--ink2); }
+.legend-dot { width: 8px; height: 8px; border-radius: 1px; }
+.minimap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; }
+.minimap-table { background: var(--paper); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; position: relative; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: transform 0.1s; }
+.minimap-table:active { transform: scale(0.97); }
+.minimap-table.selected { box-shadow: 0 0 0 2px var(--blue); }
+.minimap-table-name { font-size: 11px; font-weight: 700; color: var(--ink); }
+.minimap-table-sub { font-size: 9px; color: var(--ink2); }
+.minimap-seats { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+.minimap-seat { width: 12px; height: 12px; border-radius: 2px; }
+.seat-filled { background: #D4EAD9; }
+.seat-empty { background: #E8E6E3; border: 1px solid #D0CECA; }
+.seat-accent { background: #FBDBD8; }
+.minimap-table-footer { font-size: 9px; font-weight: 700; margin-top: 2px; }
+
+/* ─── BOTTOM SHEET ─── */
+.bottom-sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--paper); border-radius: 16px 16px 0 0; box-shadow: 0 -2px 20px rgba(0,0,0,0.12); z-index: 100; transition: height 0.3s cubic-bezier(0.32,0.72,0,1); overflow: hidden; }
+.sheet-handle-area { padding: 10px 0 6px; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+.sheet-handle { width: 36px; height: 4px; background: #C8C4C0; border-radius: 2px; }
+.sheet-peek { display: flex; align-items: center; justify-content: space-between; padding: 2px 16px 8px; }
+.sheet-peek-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+.sheet-peek-sub { font-size: 11px; color: var(--ink2); }
+.sheet-peek-badge { font-size: 10px; font-weight: 700; color: var(--accent); background: #FDE8E6; padding: 2px 7px; border-radius: 10px; }
+.unassigned-scroll { padding: 0 14px 10px; display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.unassigned-scroll::-webkit-scrollbar { display: none; }
+.ug-chip { background: var(--bg); border-radius: 20px; padding: 5px 12px; font-size: 11px; color: var(--ink); white-space: nowrap; cursor: pointer; flex-shrink: 0; font-weight: 500; border: 1.5px solid transparent; transition: all 0.12s; }
+.ug-chip.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Half sheet */
+.sheet-half-content { padding: 0 14px; overflow-y: auto; }
+.sheet-table-title { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.sheet-table-sub { font-size: 11px; color: var(--ink2); margin-bottom: 12px; }
+.sheet-divider { height: 1px; background: var(--border); margin: 10px 0; }
+.sheet-seats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 12px; }
+.sh-seat { background: var(--bg); border-radius: 6px; padding: 6px 3px; text-align: center; cursor: pointer; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; transition: all 0.1s; }
+.sh-seat.occ { background: #E8F4ED; }
+.sh-seat.sel-s { background: var(--accent); }
+.sh-seat:active { opacity: 0.75; }
+.sh-seat-num { font-size: 9px; color: var(--ink3); font-family: monospace; }
+.sh-seat.occ .sh-seat-num { color: #8BAE97; }
+.sh-seat.sel-s .sh-seat-num { color: rgba(255,255,255,0.7); }
+.sh-seat-name { font-size: 10px; color: var(--ink); font-weight: 600; }
+.sh-seat.occ .sh-seat-name { color: #2D6A4F; }
+.sh-seat.sel-s .sh-seat-name { color: #fff; }
+.empty-name { color: var(--ink3) !important; font-weight: 400 !important; font-size: 9px !important; }
+.sheet-sub-label { font-size: 10px; font-weight: 700; color: var(--ink2); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+
+/* ─── EVENTS BOTTOM SHEET ─── */
+.event-sheet-body { padding: 0 14px 16px; overflow-y: auto; flex: 1; }
+
+/* ─── MODAL ─── */
+.modal-over { position: absolute; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; flex-direction: column; justify-content: flex-end; }
+.modal-card { background: var(--paper); border-radius: 16px 16px 0 0; max-height: 88vh; display: flex; flex-direction: column; }
+.modal-handle { width: 36px; height: 4px; background: #C8C4C0; border-radius: 2px; margin: 10px auto 0; }
+.modal-header { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-header strong { font-size: 15px; color: var(--ink); font-weight: 700; }
+.modal-close { width: 28px; height: 28px; background: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+.modal-close svg { width: 13px; height: 13px; stroke: var(--ink2); stroke-width: 2.5; fill: none; }
+.modal-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+.form-row { margin-bottom: 14px; }
+.form-label { font-size: 10px; color: var(--ink2); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+.form-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; color: var(--ink); background: var(--paper); outline: none; transition: border-color 0.15s; }
+.form-input:focus { border-color: var(--blue); }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.tags-area { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag-pill { background: var(--bg); border-radius: 20px; padding: 4px 10px; font-size: 11px; color: var(--ink2); display: flex; align-items: center; gap: 4px; }
+.tag-pill svg { width: 10px; height: 10px; stroke: var(--ink3); stroke-width: 2; fill: none; cursor: pointer; }
+.tag-add { background: transparent; border: 1.5px dashed var(--border); border-radius: 20px; padding: 4px 10px; font-size: 11px; color: var(--ink3); cursor: pointer; }
+.modal-foot { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.btn-cancel { flex: 1; background: var(--bg); border: none; border-radius: 10px; padding: 12px; font-size: 13px; color: var(--ink2); cursor: pointer; font-weight: 600; }
+.btn-save { flex: 2; background: var(--accent); border: none; border-radius: 10px; padding: 12px; font-size: 13px; color: #fff; cursor: pointer; font-weight: 700; }
+
+/* Sheet animation states */
+.sh-peek { height: var(--sheet-peek); }
+.sh-half { height: 52vh; }
+.sh-full { height: 88vh; }
+</style>
+</head>
+<body>
+<h1>案B — FOCUS SHEET</h1>
+<p class="concept-label">コンテキスト保持型ドロワーUI — ミニマップ × BottomSheet</p>
+
+<div class="screen-nav">
+  <button class="screen-btn active" onclick="showScreen(0)">イベント一覧</button>
+  <button class="screen-btn" onclick="showScreen(1)">席割 (peek)</button>
+  <button class="screen-btn" onclick="showScreen(2)">席割 (half展開)</button>
+  <button class="screen-btn" onclick="showScreen(3)">席割 (full展開)</button>
+  <button class="screen-btn" onclick="showScreen(4)">ゲスト編集</button>
+</div>
+
+<div class="phone">
+  <div class="phone-notch"></div>
+
+  <!-- SCREEN 0: EVENT LIST -->
+  <div class="screen active" id="s0">
+    <div class="topbar" style="padding-top:34px;">
+      <div class="topbar-title" style="font-size:16px;font-weight:700;">TheSEKI</div>
+      <button class="topbar-icon-btn">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </button>
+    </div>
+    <div class="event-list-bg">
+      <div class="page-section-label">進行中</div>
+
+      <div class="ev-card" onclick="showScreen(1)">
+        <div class="ev-card-accent" style="background: linear-gradient(90deg, #C0392B, #E8574A);"></div>
+        <div class="ev-card-body">
+          <div class="ev-card-row">
+            <div class="ev-title">春季総会 2026</div>
+            <span class="ev-badge badge-active">進行中</span>
+          </div>
+          <div class="ev-meta"><span>2026.04.01</span><span>卓 8</span><span>120名</span></div>
+          <div class="ev-progress">
+            <div class="ev-progress-bar"><div class="ev-progress-fill" style="width:72%;background:#2D6A4F;"></div></div>
+            <div class="ev-progress-label"><span>割当進捗</span><span style="color:#2D6A4F;font-weight:700;">87 / 120名</span></div>
+          </div>
+          <div class="ev-actions">
+            <button class="ev-btn ev-btn-ghost">ゲスト</button>
+            <button class="ev-btn ev-btn-ghost">レイアウト</button>
+            <button class="ev-btn ev-btn-primary">席割を開く</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-section-label" style="margin-top:8px;">完了済み</div>
+
+      <div class="ev-card">
+        <div class="ev-card-accent" style="background: #2D6A4F;"></div>
+        <div class="ev-card-body">
+          <div class="ev-card-row">
+            <div class="ev-title">忘年会 2025</div>
+            <span class="ev-badge badge-done">完了</span>
+          </div>
+          <div class="ev-meta"><span>2025.12.20</span><span>卓 6</span><span>80名</span></div>
+          <div class="ev-progress">
+            <div class="ev-progress-bar"><div class="ev-progress-fill" style="width:100%;background:#2D6A4F;"></div></div>
+            <div class="ev-progress-label"><span>割当進捗</span><span style="color:#2D6A4F;font-weight:700;">80 / 80名</span></div>
+          </div>
+          <div class="ev-actions">
+            <button class="ev-btn ev-btn-ghost">ゲスト</button>
+            <button class="ev-btn ev-btn-ghost">レイアウト</button>
+            <button class="ev-btn ev-btn-primary" style="background:#2D6A4F;">席割を見る</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-section-label" style="margin-top:8px;">未開始</div>
+
+      <div class="ev-card">
+        <div class="ev-card-accent" style="background:#C8C4C0;"></div>
+        <div class="ev-card-body">
+          <div class="ev-card-row">
+            <div class="ev-title">新年懇親会 2026</div>
+            <span class="ev-badge badge-new">未開始</span>
+          </div>
+          <div class="ev-meta"><span>2026.01.15</span><span>卓 5</span><span>60名</span></div>
+          <div class="ev-progress">
+            <div class="ev-progress-bar"><div class="ev-progress-fill" style="width:0%;background:#2D6A4F;"></div></div>
+            <div class="ev-progress-label"><span>割当進捗</span><span>0 / 60名</span></div>
+          </div>
+          <div class="ev-actions">
+            <button class="ev-btn ev-btn-ghost">ゲスト</button>
+            <button class="ev-btn ev-btn-ghost">レイアウト</button>
+            <button class="ev-btn ev-btn-primary">席割を開く</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: ASSIGN + PEEK -->
+  <div class="screen" id="s1">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(0)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        一覧
+      </button>
+      <div class="topbar-title">春季総会 — 席割</div>
+      <button class="topbar-icon-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+    </div>
+
+    <div class="minimap-area">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="minimap-label">卓 概要</div>
+        <div class="minimap-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#D4EAD9;"></div>割当済</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#E8E6E3;border:1px solid #D0CECA;"></div>空席</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FBDBD8;"></div>要注意</div>
+        </div>
+      </div>
+
+      <div class="minimap-grid">
+        <div class="minimap-table" onclick="showScreen(2)">
+          <div class="minimap-table-name">卓01 VIP</div>
+          <div class="minimap-table-sub">10席</div>
+          <div class="minimap-seats">
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+          </div>
+          <div class="minimap-table-footer" style="color:#C0392B;">空席 3</div>
+        </div>
+        <div class="minimap-table" onclick="showScreen(2)">
+          <div class="minimap-table-name">卓02 一般</div>
+          <div class="minimap-table-sub">8席</div>
+          <div class="minimap-seats">
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-empty"></div>
+            <div class="minimap-seat seat-empty"></div>
+          </div>
+          <div class="minimap-table-footer" style="color:#C0392B;">空席 8</div>
+        </div>
+        <div class="minimap-table" onclick="showScreen(2)">
+          <div class="minimap-table-name">卓03 一般</div>
+          <div class="minimap-table-sub">8席</div>
+          <div class="minimap-seats">
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-empty"></div>
+          </div>
+          <div class="minimap-table-footer" style="color:#C0392B;">空席 1</div>
+        </div>
+        <div class="minimap-table" onclick="showScreen(2)">
+          <div class="minimap-table-name">卓04 一般</div>
+          <div class="minimap-table-sub">10席</div>
+          <div class="minimap-seats">
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-accent"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+            <div class="minimap-seat seat-filled"></div>
+          </div>
+          <div class="minimap-table-footer" style="color:#2D6A4F;">満席</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PEEK SHEET -->
+    <div class="bottom-sheet sh-peek" id="peek-sheet" onclick="showScreen(2)">
+      <div class="sheet-handle-area">
+        <div class="sheet-handle"></div>
+      </div>
+      <div class="sheet-peek">
+        <div>
+          <div class="sheet-peek-title">未割当ゲスト</div>
+          <div class="sheet-peek-sub">タップして割当を開始</div>
+        </div>
+        <span class="sheet-peek-badge">12名</span>
+      </div>
+      <div class="unassigned-scroll">
+        <div class="ug-chip">田中 一郎</div>
+        <div class="ug-chip">佐藤 花子</div>
+        <div class="ug-chip">鈴木 太郎</div>
+        <div class="ug-chip">山田 次郎</div>
+        <div class="ug-chip">高橋 三恵</div>
+        <div class="ug-chip">渡辺 四郎</div>
+        <div class="ug-chip">伊藤 五月</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: HALF SHEET -->
+  <div class="screen" id="s2">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        一覧
+      </button>
+      <div class="topbar-title">春季総会 — 席割</div>
+      <button class="topbar-icon-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+    </div>
+
+    <!-- Minimap (dimmed) -->
+    <div class="minimap-area" style="opacity:0.35;pointer-events:none;">
+      <div class="minimap-grid">
+        <div class="minimap-table selected">
+          <div class="minimap-table-name">卓01 VIP</div>
+          <div class="minimap-seats" style="margin-top:4px;">
+            <div class="minimap-seat seat-filled"></div><div class="minimap-seat seat-filled"></div><div class="minimap-seat seat-empty"></div><div class="minimap-seat seat-empty"></div><div class="minimap-seat seat-filled"></div><div class="minimap-seat seat-filled"></div><div class="minimap-seat seat-filled"></div><div class="minimap-seat seat-empty"></div><div class="minimap-seat seat-filled"></div><div class="minimap-seat seat-filled"></div>
+          </div>
+        </div>
+        <div class="minimap-table"><div class="minimap-table-name">卓02</div></div>
+        <div class="minimap-table"><div class="minimap-table-name">卓03</div></div>
+        <div class="minimap-table"><div class="minimap-table-name">卓04</div></div>
+      </div>
+    </div>
+
+    <!-- HALF SHEET -->
+    <div class="bottom-sheet sh-half">
+      <div class="sheet-handle-area" onclick="showScreen(3)">
+        <div class="sheet-handle"></div>
+      </div>
+      <div class="sheet-half-content" style="padding-bottom:16px;">
+        <div class="sheet-table-title">卓01 — VIPテーブル</div>
+        <div class="sheet-table-sub">10席 · 空席 3 · 割当済 7</div>
+        <div class="sheet-seats-grid">
+          <div class="sh-seat occ"><span class="sh-seat-num">01</span><span class="sh-seat-name">中川</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">02</span><span class="sh-seat-name">前田</span></div>
+          <div class="sh-seat" onclick="assignFromHalf(this)"><span class="sh-seat-num">03</span><span class="sh-seat-name empty-name">空席</span></div>
+          <div class="sh-seat" onclick="assignFromHalf(this)"><span class="sh-seat-num">04</span><span class="sh-seat-name empty-name">空席</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">05</span><span class="sh-seat-name">岡本</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">06</span><span class="sh-seat-name">清水</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">07</span><span class="sh-seat-name">松本</span></div>
+          <div class="sh-seat" onclick="assignFromHalf(this)"><span class="sh-seat-num">08</span><span class="sh-seat-name empty-name">空席</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">09</span><span class="sh-seat-name">井上</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">10</span><span class="sh-seat-name">木村</span></div>
+        </div>
+        <div class="sheet-divider"></div>
+        <div class="sheet-sub-label">割当可能なゲスト</div>
+        <div class="unassigned-scroll" style="padding:0 0 8px;">
+          <div class="ug-chip" onclick="selectHalfGuest(this)">田中 一郎</div>
+          <div class="ug-chip" onclick="selectHalfGuest(this)">佐藤 花子</div>
+          <div class="ug-chip" onclick="selectHalfGuest(this)">鈴木 太郎</div>
+          <div class="ug-chip" onclick="selectHalfGuest(this)">山田 次郎</div>
+          <div class="ug-chip" onclick="selectHalfGuest(this)">高橋 三恵</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: FULL SHEET -->
+  <div class="screen" id="s3">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(2)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        一覧
+      </button>
+      <div class="topbar-title">春季総会 — 席割</div>
+      <button class="topbar-action" style="color:#2A7AFF;font-size:13px;font-weight:600;background:none;border:none;cursor:pointer;">保存</button>
+    </div>
+
+    <div class="bottom-sheet sh-full" style="border-radius:0;">
+      <div class="sheet-handle-area" onclick="showScreen(2)" style="cursor:pointer;">
+        <div class="sheet-handle"></div>
+      </div>
+      <div style="overflow-y:auto;flex:1;padding:0 14px 16px;">
+        <div class="sheet-table-title">卓01 — VIPテーブル</div>
+        <div class="sheet-table-sub" style="margin-bottom:10px;">10席 · 空席 3 · 割当済 7</div>
+        <div class="sheet-seats-grid">
+          <div class="sh-seat occ"><span class="sh-seat-num">01</span><span class="sh-seat-name">中川</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">02</span><span class="sh-seat-name">前田</span></div>
+          <div class="sh-seat"><span class="sh-seat-num">03</span><span class="sh-seat-name empty-name">空席</span></div>
+          <div class="sh-seat"><span class="sh-seat-num">04</span><span class="sh-seat-name empty-name">空席</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">05</span><span class="sh-seat-name">岡本</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">06</span><span class="sh-seat-name">清水</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">07</span><span class="sh-seat-name">松本</span></div>
+          <div class="sh-seat"><span class="sh-seat-num">08</span><span class="sh-seat-name empty-name">空席</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">09</span><span class="sh-seat-name">井上</span></div>
+          <div class="sh-seat occ"><span class="sh-seat-num">10</span><span class="sh-seat-name">木村</span></div>
+        </div>
+
+        <div class="sheet-divider"></div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="sheet-sub-label" style="margin:0;">未割当 (12名)</div>
+          <div style="font-size:10px;color:#2A7AFF;font-weight:600;">全員を見る</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">田中 一郎</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">佐藤 花子</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">鈴木 太郎</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">山田 次郎</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">高橋 三恵</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">渡辺 四郎</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">伊藤 五月</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">中村 六平</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">小林 七子</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">加藤 八郎</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">吉田 九美</div>
+          <div class="ug-chip" onclick="this.classList.toggle('sel')">山本 十志</div>
+        </div>
+
+        <div class="sheet-divider"></div>
+        <div style="font-size:11px;color:#888;text-align:center;padding:8px 0;">↑ 上にスワイプして縮小 / 卓をタップして切り替え</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: GUEST EDIT -->
+  <div class="screen" id="s4">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(3)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="topbar-title">春季総会 — 席割</div>
+    </div>
+    <div style="flex:1;background:rgba(0,0,0,0.01);"></div>
+    <div class="modal-over" onclick="showScreen(3)">
+      <div class="modal-card" onclick="e=>e.stopPropagation()">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+          <strong>田中 一郎 を編集</strong>
+          <button class="modal-close" onclick="showScreen(3)">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-2col">
+            <div><div class="form-label">姓</div><input class="form-input" value="田中" type="text"></div>
+            <div><div class="form-label">名</div><input class="form-input" value="一郎" type="text"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-label">よみがな</div>
+            <input class="form-input" value="たなか いちろう" type="text">
+          </div>
+          <div class="form-row">
+            <div class="form-label">所属 / 役職</div>
+            <input class="form-input" value="営業部 部長" type="text">
+          </div>
+          <div class="form-row">
+            <div class="form-label">タグ</div>
+            <div class="tags-area">
+              <div class="tag-pill">VIP <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+              <div class="tag-pill">要通路側 <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+              <div class="tag-add">+ 追加</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-label">席割メモ</div>
+            <textarea class="form-input" style="resize:none;height:64px;" placeholder="備考・注意事項など"></textarea>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn-cancel" onclick="showScreen(3)">キャンセル</button>
+          <button class="btn-save" onclick="showScreen(3)">保存する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const screens = document.querySelectorAll('.screen');
+const btns = document.querySelectorAll('.screen-btn');
+function showScreen(i) {
+  screens.forEach((s,idx) => s.classList.toggle('active', idx===i));
+  btns.forEach((b,idx) => b.classList.toggle('active', idx===i));
+}
+let halfGuest = null;
+function selectHalfGuest(el) {
+  document.querySelectorAll('.ug-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  halfGuest = el.textContent.trim().slice(0,2);
+}
+function assignFromHalf(seatEl) {
+  if (!halfGuest) return;
+  seatEl.classList.add('occ');
+  seatEl.querySelector('.sh-seat-name').textContent = halfGuest;
+  seatEl.querySelector('.sh-seat-name').className = 'sh-seat-name';
+  halfGuest = null;
+  document.querySelectorAll('.ug-chip').forEach(c=>c.classList.remove('sel'));
+}
+</script>
+</body>
+</html>

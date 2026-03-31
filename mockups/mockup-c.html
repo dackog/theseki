@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>案C: STEP FLOW モック</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: #0f0f0f; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 24px 16px 40px; font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif; }
+h1 { color: #fff; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; font-weight: 400; }
+.concept-label { color: #666; font-size: 11px; margin-bottom: 20px; letter-spacing: 0.08em; text-align: center; }
+.screen-nav { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
+.screen-btn { background: #1a1a1a; color: #777; border: 1px solid #2a2a2a; border-radius: 4px; padding: 5px 12px; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.screen-btn.active { background: #2D6A4F; color: #fff; border-color: #2D6A4F; }
+
+:root {
+  --accent: #C0392B;
+  --ink: #1A1A1A;
+  --ink2: #6B6B6B;
+  --ink3: #A8A4A0;
+  --paper: #FFFFFF;
+  --border: #E2DFDB;
+  --bg: #F5F4F0;
+  --green: #2D6A4F;
+  --green-light: #E8F4ED;
+  --amber: #B45309;
+  --amber-light: #FFF3E0;
+  --topbar-h: 52px;
+}
+
+.phone { width: 375px; height: 812px; background: var(--bg); border-radius: 40px; overflow: hidden; position: relative; box-shadow: 0 0 0 8px #1a1a1a, 0 0 0 10px #0f0f0f, 0 24px 64px rgba(0,0,0,0.7); }
+.phone-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 28px; background: #1a1a1a; border-radius: 0 0 18px 18px; z-index: 300; }
+.screen { position: absolute; inset: 0; display: none; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* TopBar */
+.topbar { height: var(--topbar-h); background: var(--paper); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 14px; gap: 8px; flex-shrink: 0; padding-top: 28px; }
+.topbar-back { display: flex; align-items: center; gap: 3px; color: var(--accent); font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0; white-space: nowrap; }
+.topbar-back svg { width: 16px; height: 16px; }
+.topbar-title { flex: 1; font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-right { font-size: 12px; color: var(--ink2); white-space: nowrap; }
+
+/* Step Indicator */
+.step-bar { background: var(--paper); border-bottom: 1px solid var(--border); padding: 0 14px; display: flex; align-items: center; gap: 0; flex-shrink: 0; height: 40px; }
+.step-item { display: flex; align-items: center; gap: 6px; flex: 1; }
+.step-circle { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+.step-circle.done { background: var(--green); color: #fff; }
+.step-circle.active { background: var(--accent); color: #fff; }
+.step-circle.todo { background: #E2DFDB; color: var(--ink3); }
+.step-label { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; }
+.step-item.s-done .step-label { color: var(--green); }
+.step-item.s-active .step-label { color: var(--accent); }
+.step-item.s-todo .step-label { color: var(--ink3); }
+.step-arrow { font-size: 10px; color: #C8C4C0; margin: 0 4px; flex-shrink: 0; }
+
+/* Scroll Content */
+.content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* ─── EVENT LIST ─── */
+.page-header { padding: 16px 14px 10px; display: flex; align-items: center; justify-content: space-between; }
+.page-title { font-size: 18px; font-weight: 700; color: var(--ink); }
+.btn-new { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+.ev-card { background: var(--paper); border-radius: 10px; margin: 0 12px 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); cursor: pointer; transition: transform 0.1s; }
+.ev-card:active { transform: scale(0.985); }
+.ev-status-bar { height: 4px; }
+.ev-inner { padding: 12px 14px 12px; }
+.ev-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 5px; }
+.ev-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.ev-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.05em; margin-top: 2px; }
+.badge-red { background: #FDE8E6; color: var(--accent); }
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-gray { background: #EDEBE8; color: var(--ink3); }
+.ev-meta { font-size: 11px; color: var(--ink2); display: flex; gap: 8px; margin-bottom: 10px; }
+
+/* Progress Bar */
+.progress-section { }
+.progress-bar-outer { height: 6px; background: #E8E6E3; border-radius: 3px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.progress-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; }
+.progress-labels span { color: var(--ink2); }
+.progress-labels strong { font-weight: 700; }
+
+.ev-footer { display: flex; gap: 6px; margin-top: 10px; }
+.btn-ev-sub { flex: 1; background: var(--bg); border: none; border-radius: 7px; padding: 8px 4px; font-size: 11px; color: var(--ink2); font-weight: 600; cursor: pointer; text-align: center; }
+.btn-ev-main { flex: 2; background: var(--accent); border: none; border-radius: 7px; padding: 8px 8px; font-size: 12px; color: #fff; font-weight: 700; cursor: pointer; text-align: center; letter-spacing: 0.02em; }
+
+/* ─── TABLE LIST (STEP 1) ─── */
+.summary-bar { margin: 10px 12px; padding: 10px 12px; background: var(--paper); border-radius: 8px; display: flex; gap: 0; }
+.summary-item { flex: 1; text-align: center; border-right: 1px solid var(--border); }
+.summary-item:last-child { border-right: none; }
+.summary-num { font-size: 18px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.summary-num.red { color: var(--accent); }
+.summary-num.green { color: var(--green); }
+.summary-label { font-size: 9px; color: var(--ink2); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 1px; }
+
+.table-card { background: var(--paper); border-radius: 10px; margin: 0 12px 8px; overflow: hidden; cursor: pointer; transition: transform 0.1s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.table-card:active { transform: scale(0.985); }
+.table-card-inner { padding: 12px 14px 10px; }
+.table-card-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.table-card-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.table-card-sub { font-size: 11px; color: var(--ink2); margin-bottom: 8px; }
+.table-progress { }
+.table-prog-bar { height: 5px; background: #E8E6E3; border-radius: 3px; overflow: hidden; }
+.table-prog-fill { height: 100%; border-radius: 3px; }
+.table-prog-label { display: flex; justify-content: space-between; margin-top: 3px; font-size: 10px; }
+.table-arrow { font-size: 14px; color: var(--ink3); padding-left: 8px; }
+.table-badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 8px; }
+.tb-done { background: var(--green-light); color: var(--green); }
+.tb-wip { background: var(--amber-light); color: var(--amber); }
+.tb-empty { background: #FDE8E6; color: var(--accent); }
+
+/* ─── SEAT GRID (STEP 2) ─── */
+.seat-context { margin: 10px 12px 4px; padding: 10px 12px; background: var(--paper); border-radius: 8px; }
+.seat-ctx-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.seat-ctx-sub { font-size: 11px; color: var(--ink2); }
+.seat-stat-row { display: flex; gap: 12px; margin-top: 8px; }
+.seat-stat { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+.seat-stat-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+.seat-legend { padding: 6px 14px; display: flex; gap: 12px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--ink2); }
+.legend-sq { width: 14px; height: 14px; border-radius: 3px; }
+.sq-filled { background: var(--green-light); border: 1px solid #B8D9C5; }
+.sq-empty { background: #FFFFFF; border: 1px solid var(--border); }
+.sq-selected { background: var(--accent); }
+
+.seats-container { padding: 6px 12px 12px; }
+.seats-grid-c { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.seat-c { background: var(--paper); border: 1px solid var(--border); border-radius: 6px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: all 0.12s; padding: 4px 2px; }
+.seat-c:active { transform: scale(0.95); }
+.seat-c.filled { background: var(--green-light); border-color: #B8D9C5; }
+.seat-c.sel { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(192,57,43,0.3); }
+.seat-c-num { font-size: 9px; color: var(--ink3); font-family: monospace; }
+.seat-c.filled .seat-c-num { color: #7FB99A; }
+.seat-c.sel .seat-c-num { color: rgba(255,255,255,0.65); }
+.seat-c-name { font-size: 10px; font-weight: 600; color: var(--ink); text-align: center; line-height: 1.2; }
+.seat-c.filled .seat-c-name { color: var(--green); }
+.seat-c.sel .seat-c-name { color: #fff; }
+.empty-label { color: #C8C4C0 !important; font-weight: 400 !important; font-size: 9px !important; }
+
+.seat-action-bar { position: absolute; bottom: 0; left: 0; right: 0; background: var(--paper); border-top: 1px solid var(--border); padding: 10px 14px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; }
+.seat-action-hint { flex: 1; font-size: 12px; color: var(--ink2); }
+.seat-action-hint strong { color: var(--ink); display: block; font-size: 13px; }
+.btn-assign-cta { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.btn-assign-cta:disabled { background: #E2DFDB; color: var(--ink3); }
+
+/* ─── GUEST ASSIGN (STEP 3) ─── */
+.assign-header { margin: 10px 12px 4px; padding: 10px 14px; background: var(--paper); border-radius: 8px; }
+.assign-h-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.assign-h-sub { font-size: 11px; color: var(--ink2); margin-top: 2px; }
+.assign-h-seat { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; background: #FDE8E6; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--accent); }
+.assign-h-seat svg { width: 14px; height: 14px; stroke: var(--accent); stroke-width: 2; fill: none; }
+
+.guests-grid { padding: 6px 12px 80px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.guest-card { background: var(--paper); border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 6px; text-align: center; cursor: pointer; transition: all 0.12s; }
+.guest-card:active { transform: scale(0.95); }
+.guest-card.sel { background: #FDE8E6; border-color: var(--accent); }
+.guest-avatar { width: 32px; height: 32px; border-radius: 50%; background: #E8E6E3; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--ink2); }
+.guest-card.sel .guest-avatar { background: var(--accent); color: #fff; }
+.guest-card-name { font-size: 11px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.guest-card-sub { font-size: 9px; color: var(--ink3); margin-top: 2px; }
+.guest-card.sel .guest-card-name { color: var(--accent); }
+
+/* ─── MODAL ─── */
+.modal-over { position: absolute; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; flex-direction: column; justify-content: flex-end; }
+.modal-card { background: var(--paper); border-radius: 16px 16px 0 0; max-height: 90vh; display: flex; flex-direction: column; }
+.modal-handle { width: 36px; height: 4px; background: #C8C4C0; border-radius: 2px; margin: 10px auto 0; }
+.modal-header { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-header strong { font-size: 15px; color: var(--ink); font-weight: 700; }
+.modal-close { width: 28px; height: 28px; background: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+.modal-close svg { width: 13px; height: 13px; stroke: var(--ink2); stroke-width: 2.5; fill: none; }
+.modal-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+.form-row { margin-bottom: 14px; }
+.form-label { font-size: 10px; color: var(--ink2); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+.form-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; color: var(--ink); background: var(--paper); outline: none; }
+.form-input:focus { border-color: var(--accent); }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.tags-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag-p { background: var(--bg); border-radius: 20px; padding: 4px 10px; font-size: 11px; color: var(--ink2); display: flex; align-items: center; gap: 4px; }
+.tag-p svg { width: 10px; height: 10px; stroke: var(--ink3); stroke-width: 2; fill: none; }
+.tag-add { background: transparent; border: 1.5px dashed var(--border); border-radius: 20px; padding: 4px 10px; font-size: 11px; color: var(--ink3); cursor: pointer; }
+.modal-foot { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.btn-cancel { flex: 1; background: var(--bg); border: none; border-radius: 10px; padding: 12px; font-size: 13px; color: var(--ink2); cursor: pointer; font-weight: 600; }
+.btn-save { flex: 2; background: var(--green); border: none; border-radius: 10px; padding: 12px; font-size: 13px; color: #fff; cursor: pointer; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>案C — STEP FLOW</h1>
+<p class="concept-label">業務フロー完結型UI — 卓選択 → 席確認 → ゲスト割当</p>
+
+<div class="screen-nav">
+  <button class="screen-btn active" onclick="showScreen(0)">イベント一覧</button>
+  <button class="screen-btn" onclick="showScreen(1)">卓リスト(Step1)</button>
+  <button class="screen-btn" onclick="showScreen(2)">席グリッド(Step2)</button>
+  <button class="screen-btn" onclick="showScreen(3)">ゲスト割当(Step3)</button>
+  <button class="screen-btn" onclick="showScreen(4)">ゲスト編集</button>
+</div>
+
+<div class="phone">
+  <div class="phone-notch"></div>
+
+  <!-- SCREEN 0: EVENT LIST -->
+  <div class="screen active" id="s0">
+    <div class="topbar" style="padding-top:34px;">
+      <div class="topbar-title" style="font-size:16px;font-weight:800;letter-spacing:-0.01em;">TheSEKI</div>
+      <button class="btn-new">+ 新規</button>
+    </div>
+    <div class="content">
+      <div class="page-header">
+        <div class="page-title">イベント一覧</div>
+        <div style="font-size:11px;color:var(--ink2);">3件</div>
+      </div>
+
+      <div class="ev-card" onclick="showScreen(1)">
+        <div class="ev-status-bar" style="background:linear-gradient(90deg,var(--accent),#E8574A);"></div>
+        <div class="ev-inner">
+          <div class="ev-row">
+            <div class="ev-title">春季総会 2026</div>
+            <span class="ev-badge badge-red">進行中</span>
+          </div>
+          <div class="ev-meta"><span>2026.04.01</span><span>卓 8</span><span>120名</span></div>
+          <div class="progress-section">
+            <div class="progress-bar-outer"><div class="progress-bar-fill" style="width:72%;background:var(--green);"></div></div>
+            <div class="progress-labels"><span>割当進捗</span><strong style="color:var(--green);">87 / 120名</strong></div>
+          </div>
+          <div class="ev-footer">
+            <button class="btn-ev-sub">ゲスト</button>
+            <button class="btn-ev-sub">レイアウト</button>
+            <button class="btn-ev-main">席割を開始 →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ev-card">
+        <div class="ev-status-bar" style="background:var(--green);"></div>
+        <div class="ev-inner">
+          <div class="ev-row">
+            <div class="ev-title">忘年会 2025</div>
+            <span class="ev-badge badge-green">完了</span>
+          </div>
+          <div class="ev-meta"><span>2025.12.20</span><span>卓 6</span><span>80名</span></div>
+          <div class="progress-section">
+            <div class="progress-bar-outer"><div class="progress-bar-fill" style="width:100%;background:var(--green);"></div></div>
+            <div class="progress-labels"><span>割当進捗</span><strong style="color:var(--green);">80 / 80名</strong></div>
+          </div>
+          <div class="ev-footer">
+            <button class="btn-ev-sub">ゲスト</button>
+            <button class="btn-ev-sub">レイアウト</button>
+            <button class="btn-ev-main" style="background:var(--green);">席割を確認</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ev-card">
+        <div class="ev-status-bar" style="background:#C8C4C0;"></div>
+        <div class="ev-inner">
+          <div class="ev-row">
+            <div class="ev-title">新年懇親会 2026</div>
+            <span class="ev-badge badge-gray">未開始</span>
+          </div>
+          <div class="ev-meta"><span>2026.01.15</span><span>卓 5</span><span>60名</span></div>
+          <div class="progress-section">
+            <div class="progress-bar-outer"><div class="progress-bar-fill" style="width:0%;background:var(--green);"></div></div>
+            <div class="progress-labels"><span>割当進捗</span><span>0 / 60名</span></div>
+          </div>
+          <div class="ev-footer">
+            <button class="btn-ev-sub">ゲスト</button>
+            <button class="btn-ev-sub">レイアウト</button>
+            <button class="btn-ev-main">席割を開始 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: TABLE LIST (STEP 1) -->
+  <div class="screen" id="s1">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(0)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        一覧
+      </button>
+      <div class="topbar-title">春季総会</div>
+      <div class="topbar-right">残 <strong style="color:var(--accent);font-weight:800;">5</strong> 卓</div>
+    </div>
+    <div class="step-bar">
+      <div class="step-item s-active">
+        <div class="step-circle active">1</div>
+        <span class="step-label">卓選択</span>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step-item s-todo">
+        <div class="step-circle todo">2</div>
+        <span class="step-label">席確認</span>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step-item s-todo">
+        <div class="step-circle todo">3</div>
+        <span class="step-label">ゲスト割当</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="summary-bar">
+        <div class="summary-item">
+          <div class="summary-num">120</div>
+          <div class="summary-label">総ゲスト</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-num green">87</div>
+          <div class="summary-label">割当済</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-num red">33</div>
+          <div class="summary-label">未割当</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-num">8</div>
+          <div class="summary-label">卓数</div>
+        </div>
+      </div>
+
+      <div style="padding: 8px 12px 4px; font-size:10px; font-weight:700; color:var(--ink3); letter-spacing:0.1em; text-transform:uppercase;">空席あり — 優先対応</div>
+
+      <div class="table-card" onclick="showScreen(2)">
+        <div class="table-card-inner">
+          <div class="table-card-row">
+            <div class="table-card-name">卓01 — VIPテーブル</div>
+            <span class="table-badge tb-wip">進行中</span>
+          </div>
+          <div class="table-card-sub">10席 · 割当 7 · 空席 3</div>
+          <div class="table-progress">
+            <div class="table-prog-bar"><div class="table-prog-fill" style="width:70%;background:var(--green);"></div></div>
+            <div class="table-prog-label">
+              <span style="color:var(--ink2);">7 / 10名</span>
+              <span style="color:var(--accent);font-weight:700;">空席 3 →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-card" onclick="showScreen(2)">
+        <div class="table-card-inner">
+          <div class="table-card-row">
+            <div class="table-card-name">卓02 — 一般</div>
+            <span class="table-badge tb-empty">未開始</span>
+          </div>
+          <div class="table-card-sub">8席 · 割当 0 · 空席 8</div>
+          <div class="table-progress">
+            <div class="table-prog-bar"><div class="table-prog-fill" style="width:0%;background:var(--green);"></div></div>
+            <div class="table-prog-label">
+              <span style="color:var(--ink2);">0 / 8名</span>
+              <span style="color:var(--accent);font-weight:700;">空席 8 →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 8px 12px 4px; font-size:10px; font-weight:700; color:var(--ink3); letter-spacing:0.1em; text-transform:uppercase; margin-top:6px;">完了済み</div>
+
+      <div class="table-card">
+        <div class="table-card-inner">
+          <div class="table-card-row">
+            <div class="table-card-name">卓03 — 一般</div>
+            <span class="table-badge tb-done">満席</span>
+          </div>
+          <div class="table-card-sub">8席 · 割当 8</div>
+          <div class="table-progress">
+            <div class="table-prog-bar"><div class="table-prog-fill" style="width:100%;background:var(--green);"></div></div>
+            <div class="table-prog-label">
+              <span style="color:var(--green);font-weight:700;">8 / 8名 — 満席</span>
+              <span style="color:var(--ink3);">完了 ✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card-inner">
+          <div class="table-card-row">
+            <div class="table-card-name">卓04 — 一般</div>
+            <span class="table-badge tb-done">満席</span>
+          </div>
+          <div class="table-card-sub">10席 · 割当 10</div>
+          <div class="table-progress">
+            <div class="table-prog-bar"><div class="table-prog-fill" style="width:100%;background:var(--green);"></div></div>
+            <div class="table-prog-label">
+              <span style="color:var(--green);font-weight:700;">10 / 10名 — 満席</span>
+              <span style="color:var(--ink3);">完了 ✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: SEAT GRID (STEP 2) -->
+  <div class="screen" id="s2">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        卓選択
+      </button>
+      <div class="topbar-title">卓01 VIP</div>
+      <button style="background:none;border:none;font-size:12px;color:var(--green);font-weight:700;cursor:pointer;" onclick="showScreen(1)">完了 ✓</button>
+    </div>
+    <div class="step-bar">
+      <div class="step-item s-done">
+        <div class="step-circle done">✓</div>
+        <span class="step-label">卓選択</span>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step-item s-active">
+        <div class="step-circle active">2</div>
+        <span class="step-label">席確認</span>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step-item s-todo">
+        <div class="step-circle todo">3</div>
+        <span class="step-label">ゲスト割当</span>
+      </div>
+    </div>
+
+    <div class="content" style="padding-bottom:70px;">
+      <div class="seat-context">
+        <div class="seat-ctx-title">卓01 — VIPテーブル</div>
+        <div class="seat-ctx-sub">空席をタップしてゲストを割当</div>
+        <div class="seat-stat-row">
+          <div class="seat-stat"><div class="seat-stat-dot" style="background:var(--green-light);border:1px solid #B8D9C5;"></div>割当済 7席</div>
+          <div class="seat-stat"><div class="seat-stat-dot" style="background:#fff;border:1px solid var(--border);"></div>空席 3席</div>
+        </div>
+      </div>
+
+      <div class="seats-container">
+        <div class="seats-grid-c">
+          <div class="seat-c filled"><span class="seat-c-num">01</span><span class="seat-c-name">中川</span></div>
+          <div class="seat-c filled"><span class="seat-c-num">02</span><span class="seat-c-name">前田</span></div>
+          <div class="seat-c" id="seat03" onclick="selectSeat(this,'03')"><span class="seat-c-num">03</span><span class="seat-c-name empty-label">空席</span></div>
+          <div class="seat-c" id="seat04" onclick="selectSeat(this,'04')"><span class="seat-c-num">04</span><span class="seat-c-name empty-label">空席</span></div>
+          <div class="seat-c filled"><span class="seat-c-num">05</span><span class="seat-c-name">岡本</span></div>
+          <div class="seat-c filled"><span class="seat-c-num">06</span><span class="seat-c-name">清水</span></div>
+          <div class="seat-c filled"><span class="seat-c-num">07</span><span class="seat-c-name">松本</span></div>
+          <div class="seat-c" id="seat08" onclick="selectSeat(this,'08')"><span class="seat-c-num">08</span><span class="seat-c-name empty-label">空席</span></div>
+          <div class="seat-c filled"><span class="seat-c-num">09</span><span class="seat-c-name">井上</span></div>
+          <div class="seat-c filled"><span class="seat-c-num">10</span><span class="seat-c-name">木村</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="seat-action-bar">
+      <div class="seat-action-hint" id="seat-hint">
+        <strong id="seat-hint-strong">空席を選択</strong>
+        <span id="seat-hint-sub">席をタップして選択してください</span>
+      </div>
+      <button class="btn-assign-cta" id="assign-cta" disabled onclick="showScreen(3)">ゲストを選ぶ →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: GUEST ASSIGN (STEP 3) -->
+  <div class="screen" id="s3">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(2)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        席確認
+      </button>
+      <div class="topbar-title">卓01 / 03番席</div>
+    </div>
+    <div class="step-bar">
+      <div class="step-item s-done">
+        <div class="step-circle done">✓</div>
+        <span class="step-label">卓選択</span>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step-item s-done">
+        <div class="step-circle done">✓</div>
+        <span class="step-label">席確認</span>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step-item s-active">
+        <div class="step-circle active">3</div>
+        <span class="step-label">割当</span>
+      </div>
+    </div>
+
+    <div class="content" style="padding-bottom:80px;">
+      <div class="assign-header">
+        <div class="assign-h-title">割当するゲストを選択</div>
+        <div class="assign-h-sub">未割当: 12名</div>
+        <div class="assign-h-seat">
+          <svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a5 5 0 0 1 10 0v2"/></svg>
+          卓01 · 03番席 に割当
+        </div>
+      </div>
+
+      <div class="guests-grid">
+        <div class="guest-card" onclick="selectGuest3(this)">
+          <div class="guest-avatar">田</div>
+          <div class="guest-card-name">田中 一郎</div>
+          <div class="guest-card-sub">一般</div>
+        </div>
+        <div class="guest-card" onclick="selectGuest3(this)">
+          <div class="guest-avatar">佐</div>
+          <div class="guest-card-name">佐藤 花子</div>
+          <div class="guest-card-sub">VIP</div>
+        </div>
+        <div class="guest-card" onclick="selectGuest3(this)">
+          <div class="guest-avatar">鈴</div>
+          <div class="guest-card-name">鈴木 太郎</div>
+          <div class="guest-card-sub">一般</div>
+        </div>
+        <div class="guest-card" onclick="selectGuest3(this)">
+          <div class="guest-avatar">山</div>
+          <div class="guest-card-name">山田 次郎</div>
+          <div class="guest-card-sub">一般</div>
+        </div>
+        <div class="guest-card" onclick="selectGuest3(this)">
+          <div class="guest-avatar">高</div>
+          <div class="guest-card-name">高橋 三恵</div>
+          <div class="guest-card-sub">VIP</div>
+        </div>
+        <div class="guest-card" onclick="selectGuest3(this)">
+          <div class="guest-avatar">渡</div>
+          <div class="guest-card-name">渡辺 四郎</div>
+          <div class="guest-card-sub">一般</div>
+        </div>
+        <div class="guest-card" onclick="selectGuest3(this)">
+          <div class="guest-avatar">伊</div>
+          <div class="guest-card-name">伊藤 五月</div>
+          <div class="guest-card-sub">一般</div>
+        </div>
+        <div class="guest-card" onclick="selectGuest3(this)">
+          <div class="guest-avatar">中</div>
+          <div class="guest-card-name">中村 六平</div>
+          <div class="guest-card-sub">一般</div>
+        </div>
+        <div class="guest-card" onclick="selectGuest3(this)" style="cursor:pointer;" onclick2="showScreen(4)">
+          <div class="guest-avatar">小</div>
+          <div class="guest-card-name">小林 七子</div>
+          <div class="guest-card-sub">一般</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="seat-action-bar">
+      <div class="seat-action-hint">
+        <strong id="guest3-hint">ゲストを選択してください</strong>
+        <span style="font-size:11px;color:var(--ink2);">卓01 · 03番席</span>
+      </div>
+      <button class="btn-assign-cta" id="confirm-btn" disabled onclick="doAssign()">この席に割当</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: GUEST EDIT MODAL -->
+  <div class="screen" id="s4">
+    <div class="topbar" style="padding-top:34px;">
+      <button class="topbar-back" onclick="showScreen(3)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="topbar-title">春季総会 — 席割</div>
+    </div>
+    <div style="flex:1;background:var(--bg);"></div>
+    <div class="modal-over" onclick="showScreen(3)">
+      <div class="modal-card" onclick="e=>e.stopPropagation()">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+          <strong>田中 一郎 を編集</strong>
+          <button class="modal-close" onclick="showScreen(3)">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-2col">
+            <div><div class="form-label">姓</div><input class="form-input" value="田中" type="text"></div>
+            <div><div class="form-label">名</div><input class="form-input" value="一郎" type="text"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-label">よみがな</div>
+            <input class="form-input" value="たなか いちろう" type="text">
+          </div>
+          <div class="form-row">
+            <div class="form-label">所属 / 役職</div>
+            <input class="form-input" value="営業部 部長" type="text">
+          </div>
+          <div class="form-row">
+            <div class="form-label">タグ</div>
+            <div class="tags-row">
+              <div class="tag-p">VIP <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+              <div class="tag-p">要通路側 <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+              <div class="tag-add">+ 追加</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-label">席割メモ</div>
+            <textarea class="form-input" style="resize:none;height:68px;" placeholder="備考・注意事項など"></textarea>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn-cancel" onclick="showScreen(3)">キャンセル</button>
+          <button class="btn-save" onclick="showScreen(3)">保存する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const screens = document.querySelectorAll('.screen');
+const btns = document.querySelectorAll('.screen-btn');
+function showScreen(i) {
+  screens.forEach((s,idx) => s.classList.toggle('active', idx===i));
+  btns.forEach((b,idx) => b.classList.toggle('active', idx===i));
+}
+
+let selectedSeatEl = null;
+function selectSeat(el, num) {
+  if (selectedSeatEl) selectedSeatEl.classList.remove('sel');
+  selectedSeatEl = el;
+  el.classList.add('sel');
+  document.getElementById('seat-hint-strong').textContent = `${num}番席を選択中`;
+  document.getElementById('seat-hint-sub').textContent = '次のステップでゲストを割当';
+  document.getElementById('assign-cta').disabled = false;
+}
+
+let selectedGuest3 = null;
+function selectGuest3(el) {
+  document.querySelectorAll('.guest-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedGuest3 = el.querySelector('.guest-card-name').textContent;
+  document.getElementById('guest3-hint').textContent = selectedGuest3;
+  document.getElementById('confirm-btn').disabled = false;
+}
+
+function doAssign() {
+  showScreen(2);
+  if (selectedSeatEl) {
+    selectedSeatEl.classList.remove('sel');
+    selectedSeatEl.classList.add('filled');
+    const name = selectedGuest3 ? selectedGuest3.slice(0,2) : '○○';
+    selectedSeatEl.querySelector('.seat-c-name').textContent = name;
+    selectedSeatEl.querySelector('.seat-c-name').className = 'seat-c-name';
+    selectedSeatEl.onclick = null;
+    selectedSeatEl = null;
+  }
+  document.getElementById('assign-cta').disabled = true;
+  document.getElementById('seat-hint-strong').textContent = '空席を選択';
+  document.getElementById('seat-hint-sub').textContent = '席をタップして選択してください';
+}
+</script>
+</body>
+</html>
