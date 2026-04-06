@@ -2006,10 +2006,23 @@
     height: 100%; border-radius: 2px;
     background: var(--green); transition: width 0.3s;
   }
-  .mobile-reorder-hint {
-    font-size: 0.75rem; color: var(--ink-light);
-    text-align: center; padding: 0.35rem 0;
+  .mobile-reorder-bar {
+    padding: 0.45rem 0.85rem;
+    background: rgba(184,134,11,0.08);
+    border: 1px solid rgba(184,134,11,0.3);
+    border-radius: 8px;
+    font-size: 0.78rem; color: #b8860b;
+    text-align: center;
   }
+  .mobile-table-card.reorder-src {
+    border: 2.5px solid var(--accent);
+    box-shadow: 0 0 0 3px rgba(192,57,43,0.2);
+  }
+  .mobile-reorder-actions {
+    display: flex; gap: 0.6rem; margin-top: 0.5rem;
+    padding: 0 0.15rem;
+  }
+  .mobile-reorder-actions .btn { flex: 1; }
 }
 
 /* ── 席割ページ モバイル専用レイアウト（AssignPage） ── */
@@ -2030,12 +2043,23 @@
 
   /* アクションバー */
   .mobile-assign-actions {
-    display: flex; gap: 0.6rem; padding: 0.7rem 0.85rem;
+    display: flex; gap: 0.5rem; padding: 0.7rem 0.85rem;
     background: var(--paper);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-  .mobile-assign-actions .btn { flex: 1; padding: 0.7rem 0.5rem; border-radius: 10px; font-size: 0.85rem; }
+  .mobile-assign-actions .btn { flex: 1; padding: 0.7rem 0.4rem; border-radius: 10px; font-size: 0.82rem; }
+  .mobile-custom-btn-group { display: flex; gap: 0.25rem; flex: 1.5; }
+  .mobile-custom-btn-group .btn-green { flex: 1; }
+  .mobile-custom-setting-btn { padding: 0.7rem 0.6rem !important; flex: none !important; }
+  .mobile-clear-btn { flex: none !important; padding: 0.7rem 0.6rem !important; font-size: 0.82rem; }
+
+  /* AssignFloorTable モバイルラッパー */
+  .mobile-floor-table-wrap {
+    display: flex; justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
 
   /* フラグチップバー */
   .mobile-flag-bar { display: none; }
@@ -2074,19 +2098,19 @@
   }
   .mobile-flag-chip-x { font-size: 0.85rem; opacity: 0.75; }
 
-  /* 選択中バナー */
+  /* 選択中バナー（青系） */
   .mobile-selection-banner {
     padding: 0.55rem 0.85rem;
-    background: rgba(192,57,43,0.08);
-    border-bottom: 2px solid var(--accent);
-    font-size: 0.82rem; font-weight: 700; color: var(--accent);
+    background: rgba(42,122,176,0.08);
+    border-bottom: 2px solid #2a7ab0;
+    font-size: 0.82rem; font-weight: 700; color: #1a5a90;
     display: flex; align-items: center; justify-content: space-between;
     flex-shrink: 0;
   }
   .mobile-selection-banner button {
-    background: none; border: 1px solid var(--accent);
+    background: none; border: 1px solid #2a7ab0;
     border-radius: 4px; padding: 0.2rem 0.6rem;
-    font-size: 0.78rem; color: var(--accent);
+    font-size: 0.78rem; color: #2a7ab0;
     cursor: pointer; -webkit-tap-highlight-color: transparent;
   }
 
@@ -2202,10 +2226,10 @@
     touch-action: manipulation;
     white-space: nowrap;
   }
-  /* 選択中（配置操作） */
+  /* 選択中（配置操作・青系） */
   .attendee-chip.chip-selected {
-    border-color: var(--accent);
-    background: var(--accent); color: #fff;
+    border-color: #2a7ab0;
+    background: #1a5a90; color: #fff;
   }
   /* フラグ一致 */
   .attendee-chip.flag-match {
@@ -2219,8 +2243,8 @@
   .attendee-chip.chip-selected.flag-dim { opacity: 1; }
   /* 選択中 + フラグ一致 → 選択が優先、金の枠を微妙に残す */
   .attendee-chip.chip-selected.flag-match {
-    border-color: var(--accent);
-    background: var(--accent); color: #fff;
+    border-color: #2a7ab0;
+    background: #1a5a90; color: #fff;
     box-shadow: 0 0 0 2px rgba(184,134,11,0.45);
   }
   .chip-flag-star { margin-right: 0.1rem; }

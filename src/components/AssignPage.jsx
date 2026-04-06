@@ -623,8 +623,13 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
       <div className="mobile-assign-layout">
         {/* アクションバー */}
         <div className="mobile-assign-actions">
-          <button className="btn btn-outline" onClick={randomAssign}>🎲 ランダム配置</button>
-          <button className="btn btn-green"   onClick={customAssign}>✨ カスタム配置</button>
+          <button className="btn btn-outline" onClick={randomAssign}>🎲 ランダム</button>
+          <div className="mobile-custom-btn-group">
+            <button className="btn btn-green" onClick={customAssign}>✨ カスタム</button>
+            <button className="btn btn-outline mobile-custom-setting-btn"
+              onClick={() => setCustomRuleModalOpen(true)} aria-label="カスタム設定">⚙️</button>
+          </div>
+          <button className="btn btn-danger btn-sm mobile-clear-btn" onClick={clearAll}>全解除</button>
         </div>
 
         {/* フラグチップ行（フラグが1つ以上ある場合のみ表示） */}
@@ -663,37 +668,42 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           {tables.map(table => {
             const tSeats = seats.filter(s => s.tableId === table.id);
             const hasV   = violationTableIds.has(table.id);
+            const tViol  = violations.filter(v => v.tableId === table.id);
+            const tViolSeatIds = new Set([...violationSeatIds].filter(id => tSeats.some(s => s.id === id)));
+            // スケール後のラッパー高さを席数から概算
+            const N = table.seatCount;
+            const scale = 0.72;
+            let rawH;
+            if ((table.shape || 'rect') === 'round') {
+              const tR = Math.max(42, Math.min(80, 28 + N * 4));
+              const cR = Math.max(20, Math.min(30, tR * 0.45));
+              const oR = tR + cR + 8;
+              const roundSz = (oR + cR) * 2 + 20;
+              rawH = roundSz + 80;
+            } else {
+              const cH = 48, cGap = 8, tH = 70;
+              const cvH = tH + (cH + cGap) * 2 + 20;
+              rawH = cvH + 80;
+            }
             return (
               <div key={table.id} className="mobile-table-section">
-                <div className="mobile-table-section-name">
-                  {table.name}
-                  {hasV && <span className="viol-badge">⚠️ NG違反</span>}
-                </div>
-                <div className="mobile-seats-grid">
-                  {tSeats.map(seat => {
-                    const occupantId = assignments[seat.id];
-                    const attendee   = attendees.find(a => a.id === occupantId);
-                    const isFlagMatch = !!(flagHighlightIds && occupantId && flagHighlightIds.has(occupantId));
-                    const isFlagDim   = !!(flagHighlightIds && flagHighlightIds.size > 0 && occupantId && !flagHighlightIds.has(occupantId));
-                    const isTarget    = !!selected && !occupantId; // 空席 + 選択中
-                    const isSelected  = occupantId === selected;   // この席の人を選択中
-
-                    const cls = [
-                      'mobile-seat',
-                      occupantId  ? 'occupied'     : '',
-                      isTarget    ? 'place-target'  : '',
-                      isSelected  ? 'place-target'  : '',
-                      isFlagMatch ? 'flag-match'   : '',
-                      isFlagDim   ? 'flag-dim'     : '',
-                    ].filter(Boolean).join(' ');
-
-                    return (
-                      <button key={seat.id} className={cls} onClick={() => handleMobileSeatTap(seat.id)}>
-                        {isFlagMatch && <span className="seat-flag-star">★</span>}
-                        {attendee ? attendee.name.slice(0, 2) : ''}
-                      </button>
-                    );
-                  })}
+                <div className="mobile-floor-table-wrap" style={{height: Math.round(rawH * scale)}}>
+                  <div style={{transform:`scale(${scale})`, transformOrigin:'top center', width:`${Math.round(100/scale)}%`}}>
+                    <AssignFloorTable
+                      table={table} seats={tSeats}
+                      assignments={assignments} attendees={attendees}
+                      violationSeatIds={tViolSeatIds}
+                      selectedId={selected}
+                      lockedAttendees={lockedAttendees}
+                      hasViolation={hasV} tableViolations={tViol}
+                      flagHighlightIds={flagHighlightIds}
+                      onSeatClick={handleSeatClick}
+                      onUnassign={unassignSeat}
+                      onDragDrop={handleDragDrop}
+                      onAttendeeAssign={handleAttendeeAssign}
+                      onDragCancel={clearSelection}
+                    />
+                  </div>
                 </div>
               </div>
             );

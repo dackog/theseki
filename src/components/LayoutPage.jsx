@@ -1,7 +1,7 @@
 // src/components/LayoutPage.jsx
 // CDN 版からのコピー (docs/index.html 行 2621-2796)
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { uid } from '../lib/uid.js';
 import { generateSeats, checkViolations } from '../lib/seats.js';
 import FloorTable from './FloorTable.jsx';
@@ -15,13 +15,10 @@ export default function LayoutPage({ event, dispatch, notify }) {
   const [selectedId, setSelectedId] = useState(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
 
-  // モバイル長押し並び替え
-  const longPressTimer = useRef(null);
+  // モバイル2タップ並び替え・編集
   const [reorderMode, setReorderMode] = useState(false);
-  const [draggingIdx, setDraggingIdx] = useState(null);
-  const [targetIdx, setTargetIdx] = useState(null);
-  const cardRefs = useRef([]);
-  const touchStartY = useRef(0);
+  const [reorderSrcIdx, setReorderSrcIdx] = useState(null);
+  const [editingTable, setEditingTable] = useState(null);
 
   const tables = event.tables || [];
   const seats = useMemo(()=>generateSeats(tables.map(t=>({...t,eventId:event.id}))), [tables, event.id]);
@@ -105,49 +102,25 @@ export default function LayoutPage({ event, dispatch, notify }) {
   }, []);
   const effectiveFloorDesign = isMobileLayout ? 'default' : floorDesign;
 
-  // モバイル長押し並び替えハンドラ
-  const handleCardTouchStart = useCallback((e, idx) => {
-    touchStartY.current = e.touches[0].clientY;
-    longPressTimer.current = setTimeout(() => {
-      setReorderMode(true);
-      setDraggingIdx(idx);
-      setTargetIdx(idx);
-      if (navigator.vibrate) navigator.vibrate(40);
-    }, 500);
-  }, []);
-
-  const handleCardTouchMove = useCallback((e) => {
-    if (!reorderMode || draggingIdx === null) return;
-    e.preventDefault();
-    const y = e.touches[0].clientY;
-    // カードの位置からどのインデックスに重なっているか判定
-    let closest = draggingIdx;
-    let minDist = Infinity;
-    cardRefs.current.forEach((ref, i) => {
-      if (!ref) return;
-      const rect = ref.getBoundingClientRect();
-      const centerY = rect.top + rect.height / 2;
-      const dist = Math.abs(y - centerY);
-      if (dist < minDist) { minDist = dist; closest = i; }
-    });
-    setTargetIdx(closest);
-  }, [reorderMode, draggingIdx]);
-
-  const handleCardTouchEnd = useCallback(() => {
-    clearTimeout(longPressTimer.current);
-    if (reorderMode && draggingIdx !== null && targetIdx !== null && draggingIdx !== targetIdx) {
-      // draggingIdxからtargetIdxへ移動（1ステップずつdispatch）
-      const steps = targetIdx > draggingIdx ? 1 : -1;
-      let cur = draggingIdx;
-      while (cur !== targetIdx) {
-        dispatch({ type: 'MOVE_TABLE', eventId: event.id, idx: cur, dir: steps });
-        cur += steps;
-      }
+  // モバイル2タップ並び替えハンドラ
+  const handleReorderTap = (idx) => {
+    if (!reorderMode) return;
+    if (reorderSrcIdx === null) {
+      setReorderSrcIdx(idx);
+      return;
     }
-    setReorderMode(false);
-    setDraggingIdx(null);
-    setTargetIdx(null);
-  }, [reorderMode, draggingIdx, targetIdx, dispatch, event.id]);
+    if (reorderSrcIdx === idx) {
+      setReorderSrcIdx(null);
+      return;
+    }
+    const dir = idx > reorderSrcIdx ? 1 : -1;
+    let cur = reorderSrcIdx;
+    while (cur !== idx) {
+      dispatch({ type: 'MOVE_TABLE', eventId: event.id, idx: cur, dir });
+      cur += dir;
+    }
+    setReorderSrcIdx(null);
+  };
 
   return (
     <div className="floor-layout-shell" style={isMobileLayout ? {display:'flex',flexDirection:'column',height:'100%'} : {}}>
@@ -174,21 +147,24 @@ export default function LayoutPage({ event, dispatch, notify }) {
               </select>
             </>
           )}
-          <button className="btn btn-accent btn-sm" onClick={()=>setShowAdd(true)}>＋ 卓を追加</button>
+          {!isMobileLayout && (
+            <button className="btn btn-accent btn-sm" onClick={()=>setShowAdd(true)}>＋ 卓を追加</button>
+          )}
         </div>
       </div>
 
       {/* ── モバイル専用グリッド表示 ── */}
       {isMobileLayout && (
-        <div className="mobile-table-grid"
-          onTouchMove={handleCardTouchMove}
-          onTouchEnd={handleCardTouchEnd}
-          onTouchCancel={handleCardTouchEnd}>
+        <div className="mobile-table-grid">
           <button className="btn btn-accent mobile-add-table-btn" onClick={() => setShowAdd(true)}>
             ＋ 卓を追加
           </button>
           {reorderMode && (
-            <div className="mobile-reorder-hint">長押しドラッグで並び替え中…</div>
+            <div className="mobile-reorder-bar">
+              {reorderSrcIdx === null
+                ? '移動元の卓をタップ → 移動先をタップで入れ替え'
+                : `「${tables[reorderSrcIdx]?.name}」を選択中 → 移動先をタップ`}
+            </div>
           )}
           <div className="mobile-table-cards">
             {tables.length === 0 && (
@@ -200,15 +176,12 @@ export default function LayoutPage({ event, dispatch, notify }) {
               const tSeats = seats.filter(s => s.tableId === t.id);
               const occ = tSeats.filter(s => assignments[s.id]).length;
               const pct = t.seatCount > 0 ? Math.round(occ / t.seatCount * 100) : 0;
-              const isDragging = draggingIdx === idx;
-              const isTarget = reorderMode && targetIdx === idx && draggingIdx !== idx;
+              const isSrc = reorderSrcIdx === idx;
               return (
                 <div
                   key={t.id}
-                  ref={el => { cardRefs.current[idx] = el; }}
-                  className={`mobile-table-card${isDragging ? ' dragging' : ''}${isTarget ? ' reorder-target' : ''}`}
-                  onTouchStart={e => handleCardTouchStart(e, idx)}
-                  onClick={() => !reorderMode && setSelectedId(t.id === selectedId ? null : t.id)}>
+                  className={`mobile-table-card${isSrc ? ' reorder-src' : ''}`}
+                  onClick={() => reorderMode ? handleReorderTap(idx) : setEditingTable(t)}>
                   <div className="mobile-table-card-name">{t.name}</div>
                   <div className="mobile-table-card-seats">{occ}/{t.seatCount}席</div>
                   <div className="mobile-table-card-prog">
@@ -217,6 +190,17 @@ export default function LayoutPage({ event, dispatch, notify }) {
                 </div>
               );
             })}
+          </div>
+          <div className="mobile-reorder-actions">
+            {!reorderMode ? (
+              <button className="btn btn-outline btn-sm" onClick={() => setReorderMode(true)}>
+                並び順を変更
+              </button>
+            ) : (
+              <button className="btn btn-outline btn-sm" onClick={() => { setReorderMode(false); setReorderSrcIdx(null); }}>
+                ✓ 完了
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -272,6 +256,52 @@ export default function LayoutPage({ event, dispatch, notify }) {
           <div><label>卓名（省略時: 自動採番）</label><input type="text" value={newTable.name} onChange={e=>setNewTable(f=>({...f,name:e.target.value}))} placeholder={`T${tables.length+1}`} autoFocus/></div>
           <div><label>座席数</label><input type="number" min="1" max="30" value={newTableSeatCountInput} onFocus={e=>e.target.select()} onChange={e=>setNewTableSeatCountInput(e.target.value)} onBlur={commitNewTableSeatCount} onKeyDown={e=>{ if (e.key==='Enter') { commitNewTableSeatCount(); e.target.blur(); } }}/></div>
           <div><label>テーブル形状</label><div style={{display:'flex',gap:'0.75rem',marginTop:'0.25rem'}}>{[{v:'rect',icon:'⬛',label:'四角（デフォルト）'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(<button key={s.v} className={`btn ${newTable.shape===s.v?'btn-primary':'btn-outline'}`} style={{flex:1,flexDirection:'column',gap:'0.3rem',padding:'0.75rem 0.5rem',fontSize:'0.82rem'}} onClick={()=>setNewTable(f=>({...f,shape:s.v}))}><span style={{fontSize:'1.5rem'}}>{s.icon}</span>{s.label}</button>))}</div></div>
+        </Modal>
+      )}
+
+      {/* ── モバイル卓編集モーダル ── */}
+      {editingTable && (
+        <Modal title={`${editingTable.name} を編集`}
+          onClose={() => setEditingTable(null)}
+          footer={<>
+            <button className="btn btn-danger btn-sm" onClick={() => { delTable(editingTable.id); setEditingTable(null); }}>削除</button>
+            <button className="btn btn-outline" onClick={() => setEditingTable(null)}>閉じる</button>
+          </>}>
+          <div>
+            <label>卓名</label>
+            <input type="text" value={editingTable.name}
+              onChange={e => { const v = e.target.value; updateTable(editingTable.id, 'name', v); setEditingTable(t => ({...t, name: v})); }}/>
+          </div>
+          <div>
+            <label>座席数</label>
+            <input type="number" min="1" max="30"
+              value={editingSeatCounts[editingTable.id] ?? String(editingTable.seatCount)}
+              onFocus={e => e.target.select()}
+              onChange={e => setEditingSeatCounts(prev => ({...prev, [editingTable.id]: e.target.value}))}
+              onBlur={() => {
+                const raw = editingSeatCounts[editingTable.id];
+                if (raw !== undefined) {
+                  const n = parseInt(raw, 10);
+                  const sc = Number.isFinite(n) ? Math.max(1, Math.min(30, n)) : editingTable.seatCount;
+                  updateTable(editingTable.id, 'seatCount', sc);
+                  setEditingTable(t => ({...t, seatCount: sc}));
+                  setEditingSeatCounts(prev => { const next = {...prev}; delete next[editingTable.id]; return next; });
+                }
+              }}/>
+          </div>
+          <div>
+            <label>形状</label>
+            <div style={{display:'flex',gap:'0.4rem',marginTop:'0.25rem'}}>
+              {[{v:'rect',icon:'⬛',label:'四角'},{v:'round',icon:'🔵',label:'丸'}].map(s=>(
+                <button key={s.v}
+                  className={`btn ${(editingTable.shape||'rect')===s.v?'btn-primary':'btn-outline'}`}
+                  style={{flex:1}}
+                  onClick={() => { updateTable(editingTable.id,'shape',s.v); setEditingTable(t=>({...t,shape:s.v})); }}>
+                  {s.icon} {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </Modal>
       )}
 
