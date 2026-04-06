@@ -1846,3 +1846,382 @@
       font-size: 0.68rem !important;
     }
   }
+
+/* ══════════════════════════════════════════════════════════════
+   ■ スマホUI再設計 (2025-04)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── モバイルイベントヘッダー（イベント詳細ページ専用） ── */
+.mobile-event-header { display: none; }
+
+@media (max-width: 768px) {
+  /* イベント詳細ページではtopbarを非表示 */
+  .topbar.topbar-subpage { display: none !important; }
+
+  /* mobile-event-headerを表示 */
+  .mobile-event-header {
+    display: flex;
+    align-items: center;
+    height: 52px;
+    padding: 0 0.5rem 0 0.2rem;
+    background: var(--ink);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    position: sticky; top: 0; z-index: 130;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+  .hamburger-btn {
+    background: none; border: none; cursor: pointer;
+    padding: 0.5rem;
+    min-width: 44px; min-height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.85);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    flex-shrink: 0;
+  }
+  .hamburger-btn svg {
+    width: 22px; height: 22px;
+    stroke: currentColor; fill: none; stroke-width: 2;
+    stroke-linecap: round;
+  }
+  .mobile-event-title {
+    flex: 1;
+    font-weight: 700; font-size: 0.95rem;
+    font-family: 'Noto Serif JP', serif;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: #fff;
+  }
+  /* InnerNavはモバイルでは非表示（mobile-event-header + 下部ナビで代替） */
+  .inner-nav-wrap { display: none !important; }
+  /* event-subpage-shellの高さ補正：topbar非表示 + mobile-event-header(52px) + bottomnav(56px) */
+  .event-subpage-shell {
+    height: calc(100dvh - 52px - 56px - env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* ── ハンバーガードロワー ── */
+.drawer-overlay { display: none; }
+.drawer        { display: none; }
+
+@media (max-width: 768px) {
+  .drawer-overlay {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 400;
+  }
+  .drawer {
+    display: flex;
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: min(280px, 80vw);
+    background: var(--paper);
+    z-index: 410;
+    flex-direction: column;
+    animation: drawerSlideIn 0.22s cubic-bezier(0.4,0,0.2,1);
+    overflow-y: auto;
+  }
+  @keyframes drawerSlideIn {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+  }
+  .drawer-header {
+    padding: 1.25rem 1.25rem 0.6rem;
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 700; font-size: 0.9rem;
+    color: var(--ink-light);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.5rem;
+  }
+  .drawer-item {
+    display: block; width: 100%;
+    padding: 0.9rem 1.25rem;
+    background: none; border: none; border-bottom: 1px solid var(--border);
+    text-align: left; font-size: 0.95rem; color: var(--ink);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .drawer-item:active { background: var(--paper-warm); }
+}
+
+/* ── 座席ページ グリッド表示（LayoutPage） ── */
+.mobile-table-grid { display: none; }
+
+@media (max-width: 768px) {
+  /* 既存のfloor-layoutを非表示 */
+  .floor-layout-shell .floor-layout { display: none; }
+
+  .mobile-table-grid {
+    display: flex; flex-direction: column;
+    padding: 0.75rem;
+    gap: 0.75rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .mobile-add-table-btn {
+    width: 100%; padding: 0.85rem;
+    font-size: 1rem; border-radius: 12px;
+    font-weight: 700;
+  }
+  .mobile-table-cards {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;
+  }
+  .mobile-table-card {
+    background: var(--paper);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 0.75rem;
+    display: flex; flex-direction: column; gap: 0.3rem;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .mobile-table-card:active { background: var(--paper-warm); }
+  .mobile-table-card.dragging {
+    transform: scale(1.06);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    border-color: var(--accent);
+    z-index: 10; opacity: 0.92;
+  }
+  .mobile-table-card.reorder-target {
+    border-color: var(--accent-gold);
+    background: rgba(184,134,11,0.06);
+  }
+  .mobile-table-card-name {
+    font-weight: 700; font-size: 0.95rem;
+    color: var(--ink); font-family: 'Noto Serif JP', serif;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .mobile-table-card-seats {
+    font-size: 0.8rem; color: var(--ink-light);
+  }
+  .mobile-table-card-prog {
+    height: 4px; background: var(--paper-dark); border-radius: 2px;
+    overflow: hidden; margin-top: 0.25rem;
+  }
+  .mobile-table-card-prog-fill {
+    height: 100%; border-radius: 2px;
+    background: var(--green); transition: width 0.3s;
+  }
+  .mobile-reorder-hint {
+    font-size: 0.75rem; color: var(--ink-light);
+    text-align: center; padding: 0.35rem 0;
+  }
+}
+
+/* ── 席割ページ モバイル専用レイアウト（AssignPage） ── */
+.mobile-assign-layout { display: none; }
+
+@media (max-width: 768px) {
+  /* 既存モバイルUIを非表示（新UIに置き換え） */
+  .assign-mobile-minimap  { display: none !important; }
+  .assign-mobile-toolbar  { display: none !important; }
+  .assign-mobile-sheet    { display: none !important; }
+  .assign-layout          { display: none !important; }
+  .violation-banner       { display: none !important; }
+
+  .mobile-assign-layout {
+    display: flex; flex-direction: column;
+    flex: 1; overflow: hidden;
+  }
+
+  /* アクションバー */
+  .mobile-assign-actions {
+    display: flex; gap: 0.6rem; padding: 0.7rem 0.85rem;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mobile-assign-actions .btn { flex: 1; padding: 0.7rem 0.5rem; border-radius: 10px; font-size: 0.85rem; }
+
+  /* フラグチップバー */
+  .mobile-flag-bar { display: none; }
+  .mobile-flag-bar.has-flags {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mobile-flag-bar.has-flags::-webkit-scrollbar { display: none; }
+
+  .mobile-flag-chip {
+    flex-shrink: 0;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--paper);
+    font-size: 0.8rem;
+    cursor: pointer; white-space: nowrap;
+    display: flex; align-items: center; gap: 0.25rem;
+    transition: all 0.15s;
+    min-height: 34px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    color: var(--ink);
+  }
+  .mobile-flag-chip.active {
+    background: #b8860b;
+    border-color: #b8860b;
+    color: #fff8c0; font-weight: 700;
+  }
+  .mobile-flag-chip-x { font-size: 0.85rem; opacity: 0.75; }
+
+  /* 選択中バナー */
+  .mobile-selection-banner {
+    padding: 0.55rem 0.85rem;
+    background: rgba(192,57,43,0.08);
+    border-bottom: 2px solid var(--accent);
+    font-size: 0.82rem; font-weight: 700; color: var(--accent);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .mobile-selection-banner button {
+    background: none; border: 1px solid var(--accent);
+    border-radius: 4px; padding: 0.2rem 0.6rem;
+    font-size: 0.78rem; color: var(--accent);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 卓＋席エリア（スクロール可） */
+  .mobile-tables-scroll {
+    flex: 1; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem 0.85rem;
+    padding-bottom: 0;
+  }
+  .mobile-table-section { margin-bottom: 1.25rem; }
+  .mobile-table-section-name {
+    font-weight: 700; font-size: 0.88rem;
+    font-family: 'Noto Serif JP', serif;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .mobile-table-section-name .viol-badge {
+    font-size: 0.7rem; color: var(--accent);
+  }
+  .mobile-seats-grid {
+    display: flex; flex-wrap: wrap; gap: 0.45rem;
+  }
+
+  /* 席ボタン */
+  .mobile-seat {
+    width: 54px; height: 54px; border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--paper);
+    font-size: 0.68rem; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    color: var(--ink); position: relative;
+    overflow: hidden;
+  }
+  .mobile-seat.occupied {
+    background: radial-gradient(circle at 40% 35%, #5a8a6a, #2d5a3d);
+    color: #d0f0dc; border-color: rgba(120,200,140,0.4);
+  }
+  .mobile-seat.place-target {
+    border: 2.5px solid var(--accent);
+    background: rgba(192,57,43,0.08);
+    animation: seatPulse 0.9s ease-in-out infinite alternate;
+  }
+  @keyframes seatPulse {
+    from { box-shadow: 0 0 0 0 rgba(192,57,43,0.2); }
+    to   { box-shadow: 0 0 0 5px rgba(192,57,43,0.0); }
+  }
+  /* フラグ一致 */
+  .mobile-seat.flag-match {
+    background: radial-gradient(circle at 40% 35%, #b8860b, #7a5800);
+    border: 2.5px solid rgba(255,220,60,0.9);
+    color: #fff8c0;
+    box-shadow: 0 0 0 2px rgba(255,220,60,0.25);
+  }
+  /* フラグ対象外（dim） */
+  .mobile-seat.flag-dim { opacity: 0.28; }
+  /* place-target + flag-match → place-targetを優先 */
+  .mobile-seat.place-target.flag-match {
+    background: rgba(192,57,43,0.08);
+    border: 2.5px solid var(--accent);
+    color: var(--ink);
+    box-shadow: none;
+  }
+
+  .seat-flag-star {
+    position: absolute; top: 2px; right: 3px;
+    font-size: 0.55rem; line-height: 1;
+    color: #ffe066; pointer-events: none;
+  }
+
+  /* 未配置参加者パネル */
+  .mobile-unassigned-panel {
+    flex-shrink: 0;
+    padding: 0.65rem 0.85rem;
+    background: var(--paper);
+    border-top: 1px solid var(--border);
+  }
+  .mobile-unassigned-label {
+    font-size: 0.75rem; color: var(--ink-light);
+    margin-bottom: 0.45rem; font-weight: 600;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .mobile-unassigned-badge {
+    background: rgba(192,57,43,0.1);
+    color: var(--accent);
+    border-radius: 10px; padding: 1px 7px;
+    font-size: 0.68rem; font-weight: 700;
+  }
+  .mobile-unassigned-badge.all-done {
+    background: rgba(45,106,79,0.1); color: var(--green);
+  }
+  .mobile-attendee-chips {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    max-height: 100px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 参加者チップ */
+  .attendee-chip {
+    padding: 0.35rem 0.7rem;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--paper);
+    font-size: 0.82rem; color: var(--ink);
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 0.2rem;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    white-space: nowrap;
+  }
+  /* 選択中（配置操作） */
+  .attendee-chip.chip-selected {
+    border-color: var(--accent);
+    background: var(--accent); color: #fff;
+  }
+  /* フラグ一致 */
+  .attendee-chip.flag-match {
+    border-color: #b8860b;
+    background: rgba(184,134,11,0.09);
+  }
+  .attendee-chip.flag-match .chip-flag-star { color: #b8860b; font-size: 0.75rem; }
+  /* フラグ対象外（dim） */
+  .attendee-chip.flag-dim { opacity: 0.3; }
+  /* 選択中はflag-dimより優先 */
+  .attendee-chip.chip-selected.flag-dim { opacity: 1; }
+  /* 選択中 + フラグ一致 → 選択が優先、金の枠を微妙に残す */
+  .attendee-chip.chip-selected.flag-match {
+    border-color: var(--accent);
+    background: var(--accent); color: #fff;
+    box-shadow: 0 0 0 2px rgba(184,134,11,0.45);
+  }
+  .chip-flag-star { margin-right: 0.1rem; }
+}

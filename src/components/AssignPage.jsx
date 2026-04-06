@@ -20,6 +20,14 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   const assignments = event.assignments || {};
   const lockedAttendees = event.lockedAttendees || {};
 
+  // モバイル判定
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const [selected,  setSelected]  = useState(null);
   const [filterTag, setFilterTag] = useState('');
   const [search,    setSearch]    = useState('');
@@ -440,6 +448,16 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
     return true;
   });
 
+  // モバイル: 席ボタンのタップ処理（handleSeatClickを流用）
+  const handleMobileSeatTap = (seatId) => {
+    handleSeatClick(seatId);
+  };
+
+  // モバイル: 参加者チップのタップ処理
+  const handleMobileChipTap = (attendeeId) => {
+    setSelected(prev => prev === attendeeId ? null : attendeeId);
+  };
+
   const selName = selected ? attendees.find(a=>a.id===selected)?.name : null;
 
   const handlePageClick = (e) => {
@@ -600,6 +618,121 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           ⚠️ NGペア違反 {violations.length}件：{violations.map(v=>`${v.tableName}（${v.aName}×${v.bName}）`).join('、')}
         </div>
       )}
+
+      {/* ══ モバイル専用レイアウト ══ */}
+      <div className="mobile-assign-layout">
+        {/* アクションバー */}
+        <div className="mobile-assign-actions">
+          <button className="btn btn-outline" onClick={randomAssign}>🎲 ランダム配置</button>
+          <button className="btn btn-green"   onClick={customAssign}>✨ カスタム配置</button>
+        </div>
+
+        {/* フラグチップ行（フラグが1つ以上ある場合のみ表示） */}
+        <div className={`mobile-flag-bar${allTags.length > 0 ? ' has-flags' : ''}`}>
+          <button
+            className={`mobile-flag-chip${!filterTag ? ' active' : ''}`}
+            onClick={() => setFilterTag('')}>
+            すべて
+          </button>
+          {allTags.map(tag => (
+            <button
+              key={tag}
+              className={`mobile-flag-chip${filterTag === tag ? ' active' : ''}`}
+              onClick={() => setFilterTag(prev => prev === tag ? '' : tag)}>
+              {tag}
+              {filterTag === tag && <span className="mobile-flag-chip-x">×</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* 参加者選択中バナー */}
+        {selName && (
+          <div className="mobile-selection-banner">
+            <span>👆 {selName} を選択中 — 席をタップして配置</span>
+            <button onClick={clearSelection}>× 解除</button>
+          </div>
+        )}
+
+        {/* 卓＋席エリア */}
+        <div className="mobile-tables-scroll">
+          {tables.length === 0 && (
+            <div style={{textAlign:'center',padding:'2rem',color:'var(--ink-light)',fontSize:'0.85rem'}}>
+              座席タブから卓を追加してください
+            </div>
+          )}
+          {tables.map(table => {
+            const tSeats = seats.filter(s => s.tableId === table.id);
+            const hasV   = violationTableIds.has(table.id);
+            return (
+              <div key={table.id} className="mobile-table-section">
+                <div className="mobile-table-section-name">
+                  {table.name}
+                  {hasV && <span className="viol-badge">⚠️ NG違反</span>}
+                </div>
+                <div className="mobile-seats-grid">
+                  {tSeats.map(seat => {
+                    const occupantId = assignments[seat.id];
+                    const attendee   = attendees.find(a => a.id === occupantId);
+                    const isFlagMatch = !!(flagHighlightIds && occupantId && flagHighlightIds.has(occupantId));
+                    const isFlagDim   = !!(flagHighlightIds && flagHighlightIds.size > 0 && occupantId && !flagHighlightIds.has(occupantId));
+                    const isTarget    = !!selected && !occupantId; // 空席 + 選択中
+                    const isSelected  = occupantId === selected;   // この席の人を選択中
+
+                    const cls = [
+                      'mobile-seat',
+                      occupantId  ? 'occupied'     : '',
+                      isTarget    ? 'place-target'  : '',
+                      isSelected  ? 'place-target'  : '',
+                      isFlagMatch ? 'flag-match'   : '',
+                      isFlagDim   ? 'flag-dim'     : '',
+                    ].filter(Boolean).join(' ');
+
+                    return (
+                      <button key={seat.id} className={cls} onClick={() => handleMobileSeatTap(seat.id)}>
+                        {isFlagMatch && <span className="seat-flag-star">★</span>}
+                        {attendee ? attendee.name.slice(0, 2) : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 未配置参加者チップ */}
+        <div className="mobile-unassigned-panel">
+          <div className="mobile-unassigned-label">
+            未配置参加者
+            <span className={`mobile-unassigned-badge${unassigned.length === 0 ? ' all-done' : ''}`}>
+              {unassigned.length === 0 ? '全員配置済 ✓' : `${unassigned.length}名`}
+            </span>
+          </div>
+          <div className="mobile-attendee-chips">
+            {unassigned.length === 0 && (
+              <span style={{fontSize:'0.8rem',color:'var(--ink-light)'}}>全員配置済です</span>
+            )}
+            {unassigned.map(a => {
+              const isChipSelected = selected === a.id;
+              const isFlagMatch    = !!(filterTag && a.flags.includes(filterTag));
+              const isFlagDim      = !!(filterTag && !a.flags.includes(filterTag));
+              const cls = [
+                'attendee-chip',
+                isChipSelected ? 'chip-selected' : '',
+                isFlagMatch    ? 'flag-match'    : '',
+                isFlagDim      ? 'flag-dim'      : '',
+              ].filter(Boolean).join(' ');
+              return (
+                <button key={a.id} className={cls} onClick={() => handleMobileChipTap(a.id)}>
+                  {isFlagMatch && <span className="chip-flag-star">★</span>}
+                  {a.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      {/* ══ モバイル専用レイアウト 終 ══ */}
 
       <div className="assign-layout" ref={assignLayoutRef}>
         <div className="assign-sidebar">

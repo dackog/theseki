@@ -61,6 +61,8 @@ function useNotify() {
 }
 
 export default function App() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   // ---- 共有URL検出（hooks は全て早期 return より前に置く）----
 
   // ?share= パラメータ（DB共有、新方式）
@@ -435,37 +437,86 @@ export default function App() {
 
       {page==='events' && <EventsPage state={state} dispatch={dispatch} authUser={authUser} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>}
       {(page==='layout'||page==='assign'||page==='attendees') && currentEvent && (
-        <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column',height:'calc(100dvh - 52px)'}}>
-          <InnerNav subPage={page} setSubPage={(p)=>{if(p==='assign'){setAssignInitTab('seat');setAssignKey(k=>k+1);}setPage(p);}} eventName={currentEvent?.name} onBack={()=>setPage('events')}/>
-          <div className="event-subpage-content" style={{minHeight:0, WebkitOverflowScrolling:'touch'}}>
-            {page==='layout' && <LayoutPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
-            {page==='assign' && <AssignPage key={assignKey} event={currentEvent} dispatch={dispatch} notify={notify} initialSideTab={assignInitTab}/>}
-            {page==='attendees' && <AttendeesPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
+        <>
+          {/* ── モバイル専用イベントヘッダー（PCではCSS非表示） ── */}
+          <div className="mobile-event-header">
+            <button className="hamburger-btn" aria-label="メニューを開く" onClick={() => setDrawerOpen(true)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <line x1="3" y1="6"  x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+            <span className="mobile-event-title">{currentEvent.name}</span>
           </div>
-        </div>
+
+          <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column',height:'calc(100dvh - 52px)'}}>
+            <InnerNav subPage={page} setSubPage={(p)=>{if(p==='assign'){setAssignInitTab('seat');setAssignKey(k=>k+1);}setPage(p);}} eventName={currentEvent?.name} onBack={()=>setPage('events')}/>
+            <div className="event-subpage-content" style={{minHeight:0, WebkitOverflowScrolling:'touch'}}>
+              {page==='layout' && <LayoutPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
+              {page==='assign' && <AssignPage key={assignKey} event={currentEvent} dispatch={dispatch} notify={notify} initialSideTab={assignInitTab}/>}
+              {page==='attendees' && <AttendeesPage event={currentEvent} dispatch={dispatch} notify={notify}/>}
+            </div>
+          </div>
+        </>
       )}
 
       {note && <div className={`notification ${note.type}`}>{note.msg}</div>}
 
+      {/* ── ハンバーガードロワー（モバイルのみ表示） ── */}
+      {drawerOpen && (
+        <>
+          <div className="drawer-overlay" onClick={() => setDrawerOpen(false)}/>
+          <nav className="drawer" aria-label="メインメニュー">
+            <div className="drawer-header">メニュー</div>
+            <button className="drawer-item" onClick={() => { setPage('events'); setDrawerOpen(false); }}>
+              イベント一覧 / 新規作成
+            </button>
+            <button className="drawer-item" onClick={() => { setShowAuthModal(true); setDrawerOpen(false); }}>
+              アカウント（{displayName}）
+            </button>
+          </nav>
+        </>
+      )}
+
       {/* ── モバイルボトムナビ ── */}
       <nav className="mobile-bottom-nav" aria-label="メインナビゲーション">
-        <button
-          className={`mobile-nav-item ${page==='events'?'active':''}`}
-          onClick={()=>setPage('events')}
-          aria-label="イベント一覧"
-        >
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          <span>一覧</span>
-        </button>
-        <button
-          className={`mobile-nav-item ${(page==='assign'||page==='layout'||page==='attendees')?'active':''}`}
-          onClick={()=>{ if(currentEvent){ setAssignInitTab('seat'); setAssignKey(k=>k+1); setPage('assign'); } else { setPage('events'); } }}
-          aria-label="席割"
-          style={!currentEvent?{opacity:0.3}:{}}
-        >
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          <span>席割</span>
-        </button>
+        {/* イベント一覧ページ: 一覧ボタンのみ */}
+        {page === 'events' && (
+          <button className="mobile-nav-item active" onClick={() => setPage('events')} aria-label="イベント一覧">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span>一覧</span>
+          </button>
+        )}
+        {/* イベント詳細ページ: 座席／席割／参加者の3タブ */}
+        {(page==='layout'||page==='assign'||page==='attendees') && currentEvent && (
+          <>
+            <button
+              className={`mobile-nav-item ${page==='layout'?'active':''}`}
+              onClick={() => setPage('layout')}
+              aria-label="座席"
+            >
+              <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+              <span>座席</span>
+            </button>
+            <button
+              className={`mobile-nav-item ${page==='assign'?'active':''}`}
+              onClick={() => { setAssignInitTab('seat'); setAssignKey(k=>k+1); setPage('assign'); }}
+              aria-label="席割"
+            >
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              <span>席割</span>
+            </button>
+            <button
+              className={`mobile-nav-item ${page==='attendees'?'active':''}`}
+              onClick={() => setPage('attendees')}
+              aria-label="参加者"
+            >
+              <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+              <span>参加者</span>
+            </button>
+          </>
+        )}
       </nav>
 
       {(showAuthModal || isPasswordRecovery) && (

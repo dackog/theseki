@@ -1,7 +1,7 @@
 // src/components/LayoutPage.jsx
 // CDN 版からのコピー (docs/index.html 行 2621-2796)
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { uid } from '../lib/uid.js';
 import { generateSeats, checkViolations } from '../lib/seats.js';
 import FloorTable from './FloorTable.jsx';
@@ -14,6 +14,14 @@ export default function LayoutPage({ event, dispatch, notify }) {
   const [newTableSeatCountInput, setNewTableSeatCountInput] = useState('6');
   const [selectedId, setSelectedId] = useState(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
+
+  // モバイル長押し並び替え
+  const longPressTimer = useRef(null);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [draggingIdx, setDraggingIdx] = useState(null);
+  const [targetIdx, setTargetIdx] = useState(null);
+  const cardRefs = useRef([]);
+  const touchStartY = useRef(0);
 
   const tables = event.tables || [];
   const seats = useMemo(()=>generateSeats(tables.map(t=>({...t,eventId:event.id}))), [tables, event.id]);
@@ -85,11 +93,11 @@ export default function LayoutPage({ event, dispatch, notify }) {
   const totalSeats = tables.reduce((s,t)=>s+t.seatCount,0);
   const assignedCount = Object.values(assignments).filter(Boolean).length;
   const floorDesign = event.floorDesign || 'default';
-  const [isMobileLayout, setIsMobileLayout] = useState(() => window.innerWidth <= 720);
+  const [isMobileLayout, setIsMobileLayout] = useState(() => window.innerWidth <= 768);
   const [isCompactPc, setIsCompactPc] = useState(() => window.innerWidth <= 1200 || window.innerHeight <= 820);
   useEffect(() => {
     const onResize = () => {
-      setIsMobileLayout(window.innerWidth <= 720);
+      setIsMobileLayout(window.innerWidth <= 768);
       setIsCompactPc(window.innerWidth <= 1200 || window.innerHeight <= 820);
     };
     window.addEventListener('resize', onResize);
@@ -97,8 +105,52 @@ export default function LayoutPage({ event, dispatch, notify }) {
   }, []);
   const effectiveFloorDesign = isMobileLayout ? 'default' : floorDesign;
 
+  // モバイル長押し並び替えハンドラ
+  const handleCardTouchStart = useCallback((e, idx) => {
+    touchStartY.current = e.touches[0].clientY;
+    longPressTimer.current = setTimeout(() => {
+      setReorderMode(true);
+      setDraggingIdx(idx);
+      setTargetIdx(idx);
+      if (navigator.vibrate) navigator.vibrate(40);
+    }, 500);
+  }, []);
+
+  const handleCardTouchMove = useCallback((e) => {
+    if (!reorderMode || draggingIdx === null) return;
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    // カードの位置からどのインデックスに重なっているか判定
+    let closest = draggingIdx;
+    let minDist = Infinity;
+    cardRefs.current.forEach((ref, i) => {
+      if (!ref) return;
+      const rect = ref.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      const dist = Math.abs(y - centerY);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    });
+    setTargetIdx(closest);
+  }, [reorderMode, draggingIdx]);
+
+  const handleCardTouchEnd = useCallback(() => {
+    clearTimeout(longPressTimer.current);
+    if (reorderMode && draggingIdx !== null && targetIdx !== null && draggingIdx !== targetIdx) {
+      // draggingIdxからtargetIdxへ移動（1ステップずつdispatch）
+      const steps = targetIdx > draggingIdx ? 1 : -1;
+      let cur = draggingIdx;
+      while (cur !== targetIdx) {
+        dispatch({ type: 'MOVE_TABLE', eventId: event.id, idx: cur, dir: steps });
+        cur += steps;
+      }
+    }
+    setReorderMode(false);
+    setDraggingIdx(null);
+    setTargetIdx(null);
+  }, [reorderMode, draggingIdx, targetIdx, dispatch, event.id]);
+
   return (
-    <div className="floor-layout-shell">
+    <div className="floor-layout-shell" style={isMobileLayout ? {display:'flex',flexDirection:'column',height:'100%'} : {}}>
       <div className="floor-toolbar">
         <div className="floor-toolbar-stats">
           {[
@@ -125,6 +177,49 @@ export default function LayoutPage({ event, dispatch, notify }) {
           <button className="btn btn-accent btn-sm" onClick={()=>setShowAdd(true)}>＋ 卓を追加</button>
         </div>
       </div>
+
+      {/* ── モバイル専用グリッド表示 ── */}
+      {isMobileLayout && (
+        <div className="mobile-table-grid"
+          onTouchMove={handleCardTouchMove}
+          onTouchEnd={handleCardTouchEnd}
+          onTouchCancel={handleCardTouchEnd}>
+          <button className="btn btn-accent mobile-add-table-btn" onClick={() => setShowAdd(true)}>
+            ＋ 卓を追加
+          </button>
+          {reorderMode && (
+            <div className="mobile-reorder-hint">長押しドラッグで並び替え中…</div>
+          )}
+          <div className="mobile-table-cards">
+            {tables.length === 0 && (
+              <div style={{gridColumn:'1/-1',textAlign:'center',padding:'2rem',color:'var(--ink-light)',fontSize:'0.85rem'}}>
+                「＋ 卓を追加」から卓を追加しましょう
+              </div>
+            )}
+            {tables.map((t, idx) => {
+              const tSeats = seats.filter(s => s.tableId === t.id);
+              const occ = tSeats.filter(s => assignments[s.id]).length;
+              const pct = t.seatCount > 0 ? Math.round(occ / t.seatCount * 100) : 0;
+              const isDragging = draggingIdx === idx;
+              const isTarget = reorderMode && targetIdx === idx && draggingIdx !== idx;
+              return (
+                <div
+                  key={t.id}
+                  ref={el => { cardRefs.current[idx] = el; }}
+                  className={`mobile-table-card${isDragging ? ' dragging' : ''}${isTarget ? ' reorder-target' : ''}`}
+                  onTouchStart={e => handleCardTouchStart(e, idx)}
+                  onClick={() => !reorderMode && setSelectedId(t.id === selectedId ? null : t.id)}>
+                  <div className="mobile-table-card-name">{t.name}</div>
+                  <div className="mobile-table-card-seats">{occ}/{t.seatCount}席</div>
+                  <div className="mobile-table-card-prog">
+                    <div className="mobile-table-card-prog-fill" style={{ width: `${pct}%` }}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className={`floor-layout theme-${effectiveFloorDesign} ${panelCollapsed && isCompactPc ? 'panel-collapsed' : ''}`}>
         <div className="floor-canvas-region">
