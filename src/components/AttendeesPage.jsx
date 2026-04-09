@@ -94,7 +94,7 @@ export default function AttendeesPage({ event, dispatch, notify }) {
   };
 
   return (
-    <div className="main">
+    <div className="main attendees-page">
       <div className="page-header">
         <div className="page-title">参加者管理</div>
         <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>

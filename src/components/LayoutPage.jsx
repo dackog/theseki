@@ -302,6 +302,28 @@ export default function LayoutPage({ event, dispatch, notify }) {
               ))}
             </div>
           </div>
+          {/* 席割プレビュー */}
+          {(() => {
+            const previewSeats = seats.filter(s => s.tableId === editingTable.id);
+            if (previewSeats.length === 0) return null;
+            return (
+              <div>
+                <label>席割状況</label>
+                <div className="mobile-edit-seat-preview">
+                  {previewSeats.map(s => {
+                    const occupant = attendees.find(a => a.id === assignments[s.id]);
+                    return (
+                      <div key={s.id}
+                        className={`mobile-preview-seat${occupant ? ' occ' : ''}`}
+                        title={occupant?.name || '空席'}>
+                        {occupant ? occupant.name.slice(0, 2) : ''}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </Modal>
       )}
 

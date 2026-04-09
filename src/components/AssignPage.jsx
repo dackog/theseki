@@ -672,7 +672,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
             const tViolSeatIds = new Set([...violationSeatIds].filter(id => tSeats.some(s => s.id === id)));
             // スケール後のラッパー高さを席数から概算
             const N = table.seatCount;
-            const scale = 0.72;
+            const scale = 0.85;
             let rawH;
             if ((table.shape || 'rect') === 'round') {
               const tR = Math.max(42, Math.min(80, 28 + N * 4));
@@ -685,6 +685,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
               const cvH = tH + (cH + cGap) * 2 + 20;
               rawH = cvH + 80;
             }
+            const occupiedCount = tSeats.filter(s => assignments[s.id]).length;
             return (
               <div key={table.id} className="mobile-table-section">
                 <div className="mobile-floor-table-wrap" style={{height: Math.round(rawH * scale)}}>
@@ -704,6 +705,10 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                       onDragCancel={clearSelection}
                     />
                   </div>
+                </div>
+                <div className="mobile-table-summary">
+                  <span className="mobile-table-summary-count">{occupiedCount}/{table.seatCount}席</span>
+                  {hasV && <span className="mobile-table-summary-viol">⚠️ NG違反</span>}
                 </div>
               </div>
             );
