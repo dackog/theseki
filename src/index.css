@@ -433,10 +433,11 @@
   }
   .custom-rule-modal .modal-body {
     overflow-x: auto;
+    overflow-y: auto;
   }
   /* header/footer が custom-rule-table-panel (z-index:1) より確実に前面に来るよう z-index を強化 */
-  .custom-rule-modal .modal-header { z-index: 10; }
-  .custom-rule-modal .modal-footer { z-index: 10; }
+  .custom-rule-modal .modal-header { flex-shrink: 0 !important; z-index: 10; position: relative; }
+  .custom-rule-modal .modal-footer { flex-shrink: 0 !important; z-index: 10; position: relative; }
   .custom-rule-table-panel { position: relative; z-index: 1; }
   .custom-rule-table-wrap {
     border: 1px solid var(--border);
@@ -915,21 +916,54 @@
     }
 
     /* ── サブページシェル ── */
-    .inner-nav-wrap { top: 52px; z-index: 110; }
+    /* event-subpage-shell はインラインスタイルの固定高さを維持し、overflow:hidden でクリップ */
     .event-subpage-shell {
-      min-height: calc(100dvh - 52px) !important;
-      height: auto !important;
+      height: calc(100dvh - 52px) !important;
+      min-height: unset !important;
+      overflow: hidden !important;
       background: var(--paper);
     }
+    /* event-subpage-content はフレックスコンテナとして機能させる
+       → assign-page-shell の overflow:hidden が効き、選択バナーが固定される */
     .event-subpage-content {
-      min-height: auto;
-      display: block !important;
-      overflow: visible !important;
-      flex: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
       background: var(--paper);
+    }
+    /* LayoutPage / AttendeesPage: ボトムナビ分の余白 */
+    .event-subpage-content > .main {
+      padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 1rem) !important;
     }
 
-    /* custom-rule-modal: flex-shrink: 0 でヘッダー・フッターを固定（sticky不要） */
+    /* カスタム設定モーダル：モバイルでヘッダー・フッターを確実に表示 */
+    .custom-rule-modal {
+      display: flex !important;
+      flex-direction: column !important;
+      max-height: min(92dvh, 92vh) !important;
+    }
+    .custom-rule-modal .modal-header {
+      flex-shrink: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+    }
+    .custom-rule-modal .modal-body {
+      flex: 1 !important;
+      min-height: 0 !important;
+      overflow-x: auto !important;
+      overflow-y: auto !important;
+    }
+    .custom-rule-modal .modal-footer {
+      flex-shrink: 0 !important;
+      display: flex !important;
+      justify-content: flex-end !important;
+    }
+
+    /* custom-rule-modal テーブルセルのsticky無効 */
     .custom-rule-modal .custom-rule-table th,
     .custom-rule-modal .custom-rule-table td {
       position: static !important;
@@ -2312,17 +2346,20 @@ label.btn {
   line-height: 1;
   white-space: nowrap;
 }
-/* .btn-sm の padding/font-size と完全一致させる */
+/* label は height を明示指定しないとブラウザのデフォルト行高が button と異なる */
 label.btn-sm {
+  height: var(--ctrl-h-desktop) !important;
   min-height: var(--ctrl-h-desktop) !important;
-  padding: 0.3rem 0.7rem !important;
+  padding: 0 0.7rem !important;
   font-size: 0.75rem !important;
   line-height: 1 !important;
+  box-sizing: border-box !important;
 }
 @media (max-width: 768px) {
   label.btn-sm {
+    height: var(--ctrl-h-mobile) !important;
     min-height: var(--ctrl-h-mobile) !important;
-    padding: 0.42rem 0.85rem !important;
+    padding: 0 0.85rem !important;
     font-size: 0.8rem !important;
   }
 }
