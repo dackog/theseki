@@ -654,7 +654,20 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
         {selName && (
           <div className="mobile-selection-banner">
             <span>👆 {selName} を選択中 — 席をタップして配置</span>
-            <button onClick={clearSelection}>× 解除</button>
+            <div style={{display:'flex',gap:'0.35rem',flexShrink:0}}>
+              {(() => {
+                const currentSeatId = Object.keys(assignments).find(s => assignments[s] === selected);
+                if (!currentSeatId) return null;
+                return (
+                  <button onClick={() => {
+                    if (lockedAttendees[selected]) { notify('🔒 ロック中の参加者は解除できません','warning'); return; }
+                    dispatch({type:'ASSIGN', eventId:event.id, seatId:currentSeatId, attendeeId:null});
+                    clearSelection();
+                  }}>席から外す</button>
+                );
+              })()}
+              <button onClick={clearSelection}>× 解除</button>
+            </div>
           </div>
         )}
 
@@ -670,41 +683,24 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
             const hasV   = violationTableIds.has(table.id);
             const tViol  = violations.filter(v => v.tableId === table.id);
             const tViolSeatIds = new Set([...violationSeatIds].filter(id => tSeats.some(s => s.id === id)));
-            // スケール後のラッパー高さを席数から概算
-            const N = table.seatCount;
-            const scale = 0.85;
-            let rawH;
-            if ((table.shape || 'rect') === 'round') {
-              const tR = Math.max(42, Math.min(80, 28 + N * 4));
-              const cR = Math.max(20, Math.min(30, tR * 0.45));
-              const oR = tR + cR + 8;
-              const roundSz = (oR + cR) * 2 + 20;
-              rawH = roundSz + 80;
-            } else {
-              const cH = 48, cGap = 8, tH = 70;
-              const cvH = tH + (cH + cGap) * 2 + 20;
-              rawH = cvH + 80;
-            }
             const occupiedCount = tSeats.filter(s => assignments[s.id]).length;
             return (
               <div key={table.id} className="mobile-table-section">
-                <div className="mobile-floor-table-wrap" style={{height: Math.round(rawH * scale)}}>
-                  <div style={{transform:`scale(${scale})`, transformOrigin:'top center', width:`${Math.round(100/scale)}%`}}>
-                    <AssignFloorTable
-                      table={table} seats={tSeats}
-                      assignments={assignments} attendees={attendees}
-                      violationSeatIds={tViolSeatIds}
-                      selectedId={selected}
-                      lockedAttendees={lockedAttendees}
-                      hasViolation={hasV} tableViolations={tViol}
-                      flagHighlightIds={flagHighlightIds}
-                      onSeatClick={handleSeatClick}
-                      onUnassign={unassignSeat}
-                      onDragDrop={handleDragDrop}
-                      onAttendeeAssign={handleAttendeeAssign}
-                      onDragCancel={clearSelection}
-                    />
-                  </div>
+                <div className="mobile-floor-table-wrap">
+                  <AssignFloorTable
+                    table={table} seats={tSeats}
+                    assignments={assignments} attendees={attendees}
+                    violationSeatIds={tViolSeatIds}
+                    selectedId={selected}
+                    lockedAttendees={lockedAttendees}
+                    hasViolation={hasV} tableViolations={tViol}
+                    flagHighlightIds={flagHighlightIds}
+                    onSeatClick={handleSeatClick}
+                    onUnassign={unassignSeat}
+                    onDragDrop={handleDragDrop}
+                    onAttendeeAssign={handleAttendeeAssign}
+                    onDragCancel={clearSelection}
+                  />
                 </div>
                 <div className="mobile-table-summary">
                   <span className="mobile-table-summary-count">{occupiedCount}/{table.seatCount}席</span>

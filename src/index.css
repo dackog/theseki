@@ -386,7 +386,8 @@
     padding: 1.25rem 1.5rem 1rem;
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 2; background: var(--paper);
+    flex-shrink: 0;
+    background: var(--paper);
   }
   .modal-title { font-family: 'Noto Serif JP', serif; font-size: 1.1rem; font-weight: 700; }
   .modal-close {
@@ -402,7 +403,7 @@
   }
   .modal-footer {
     padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); display: flex; gap: 0.75rem; justify-content: flex-end;
-    position: sticky; bottom: 0; z-index: 2; background: var(--paper);
+    flex-shrink: 0; background: var(--paper);
   }
 
   .rule-header-wrap { position: relative; display: inline-flex; align-items: center; gap: 0.28rem; }
@@ -802,11 +803,12 @@
     }
     .event-action-btns .btn-main {
       flex: 1;
-      padding: 0.65rem 0.5rem;
-      font-size: 0.82rem;
-      min-height: var(--ctrl-h-mobile);
+      padding: 1rem 0.5rem;
+      font-size: 1rem;
+      min-height: 60px;
     }
-    .event-action-btns .btn-main .btn-icon { font-size: 0.95rem; }
+    /* アイコン（絵文字）をモバイル一覧では非表示 */
+    .event-action-btns .btn-icon { display: none; }
     .event-sub-btns {
       /* モバイルでは常に表示 */
       opacity: 1 !important;
@@ -814,10 +816,12 @@
     }
     .event-sub-btns .btn {
       flex: 1;
-      min-height: var(--ctrl-h-mobile);
-      font-size: 0.8rem;
-      padding: 0.45rem 0.5rem;
+      min-height: 52px;
+      font-size: 0.88rem;
+      padding: 0.6rem 0.5rem;
     }
+    /* サブボタン絵文字非表示 */
+    .event-sub-btn span:first-child { display: none; }
     .event-sub-btn { gap: 0.28rem; }
 
     /* ── 参加者管理 ── */
@@ -921,8 +925,7 @@
       background: var(--paper);
     }
 
-    .custom-rule-modal .modal-header { position: sticky; top: 0; z-index: 2; background: var(--paper); }
-    .custom-rule-modal .modal-footer { position: sticky; bottom: 0; z-index: 2; background: var(--paper); }
+    /* custom-rule-modal: flex-shrink: 0 でヘッダー・フッターを固定（sticky不要） */
     .custom-rule-modal .custom-rule-table th,
     .custom-rule-modal .custom-rule-table td {
       position: static !important;
@@ -1539,9 +1542,9 @@
     }
     .event-sub-btns .btn {
       flex: 1;
-      min-height: 44px !important;
-      font-size: 13px !important;
-      padding: 0.55rem 0.4rem !important;
+      min-height: 52px !important;
+      font-size: 14px !important;
+      padding: 0.6rem 0.5rem !important;
     }
     /* 認証バナー */
     .event-auth-banner {
@@ -2052,12 +2055,15 @@
   .mobile-custom-setting-btn { padding: 0.7rem 0.6rem !important; flex: none !important; }
   .mobile-clear-btn { flex: none !important; padding: 0.7rem 0.6rem !important; font-size: 0.82rem; }
 
-  /* AssignFloorTable モバイルラッパー */
+  /* AssignFloorTable モバイルラッパー（ネイティブサイズ＋横スクロール対応） */
   .mobile-floor-table-wrap {
-    display: flex; justify-content: center;
-    overflow: hidden;
-    position: relative;
+    display: flex; justify-content: flex-start;
+    overflow-x: auto; overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 0.5rem 0.25rem;
+    scrollbar-width: none;
   }
+  .mobile-floor-table-wrap::-webkit-scrollbar { display: none; }
 
   /* フラグチップバー */
   .mobile-flag-bar { display: none; }
@@ -2285,8 +2291,9 @@ label.btn {
   align-items: center;
   justify-content: center;
   vertical-align: middle;
-  min-height: var(--ctrl-h-desktop);
+  line-height: 1;
 }
+label.btn-sm { min-height: var(--ctrl-h-desktop); padding: 0.32rem 0.65rem; }
 @media (max-width: 768px) {
-  label.btn { min-height: var(--ctrl-h-mobile); }
+  label.btn-sm { min-height: var(--ctrl-h-mobile) !important; padding: 0.32rem 0.65rem !important; }
 }
