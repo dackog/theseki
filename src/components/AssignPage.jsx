@@ -151,6 +151,17 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   // mobileLayoutRef はモバイルレイアウト用（assignLayoutRef はデスクトップ側）
   const assignLayoutRef = useRef(null);
   const mobileLayoutRef = useRef(null);
+
+  // ツールバーコンパクトモード（スクロール量に応じてアイコン化）
+  const [toolbarCompact, setToolbarCompact] = useState(false);
+  const tablesScrollRef = useRef(null);
+  useEffect(() => {
+    const el = tablesScrollRef.current;
+    if (!el || !isMobile) return;
+    const handler = () => setToolbarCompact(el.scrollTop > 20);
+    el.addEventListener('scroll', handler, { passive: true });
+    return () => el.removeEventListener('scroll', handler);
+  }, [isMobile]);
   useEffect(() => {
     const handler = (e) => {
       const inDesktop = assignLayoutRef.current?.contains(e.target);
@@ -622,15 +633,24 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
 
       {/* ══ モバイル専用レイアウト ══ */}
       <div className="mobile-assign-layout" ref={mobileLayoutRef}>
-        {/* アクションバー */}
-        <div className="mobile-assign-actions">
-          <button className="btn btn-outline" onClick={randomAssign}>🎲 ランダム</button>
-          <div className="mobile-custom-btn-group">
-            <button className="btn btn-green" onClick={customAssign}>✨ カスタム</button>
-            <button className="btn btn-outline mobile-custom-setting-btn"
-              onClick={() => setCustomRuleModalOpen(true)} aria-label="カスタム設定">⚙️</button>
-          </div>
-          <button className="btn btn-danger btn-sm mobile-clear-btn" onClick={clearAll}>全解除</button>
+        {/* アクションツールバー（固定・横スクロール可・コンパクトモード対応） */}
+        <div className={`mobile-action-toolbar${toolbarCompact ? ' compact' : ''}`}>
+          <button className="mobile-action-chip" onClick={randomAssign}>
+            <span className="mac-icon">🎲</span>
+            <span className="mac-label">ランダム</span>
+          </button>
+          <button className="mobile-action-chip mac-green" onClick={customAssign}>
+            <span className="mac-icon">✨</span>
+            <span className="mac-label">カスタム</span>
+          </button>
+          <button className="mobile-action-chip" onClick={() => setCustomRuleModalOpen(true)}>
+            <span className="mac-icon">⚙️</span>
+            <span className="mac-label">設定</span>
+          </button>
+          <button className="mobile-action-chip mac-danger" onClick={clearAll}>
+            <span className="mac-icon">🗑️</span>
+            <span className="mac-label">全解除</span>
+          </button>
         </div>
 
         {/* フラグチップ行（フラグが1つ以上ある場合のみ表示） */}
@@ -713,7 +733,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
         })()}
 
         {/* 卓＋席エリア */}
-        <div className="mobile-tables-scroll">
+        <div className="mobile-tables-scroll" ref={tablesScrollRef}>
           {tables.length === 0 && (
             <div style={{textAlign:'center',padding:'2rem',color:'var(--ink-light)',fontSize:'0.85rem'}}>
               座席タブから卓を追加してください

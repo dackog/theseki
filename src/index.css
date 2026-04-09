@@ -2103,10 +2103,66 @@
     flex: 1; overflow: hidden;
   }
 
-  /* アクションバー・フラグバーはスマホでは非表示（常時表示しない） */
-  .mobile-assign-actions { display: none !important; }
-  .mobile-flag-bar { display: none !important; }
-  .mobile-flag-bar.has-flags { display: none !important; }
+  /* ── モバイルアクションツールバー ── */
+  .mobile-action-toolbar {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: padding 0.18s ease;
+  }
+  .mobile-action-toolbar::-webkit-scrollbar { display: none; }
+
+  .mobile-action-chip {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center;
+    gap: 0.3rem;
+    padding: 0.38rem 0.85rem;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--paper);
+    font-size: 0.82rem; color: var(--ink);
+    cursor: pointer; white-space: nowrap;
+    min-height: 36px;
+    transition: padding 0.18s ease, border-radius 0.18s ease, gap 0.18s ease, min-width 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .mobile-action-chip:active:not(:disabled) { transform: scale(0.94); }
+  .mobile-action-chip.mac-green {
+    border-color: var(--green); color: var(--green);
+    background: rgba(45,106,79,0.05);
+  }
+  .mobile-action-chip.mac-danger {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(192,57,43,0.05);
+  }
+
+  .mac-icon { line-height: 1; }
+  .mac-label {
+    transition: max-width 0.18s ease, opacity 0.15s ease;
+    max-width: 80px; overflow: hidden;
+  }
+
+  /* コンパクトモード：スクロール時にアイコンのみ表示 */
+  .mobile-action-toolbar.compact { padding: 0.3rem 0.85rem; }
+  .mobile-action-toolbar.compact .mobile-action-chip {
+    padding: 0.38rem 0.5rem;
+    gap: 0;
+    border-radius: 50%;
+    min-width: 36px;
+    justify-content: center;
+  }
+  .mobile-action-toolbar.compact .mac-label {
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
 
   /* AssignFloorTable モバイルラッパー（ネイティブサイズ＋横スクロール対応） */
   .mobile-floor-table-wrap {
