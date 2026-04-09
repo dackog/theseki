@@ -2114,9 +2114,10 @@
   }
   .mobile-selection-banner button {
     background: none; border: 1px solid #2a7ab0;
-    border-radius: 4px; padding: 0.2rem 0.6rem;
-    font-size: 0.78rem; color: #2a7ab0;
+    border-radius: 4px; padding: 0.35rem 0.7rem;
+    font-size: 0.8rem; color: #2a7ab0;
     cursor: pointer; -webkit-tap-highlight-color: transparent;
+    min-height: 36px; touch-action: manipulation;
   }
 
   /* 卓＋席エリア（スクロール可） */
@@ -2191,16 +2192,16 @@
     color: #ffe066; pointer-events: none;
   }
 
-  /* 未配置参加者パネル */
+  /* 未配置参加者パネル（上部表示・スクロールしても固定） */
   .mobile-unassigned-panel {
     flex-shrink: 0;
-    padding: 0.65rem 0.85rem;
+    padding: 0.55rem 0.85rem 0.5rem;
     background: var(--paper);
-    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
   .mobile-unassigned-label {
     font-size: 0.75rem; color: var(--ink-light);
-    margin-bottom: 0.45rem; font-weight: 600;
+    margin-bottom: 0.4rem; font-weight: 600;
     display: flex; align-items: center; gap: 0.4rem;
   }
   .mobile-unassigned-badge {
@@ -2214,7 +2215,7 @@
   }
   .mobile-attendee-chips {
     display: flex; flex-wrap: wrap; gap: 0.4rem;
-    max-height: 100px; overflow-y: auto;
+    max-height: 90px; overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 

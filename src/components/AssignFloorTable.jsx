@@ -135,15 +135,12 @@ export default function AssignFloorTable({ table, seats, assignments, attendees,
       >
         <span style={{pointerEvents:'none'}}>{att ? att.name.slice(0,4) : seat.index}</span>
         {att && lockedAttendees && lockedAttendees[aId] && <span style={{position:'absolute',left:3,top:2,fontSize:'0.52rem',pointerEvents:'none'}}>🔒</span>}
-        {att && (
+        {att && !isTouch && (
           <button onClick={e => { e.stopPropagation(); onUnassign && onUnassign(seat.id, e); }}
             style={{position:'absolute',top:0,right:0,background:'none',border:'none',
-              cursor:'pointer',fontSize: isTouch ? '0.75rem' : '0.6rem',
+              cursor:'pointer',fontSize:'0.6rem',
               color:'rgba(255,200,200,0.85)',lineHeight:1,
-              padding: isTouch ? '4px 6px' : '0',
-              minWidth: isTouch ? '22px' : 'auto',
-              minHeight: isTouch ? '22px' : 'auto',
-              display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+              padding:0,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
         )}
       </div>
     );

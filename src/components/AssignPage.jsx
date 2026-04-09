@@ -148,12 +148,14 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   }, []);
 
   // Outside-click clears selection
+  // mobileLayoutRef はモバイルレイアウト用（assignLayoutRef はデスクトップ側）
   const assignLayoutRef = useRef(null);
+  const mobileLayoutRef = useRef(null);
   useEffect(() => {
     const handler = (e) => {
-      if (assignLayoutRef.current && !assignLayoutRef.current.contains(e.target)) {
-        clearSelection();
-      }
+      const inDesktop = assignLayoutRef.current?.contains(e.target);
+      const inMobile  = mobileLayoutRef.current?.contains(e.target);
+      if (!inDesktop && !inMobile) clearSelection();
     };
     document.addEventListener('pointerdown', handler);
     return () => document.removeEventListener('pointerdown', handler);
@@ -620,7 +622,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
       )}
 
       {/* ══ モバイル専用レイアウト ══ */}
-      <div className="mobile-assign-layout">
+      <div className="mobile-assign-layout" ref={mobileLayoutRef}>
         {/* アクションバー */}
         <div className="mobile-assign-actions">
           <button className="btn btn-outline" onClick={randomAssign}>🎲 ランダム</button>
@@ -650,6 +652,38 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           ))}
         </div>
 
+        {/* 未配置参加者チップ（上部常時表示） */}
+        <div className="mobile-unassigned-panel">
+          <div className="mobile-unassigned-label">
+            未配置参加者
+            <span className={`mobile-unassigned-badge${unassigned.length === 0 ? ' all-done' : ''}`}>
+              {unassigned.length === 0 ? '全員配置済 ✓' : `${unassigned.length}名`}
+            </span>
+          </div>
+          <div className="mobile-attendee-chips">
+            {unassigned.length === 0 && (
+              <span style={{fontSize:'0.8rem',color:'var(--ink-light)'}}>全員配置済です</span>
+            )}
+            {unassigned.map(a => {
+              const isChipSelected = selected === a.id;
+              const isFlagMatch    = !!(filterTag && a.flags.includes(filterTag));
+              const isFlagDim      = !!(filterTag && !a.flags.includes(filterTag));
+              const cls = [
+                'attendee-chip',
+                isChipSelected ? 'chip-selected' : '',
+                isFlagMatch    ? 'flag-match'    : '',
+                isFlagDim      ? 'flag-dim'      : '',
+              ].filter(Boolean).join(' ');
+              return (
+                <button key={a.id} className={cls} onClick={() => handleMobileChipTap(a.id)}>
+                  {isFlagMatch && <span className="chip-flag-star">★</span>}
+                  {a.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* 参加者選択中バナー */}
         {selName && (() => {
           const currentSeatId = Object.keys(assignments).find(s => assignments[s] === selected);
@@ -661,17 +695,19 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
               </span>
               <div style={{display:'flex',gap:'0.3rem',flexShrink:0,marginLeft:'0.4rem'}}>
                 {currentSeatId && (
-                  <button onClick={() => {
+                  <button onPointerDown={e => e.stopPropagation()} onClick={e => {
+                    e.stopPropagation();
                     if (isLocked) { notify('🔒 ロック中は外せません','warning'); return; }
                     dispatch({type:'ASSIGN', eventId:event.id, seatId:currentSeatId, attendeeId:null});
                     clearSelection();
                   }}>席から外す</button>
                 )}
-                <button onClick={() => {
+                <button onPointerDown={e => e.stopPropagation()} onClick={e => {
+                  e.stopPropagation();
                   dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:!isLocked});
                   if (!isLocked) clearSelection();
                 }}>{isLocked ? '🔓' : '🔒'}</button>
-                <button onClick={clearSelection}>✕</button>
+                <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); clearSelection(); }}>✕</button>
               </div>
             </div>
           );
@@ -717,38 +753,6 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
               </div>
             );
           })}
-        </div>
-
-        {/* 未配置参加者チップ */}
-        <div className="mobile-unassigned-panel">
-          <div className="mobile-unassigned-label">
-            未配置参加者
-            <span className={`mobile-unassigned-badge${unassigned.length === 0 ? ' all-done' : ''}`}>
-              {unassigned.length === 0 ? '全員配置済 ✓' : `${unassigned.length}名`}
-            </span>
-          </div>
-          <div className="mobile-attendee-chips">
-            {unassigned.length === 0 && (
-              <span style={{fontSize:'0.8rem',color:'var(--ink-light)'}}>全員配置済です</span>
-            )}
-            {unassigned.map(a => {
-              const isChipSelected = selected === a.id;
-              const isFlagMatch    = !!(filterTag && a.flags.includes(filterTag));
-              const isFlagDim      = !!(filterTag && !a.flags.includes(filterTag));
-              const cls = [
-                'attendee-chip',
-                isChipSelected ? 'chip-selected' : '',
-                isFlagMatch    ? 'flag-match'    : '',
-                isFlagDim      ? 'flag-dim'      : '',
-              ].filter(Boolean).join(' ');
-              return (
-                <button key={a.id} className={cls} onClick={() => handleMobileChipTap(a.id)}>
-                  {isFlagMatch && <span className="chip-flag-star">★</span>}
-                  {a.name}
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
       {/* ══ モバイル専用レイアウト 終 ══ */}
