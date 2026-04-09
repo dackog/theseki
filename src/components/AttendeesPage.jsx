@@ -7,6 +7,7 @@ import Modal from './Modal.jsx';
 import TagInput from './TagInput.jsx';
 
 export default function AttendeesPage({ event, dispatch, notify }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const attendees = event.attendees || [];
   const ngPairs = event.ngPairs || [];
   const [search, setSearch] = useState('');
@@ -98,10 +99,14 @@ export default function AttendeesPage({ event, dispatch, notify }) {
       <div className="page-header">
         <div className="page-title">参加者管理</div>
         <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
-          <label className="btn btn-outline btn-sm attendees-csv-btn" style={{cursor:'pointer'}}>
-            📥 インポート<input type="file" accept=".csv" onChange={importCSV} style={{display:'none'}}/>
-          </label>
-          <button className="btn btn-outline btn-sm attendees-csv-btn" onClick={exportCSV}>📤 エクスポート</button>
+          {!isMobile && (
+            <>
+              <label className="btn btn-outline btn-sm" style={{cursor:'pointer'}}>
+                📥 インポート<input type="file" accept=".csv" onChange={importCSV} style={{display:'none'}}/>
+              </label>
+              <button className="btn btn-outline btn-sm" onClick={exportCSV}>📤 エクスポート</button>
+            </>
+          )}
           <button className="btn btn-accent btn-sm" onClick={openAdd}>＋ 追加</button>
         </div>
       </div>

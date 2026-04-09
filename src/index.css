@@ -940,9 +940,13 @@
       overflow-x: hidden !important;
       background: var(--paper);
     }
-    /* LayoutPage / AttendeesPage: ボトムナビ分の余白 */
+    /* LayoutPage / AttendeesPage: ボトムナビ分の余白（ボトムナビ高さ分だけ確保） */
     .event-subpage-content > .main {
-      padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 1rem) !important;
+      padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    /* AssignPage は overflow:hidden のため padding-bottom 不要 */
+    .event-subpage-content > .assign-page-shell {
+      padding-bottom: 0 !important;
     }
 
     /* カスタム設定モーダル：モバイルでヘッダー・フッターを確実に表示 */
@@ -2099,18 +2103,10 @@
     flex: 1; overflow: hidden;
   }
 
-  /* アクションバー */
-  .mobile-assign-actions {
-    display: flex; gap: 0.5rem; padding: 0.7rem 0.85rem;
-    background: var(--paper);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .mobile-assign-actions .btn { flex: 1; padding: 0.7rem 0.4rem; border-radius: 10px; font-size: 0.82rem; }
-  .mobile-custom-btn-group { display: flex; gap: 0.25rem; flex: 1.5; }
-  .mobile-custom-btn-group .btn-green { flex: 1; }
-  .mobile-custom-setting-btn { padding: 0.7rem 0.6rem !important; flex: none !important; }
-  .mobile-clear-btn { flex: none !important; padding: 0.7rem 0.6rem !important; font-size: 0.82rem; }
+  /* アクションバー・フラグバーはスマホでは非表示（常時表示しない） */
+  .mobile-assign-actions { display: none !important; }
+  .mobile-flag-bar { display: none !important; }
+  .mobile-flag-bar.has-flags { display: none !important; }
 
   /* AssignFloorTable モバイルラッパー（ネイティブサイズ＋横スクロール対応） */
   .mobile-floor-table-wrap {
