@@ -450,7 +450,7 @@ export default function App() {
             <span className="mobile-event-title">{currentEvent.name}</span>
           </div>
 
-          <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column',height:'calc(100dvh - 52px)'}}>
+          <div className="event-subpage-shell" style={{display:'flex',flexDirection:'column'}}>
             <InnerNav subPage={page} setSubPage={(p)=>{if(p==='assign'){setAssignInitTab('seat');setAssignKey(k=>k+1);}setPage(p);}} eventName={currentEvent?.name} onBack={()=>setPage('events')}/>
             <div className="event-subpage-content" style={{minHeight:0, WebkitOverflowScrolling:'touch'}}>
               {page==='layout' && <LayoutPage event={currentEvent} dispatch={dispatch} notify={notify}/>}

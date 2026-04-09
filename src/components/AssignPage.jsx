@@ -666,12 +666,12 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           );
         })()}
 
-        {/* ② 操作バー（常時固定・2×2グリッド） */}
+        {/* ② 操作バー（常時固定・1行） */}
         <div className="mobile-op-bar">
-          <button className="mobile-op-btn op-assign" onClick={randomAssign}>🎲 ランダム配置</button>
-          <button className="mobile-op-btn op-assign" onClick={customAssign}>✨ カスタム配置</button>
-          <button className="mobile-op-btn op-setting" onClick={() => setCustomRuleModalOpen(true)}>⚙️ 配置設定</button>
-          <button className="mobile-op-btn op-danger" onClick={clearAll}>🗑️ 全解除</button>
+          <button className="mobile-op-btn op-assign" onClick={randomAssign}>ランダム配置</button>
+          <button className="mobile-op-btn op-assign" onClick={customAssign}>カスタム配置</button>
+          <button className="mobile-op-btn op-setting op-icon" onClick={() => setCustomRuleModalOpen(true)}>⚙️</button>
+          <button className="mobile-op-btn op-danger" onClick={clearAll}>全解除</button>
         </div>
 
         {/* ③ 状態バー（フラグ + 未配置参加者・折り畳み可能） */}
