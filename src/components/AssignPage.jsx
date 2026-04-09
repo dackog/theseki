@@ -539,7 +539,6 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           <div className="custom-rule-table-panel">
           <div className="text-sm" style={{fontWeight:700,marginBottom:'0.25rem'}}>フラグ別 配置ルール設定</div>
           <div className="text-sm text-muted" style={{marginBottom:'0.6rem'}}>フラグごとに「分散」または「同卓」を設定できます。</div>
-          <div className="text-sm text-muted" style={{marginBottom:'0.5rem'}}>※ 既存の保存データ（全体ルール + 対象フラグ）との後方互換を維持するため、保存時に旧形式も併記します。</div>
           {ruleConflictBanner && (
             <div className="rule-conflict-banner" role="status" aria-live="polite">{ruleConflictBanner}</div>
           )}

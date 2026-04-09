@@ -434,6 +434,9 @@
   .custom-rule-modal .modal-body {
     overflow-x: auto;
   }
+  /* header/footer が custom-rule-table-panel (z-index:1) より確実に前面に来るよう z-index を強化 */
+  .custom-rule-modal .modal-header { z-index: 10; }
+  .custom-rule-modal .modal-footer { z-index: 10; }
   .custom-rule-table-panel { position: relative; z-index: 1; }
   .custom-rule-table-wrap {
     border: 1px solid var(--border);
@@ -2038,6 +2041,18 @@
   .assign-layout          { display: none !important; }
   .violation-banner       { display: none !important; }
 
+  /* assign-page-shell をフレックスコンテナ化し mobile-assign-layout が正しく充填されるようにする */
+  .assign-page-shell {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
   .mobile-assign-layout {
     display: flex; flex-direction: column;
     flex: 1; overflow: hidden;
@@ -2286,7 +2301,7 @@
   }
 }
 
-/* ── P1: label.btn を button.btn と完全に同一化 ── */
+/* ── label.btn を button.btn と完全に同一化 ── */
 label.btn {
   -webkit-appearance: none; appearance: none;
   box-sizing: border-box;
@@ -2295,12 +2310,19 @@ label.btn {
   justify-content: center !important;
   vertical-align: middle;
   line-height: 1;
+  white-space: nowrap;
 }
+/* .btn-sm の padding/font-size と完全一致させる */
 label.btn-sm {
   min-height: var(--ctrl-h-desktop) !important;
-  padding: 0.32rem 0.65rem !important;
+  padding: 0.3rem 0.7rem !important;
   font-size: 0.75rem !important;
+  line-height: 1 !important;
 }
 @media (max-width: 768px) {
-  label.btn-sm { min-height: var(--ctrl-h-mobile) !important; }
+  label.btn-sm {
+    min-height: var(--ctrl-h-mobile) !important;
+    padding: 0.42rem 0.85rem !important;
+    font-size: 0.8rem !important;
+  }
 }
