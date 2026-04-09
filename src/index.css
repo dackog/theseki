@@ -387,6 +387,7 @@
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
     flex-shrink: 0;
+    position: relative; z-index: 2;
     background: var(--paper);
   }
   .modal-title { font-family: 'Noto Serif JP', serif; font-size: 1.1rem; font-weight: 700; }
@@ -403,7 +404,7 @@
   }
   .modal-footer {
     padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); display: flex; gap: 0.75rem; justify-content: flex-end;
-    flex-shrink: 0; background: var(--paper);
+    flex-shrink: 0; position: relative; z-index: 2; background: var(--paper);
   }
 
   .rule-header-wrap { position: relative; display: inline-flex; align-items: center; gap: 0.28rem; }
@@ -803,9 +804,9 @@
     }
     .event-action-btns .btn-main {
       flex: 1;
-      padding: 1rem 0.5rem;
-      font-size: 1rem;
-      min-height: 60px;
+      padding: 0.65rem 0.5rem;
+      font-size: 0.88rem;
+      min-height: var(--ctrl-h-mobile);
     }
     /* アイコン（絵文字）をモバイル一覧では非表示 */
     .event-action-btns .btn-icon { display: none; }
@@ -816,9 +817,9 @@
     }
     .event-sub-btns .btn {
       flex: 1;
-      min-height: 52px;
-      font-size: 0.88rem;
-      padding: 0.6rem 0.5rem;
+      min-height: var(--ctrl-h-mobile);
+      font-size: 0.82rem;
+      padding: 0.45rem 0.5rem;
     }
     /* サブボタン絵文字非表示 */
     .event-sub-btn span:first-child { display: none; }
@@ -1542,9 +1543,9 @@
     }
     .event-sub-btns .btn {
       flex: 1;
-      min-height: 52px !important;
-      font-size: 14px !important;
-      padding: 0.6rem 0.5rem !important;
+      min-height: var(--ctrl-h-mobile) !important;
+      font-size: 13px !important;
+      padding: 0.45rem 0.5rem !important;
     }
     /* 認証バナー */
     .event-auth-banner {
@@ -2284,16 +2285,21 @@
   }
 }
 
-/* ── P1: label.btn / button.btn サイズ統一（PC含む） ── */
+/* ── P1: label.btn を button.btn と完全に同一化 ── */
 label.btn {
+  -webkit-appearance: none; appearance: none;
   box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   vertical-align: middle;
   line-height: 1;
 }
-label.btn-sm { min-height: var(--ctrl-h-desktop); padding: 0.32rem 0.65rem; }
+label.btn-sm {
+  min-height: var(--ctrl-h-desktop) !important;
+  padding: 0.32rem 0.65rem !important;
+  font-size: 0.75rem !important;
+}
 @media (max-width: 768px) {
-  label.btn-sm { min-height: var(--ctrl-h-mobile) !important; padding: 0.32rem 0.65rem !important; }
+  label.btn-sm { min-height: var(--ctrl-h-mobile) !important; }
 }

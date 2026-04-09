@@ -651,25 +651,31 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
         </div>
 
         {/* 参加者選択中バナー */}
-        {selName && (
-          <div className="mobile-selection-banner">
-            <span>👆 {selName} を選択中 — 席をタップして配置</span>
-            <div style={{display:'flex',gap:'0.35rem',flexShrink:0}}>
-              {(() => {
-                const currentSeatId = Object.keys(assignments).find(s => assignments[s] === selected);
-                if (!currentSeatId) return null;
-                return (
+        {selName && (() => {
+          const currentSeatId = Object.keys(assignments).find(s => assignments[s] === selected);
+          const isLocked = !!lockedAttendees[selected];
+          return (
+            <div className="mobile-selection-banner">
+              <span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                👆 {selName}{currentSeatId ? ' — 移動先をタップ' : ' — 席をタップして配置'}
+              </span>
+              <div style={{display:'flex',gap:'0.3rem',flexShrink:0,marginLeft:'0.4rem'}}>
+                {currentSeatId && (
                   <button onClick={() => {
-                    if (lockedAttendees[selected]) { notify('🔒 ロック中の参加者は解除できません','warning'); return; }
+                    if (isLocked) { notify('🔒 ロック中は外せません','warning'); return; }
                     dispatch({type:'ASSIGN', eventId:event.id, seatId:currentSeatId, attendeeId:null});
                     clearSelection();
                   }}>席から外す</button>
-                );
-              })()}
-              <button onClick={clearSelection}>× 解除</button>
+                )}
+                <button onClick={() => {
+                  dispatch({type:'SET_ATTENDEE_LOCK', eventId:event.id, attendeeId:selected, locked:!isLocked});
+                  if (!isLocked) clearSelection();
+                }}>{isLocked ? '🔓' : '🔒'}</button>
+                <button onClick={clearSelection}>✕</button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 卓＋席エリア */}
         <div className="mobile-tables-scroll">
@@ -687,6 +693,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
             return (
               <div key={table.id} className="mobile-table-section">
                 <div className="mobile-floor-table-wrap">
+                  <div style={{margin:'0 auto', flexShrink:0}}>
                   <AssignFloorTable
                     table={table} seats={tSeats}
                     assignments={assignments} attendees={attendees}
@@ -701,6 +708,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                     onAttendeeAssign={handleAttendeeAssign}
                     onDragCancel={clearSelection}
                   />
+                  </div>
                 </div>
                 <div className="mobile-table-summary">
                   <span className="mobile-table-summary-count">{occupiedCount}/{table.seatCount}席</span>
