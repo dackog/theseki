@@ -152,16 +152,19 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   const assignLayoutRef = useRef(null);
   const mobileLayoutRef = useRef(null);
 
-  // ツールバーコンパクトモード（スクロール量に応じてアイコン化）
-  const [toolbarCompact, setToolbarCompact] = useState(false);
+  // 状態バー折り畳み（スクロール30px超で折り畳み、参加者選択中も折り畳み）
+  const [statusBarCollapsed, setStatusBarCollapsed] = useState(false);
   const tablesScrollRef = useRef(null);
   useEffect(() => {
     const el = tablesScrollRef.current;
     if (!el || !isMobile) return;
-    const handler = () => setToolbarCompact(el.scrollTop > 20);
+    const handler = () => setStatusBarCollapsed(el.scrollTop > 30);
     el.addEventListener('scroll', handler, { passive: true });
     return () => el.removeEventListener('scroll', handler);
   }, [isMobile]);
+  useEffect(() => {
+    if (selected) setStatusBarCollapsed(true);
+  }, [selected]);
   useEffect(() => {
     const handler = (e) => {
       const inDesktop = assignLayoutRef.current?.contains(e.target);
@@ -633,77 +636,8 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
 
       {/* ══ モバイル専用レイアウト ══ */}
       <div className="mobile-assign-layout" ref={mobileLayoutRef}>
-        {/* アクションツールバー（固定・横スクロール可・コンパクトモード対応） */}
-        <div className={`mobile-action-toolbar${toolbarCompact ? ' compact' : ''}`}>
-          <button className="mobile-action-chip" onClick={randomAssign}>
-            <span className="mac-icon">🎲</span>
-            <span className="mac-label">ランダム</span>
-          </button>
-          <button className="mobile-action-chip mac-green" onClick={customAssign}>
-            <span className="mac-icon">✨</span>
-            <span className="mac-label">カスタム</span>
-          </button>
-          <button className="mobile-action-chip" onClick={() => setCustomRuleModalOpen(true)}>
-            <span className="mac-icon">⚙️</span>
-            <span className="mac-label">設定</span>
-          </button>
-          <button className="mobile-action-chip mac-danger" onClick={clearAll}>
-            <span className="mac-icon">🗑️</span>
-            <span className="mac-label">全解除</span>
-          </button>
-        </div>
 
-        {/* フラグチップ行（フラグが1つ以上ある場合のみ表示） */}
-        <div className={`mobile-flag-bar${allTags.length > 0 ? ' has-flags' : ''}`}>
-          <button
-            className={`mobile-flag-chip${!filterTag ? ' active' : ''}`}
-            onClick={() => setFilterTag('')}>
-            すべて
-          </button>
-          {allTags.map(tag => (
-            <button
-              key={tag}
-              className={`mobile-flag-chip${filterTag === tag ? ' active' : ''}`}
-              onClick={() => setFilterTag(prev => prev === tag ? '' : tag)}>
-              {tag}
-              {filterTag === tag && <span className="mobile-flag-chip-x">×</span>}
-            </button>
-          ))}
-        </div>
-
-        {/* 未配置参加者チップ（上部常時表示） */}
-        <div className="mobile-unassigned-panel">
-          <div className="mobile-unassigned-label">
-            未配置参加者
-            <span className={`mobile-unassigned-badge${unassigned.length === 0 ? ' all-done' : ''}`}>
-              {unassigned.length === 0 ? '全員配置済 ✓' : `${unassigned.length}名`}
-            </span>
-          </div>
-          <div className="mobile-attendee-chips">
-            {unassigned.length === 0 && (
-              <span style={{fontSize:'0.8rem',color:'var(--ink-light)'}}>全員配置済です</span>
-            )}
-            {unassigned.map(a => {
-              const isChipSelected = selected === a.id;
-              const isFlagMatch    = !!(filterTag && a.flags.includes(filterTag));
-              const isFlagDim      = !!(filterTag && !a.flags.includes(filterTag));
-              const cls = [
-                'attendee-chip',
-                isChipSelected ? 'chip-selected' : '',
-                isFlagMatch    ? 'flag-match'    : '',
-                isFlagDim      ? 'flag-dim'      : '',
-              ].filter(Boolean).join(' ');
-              return (
-                <button key={a.id} className={cls} onClick={() => handleMobileChipTap(a.id)}>
-                  {isFlagMatch && <span className="chip-flag-star">★</span>}
-                  {a.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 参加者選択中バナー */}
+        {/* ① 選択バナー（参加者選択中のみ表示・最優先） */}
         {selName && (() => {
           const currentSeatId = Object.keys(assignments).find(s => assignments[s] === selected);
           const isLocked = !!lockedAttendees[selected];
@@ -732,7 +666,76 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           );
         })()}
 
-        {/* 卓＋席エリア */}
+        {/* ② 操作バー（常時固定・2×2グリッド） */}
+        <div className="mobile-op-bar">
+          <button className="mobile-op-btn op-assign" onClick={randomAssign}>🎲 ランダム配置</button>
+          <button className="mobile-op-btn op-assign" onClick={customAssign}>✨ カスタム配置</button>
+          <button className="mobile-op-btn op-setting" onClick={() => setCustomRuleModalOpen(true)}>⚙️ 配置設定</button>
+          <button className="mobile-op-btn op-danger" onClick={clearAll}>🗑️ 全解除</button>
+        </div>
+
+        {/* ③ 状態バー（フラグ + 未配置参加者・折り畳み可能） */}
+        <div
+          className={`mobile-status-bar${statusBarCollapsed ? ' collapsed' : ''}`}
+          onClick={() => statusBarCollapsed && setStatusBarCollapsed(false)}
+        >
+          {/* ヘッダー行: 「未配置N名」+ フラグチップ横スクロール + ▼アイコン */}
+          <div className="mobile-status-bar-header">
+            <span style={{fontSize:'0.78rem',fontWeight:600,color:'var(--ink)',flexShrink:0}}>
+              未配置
+              <span style={{
+                marginLeft:'0.3rem', fontSize:'0.72rem', fontWeight:700, padding:'1px 7px',
+                borderRadius:10, background: unassigned.length===0 ? 'var(--green)' : 'var(--accent)',
+                color:'#fff',
+              }}>{unassigned.length===0 ? '✓' : unassigned.length}</span>
+            </span>
+            {allTags.length > 0 && (
+              <div className="mobile-status-flag-chips">
+                <button
+                  className={`mobile-flag-chip${!filterTag ? ' active' : ''}`}
+                  onClick={e => { e.stopPropagation(); setFilterTag(''); }}>
+                  すべて
+                </button>
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    className={`mobile-flag-chip${filterTag === tag ? ' active' : ''}`}
+                    onClick={e => { e.stopPropagation(); setFilterTag(prev => prev === tag ? '' : tag); }}>
+                    {tag}
+                    {filterTag === tag && <span className="mobile-flag-chip-x">×</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="mobile-status-bar-expand">{statusBarCollapsed ? '▼' : '▲'}</span>
+          </div>
+          {/* チップ一覧（折り畳み時はCSSで非表示） */}
+          <div className="mobile-status-bar-chips">
+            {unassigned.length === 0 ? (
+              <span style={{fontSize:'0.8rem',color:'var(--ink-light)'}}>全員配置済です</span>
+            ) : (
+              unassigned.map(a => {
+                const isChipSelected = selected === a.id;
+                const isFlagMatch    = !!(filterTag && a.flags.includes(filterTag));
+                const isFlagDim      = !!(filterTag && !a.flags.includes(filterTag));
+                const cls = [
+                  'attendee-chip',
+                  isChipSelected ? 'chip-selected' : '',
+                  isFlagMatch    ? 'flag-match'    : '',
+                  isFlagDim      ? 'flag-dim'      : '',
+                ].filter(Boolean).join(' ');
+                return (
+                  <button key={a.id} className={cls} onClick={() => handleMobileChipTap(a.id)}>
+                    {isFlagMatch && <span className="chip-flag-star">★</span>}
+                    {a.name}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* ④ 卓＋席エリア */}
         <div className="mobile-tables-scroll" ref={tablesScrollRef}>
           {tables.length === 0 && (
             <div style={{textAlign:'center',padding:'2rem',color:'var(--ink-light)',fontSize:'0.85rem'}}>

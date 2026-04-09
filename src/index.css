@@ -2103,66 +2103,25 @@
     flex: 1; overflow: hidden;
   }
 
-  /* ── モバイルアクションツールバー ── */
-  .mobile-action-toolbar {
-    display: flex;
-    gap: 0.4rem;
-    padding: 0.45rem 0.85rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    background: var(--paper);
-    border-bottom: 1px solid var(--border);
+  /* ② 操作バー（常時固定・2×2グリッド） */
+  .mobile-op-bar {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0.4rem; padding: 0.55rem 0.85rem;
+    background: var(--paper); border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-    transition: padding 0.18s ease;
   }
-  .mobile-action-toolbar::-webkit-scrollbar { display: none; }
-
-  .mobile-action-chip {
-    flex-shrink: 0;
-    display: inline-flex; align-items: center;
-    gap: 0.3rem;
-    padding: 0.38rem 0.85rem;
-    border-radius: 20px;
-    border: 1.5px solid var(--border);
-    background: var(--paper);
-    font-size: 0.82rem; color: var(--ink);
-    cursor: pointer; white-space: nowrap;
-    min-height: 36px;
-    transition: padding 0.18s ease, border-radius 0.18s ease, gap 0.18s ease, min-width 0.18s ease;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
+  .mobile-op-btn {
+    display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+    padding: 0.6rem 0.5rem; border-radius: 8px;
+    border: 1.5px solid var(--border); background: var(--paper-warm, var(--paper));
+    font-size: 0.8rem; font-weight: 600; color: var(--ink);
+    cursor: pointer; min-height: 44px; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
   }
-  .mobile-action-chip:active:not(:disabled) { transform: scale(0.94); }
-  .mobile-action-chip.mac-green {
-    border-color: var(--green); color: var(--green);
-    background: rgba(45,106,79,0.05);
-  }
-  .mobile-action-chip.mac-danger {
-    border-color: var(--accent); color: var(--accent);
-    background: rgba(192,57,43,0.05);
-  }
-
-  .mac-icon { line-height: 1; }
-  .mac-label {
-    transition: max-width 0.18s ease, opacity 0.15s ease;
-    max-width: 80px; overflow: hidden;
-  }
-
-  /* コンパクトモード：スクロール時にアイコンのみ表示 */
-  .mobile-action-toolbar.compact { padding: 0.3rem 0.85rem; }
-  .mobile-action-toolbar.compact .mobile-action-chip {
-    padding: 0.38rem 0.5rem;
-    gap: 0;
-    border-radius: 50%;
-    min-width: 36px;
-    justify-content: center;
-  }
-  .mobile-action-toolbar.compact .mac-label {
-    max-width: 0;
-    opacity: 0;
-    pointer-events: none;
-  }
+  .mobile-op-btn:active:not(:disabled) { transform: scale(0.96); }
+  .mobile-op-btn.op-assign { border-color: var(--green); color: var(--green); background: rgba(45,106,79,0.05); }
+  .mobile-op-btn.op-danger { border-color: var(--accent); color: var(--accent); background: rgba(192,57,43,0.04); }
+  .mobile-op-btn.op-setting { color: var(--ink-light); }
 
   /* AssignFloorTable モバイルラッパー（ネイティブサイズ＋横スクロール対応） */
   .mobile-floor-table-wrap {
@@ -2174,20 +2133,26 @@
   }
   .mobile-floor-table-wrap::-webkit-scrollbar { display: none; }
 
-  /* フラグチップバー */
-  .mobile-flag-bar { display: none; }
-  .mobile-flag-bar.has-flags {
-    display: flex;
-    gap: 0.4rem;
-    padding: 0.45rem 0.85rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    background: var(--paper);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+  /* ③ 状態バー（フラグ + 未配置参加者・折り畳み可能） */
+  .mobile-status-bar {
+    flex-shrink: 0; background: var(--paper); border-bottom: 1px solid var(--border);
+    overflow: hidden; transition: max-height 0.22s ease; max-height: 200px;
   }
-  .mobile-flag-bar.has-flags::-webkit-scrollbar { display: none; }
+  .mobile-status-bar.collapsed { max-height: 44px; cursor: pointer; }
+  .mobile-status-bar-header {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0 0.85rem; min-height: 44px; overflow: hidden;
+  }
+  .mobile-status-flag-chips {
+    display: flex; gap: 0.3rem; overflow-x: auto; flex: 1; min-width: 0;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .mobile-status-flag-chips::-webkit-scrollbar { display: none; }
+  .mobile-status-bar-expand { flex-shrink: 0; font-size: 0.65rem; color: var(--ink-light); }
+  .mobile-status-bar.collapsed .mobile-status-bar-chips { display: none; }
+  .mobile-status-bar-chips {
+    padding: 0 0.85rem 0.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem;
+  }
 
   .mobile-flag-chip {
     flex-shrink: 0;
@@ -2300,32 +2265,6 @@
     color: #ffe066; pointer-events: none;
   }
 
-  /* 未配置参加者パネル（上部表示・スクロールしても固定） */
-  .mobile-unassigned-panel {
-    flex-shrink: 0;
-    padding: 0.55rem 0.85rem 0.5rem;
-    background: var(--paper);
-    border-bottom: 1px solid var(--border);
-  }
-  .mobile-unassigned-label {
-    font-size: 0.75rem; color: var(--ink-light);
-    margin-bottom: 0.4rem; font-weight: 600;
-    display: flex; align-items: center; gap: 0.4rem;
-  }
-  .mobile-unassigned-badge {
-    background: rgba(192,57,43,0.1);
-    color: var(--accent);
-    border-radius: 10px; padding: 1px 7px;
-    font-size: 0.68rem; font-weight: 700;
-  }
-  .mobile-unassigned-badge.all-done {
-    background: rgba(45,106,79,0.1); color: var(--green);
-  }
-  .mobile-attendee-chips {
-    display: flex; flex-wrap: wrap; gap: 0.4rem;
-    max-height: 90px; overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
 
   /* 参加者チップ */
   .attendee-chip {
