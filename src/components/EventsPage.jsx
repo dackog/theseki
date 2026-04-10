@@ -79,8 +79,8 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
   const menuEvent = state.events.find(ev => ev.id === openMenuId);
 
   return (
-    <div className="main">
-      <div className="page-header">
+    <div className="main" style={isMobile ? {paddingLeft:0, paddingRight:0} : {}}>
+      <div className="page-header" style={isMobile ? {paddingLeft:'1.1rem', paddingRight:'1.1rem'} : {}}>
         <div className="page-title">イベント一覧</div>
         <button className="btn btn-accent" onClick={()=>setShowNew(true)}>＋ 新規イベント</button>
       </div>
