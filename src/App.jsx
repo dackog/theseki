@@ -447,6 +447,12 @@ export default function App() {
                 <line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
             </button>
+            <button className="mobile-back-btn" aria-label="イベント一覧に戻る" onClick={() => setPage('events')}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" style={{width:18,height:18,stroke:'currentColor',fill:'none',strokeWidth:2.5,strokeLinecap:'round',strokeLinejoin:'round'}}>
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              一覧
+            </button>
             <span className="mobile-event-title">{currentEvent.name}</span>
           </div>
 
