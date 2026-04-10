@@ -1,7 +1,8 @@
 // src/components/EventsPage.jsx
 // CDN 版からのコピー (docs/index.html 行 1433-1525)
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { uid, now, fmtDate } from '../lib/uid.js';
 import Modal from './Modal.jsx';
 
@@ -12,6 +13,9 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
   const [editingEventId, setEditingEventId] = useState(null);
   const [isMobile] = useState(() => window.innerWidth <= 768);
   const [openMenuId, setOpenMenuId] = useState(null);
+  // メニューの fixed 位置（getBoundingClientRect で計算）
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const menuBtnRefs = useRef({});
 
   // メニュー外タップで閉じる
   useEffect(() => {
@@ -20,6 +24,24 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
   }, [openMenuId]);
+
+  const openMenu = (evId, e) => {
+    e.stopPropagation();
+    if (openMenuId === evId) { setOpenMenuId(null); return; }
+    const btn = menuBtnRefs.current[evId];
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const menuH = 3 * 48 + 20; // 3項目 × 48px + 余裕
+      // 下に十分なスペース（bottom nav 56px + safe area を考慮）があれば下、なければ上
+      const bottomSpace = window.innerHeight - rect.bottom - 60;
+      if (bottomSpace >= menuH) {
+        setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      } else {
+        setMenuPos({ top: rect.top - menuH - 4, right: window.innerWidth - rect.right });
+      }
+    }
+    setOpenMenuId(evId);
+  };
 
   const create = () => {
     if (!form.name.trim()) return;
@@ -53,6 +75,9 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
     dispatch({type:'DUPLICATE_EVENT', payload:{src:ev, newId}});
   };
 
+  // openMenuId に対応するイベント
+  const menuEvent = state.events.find(ev => ev.id === openMenuId);
+
   return (
     <div className="main">
       <div className="page-header">
@@ -83,20 +108,13 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
                 <div key={ev.id} className="event-card mobile-entry-card"
                   onClick={() => onLayout(ev.id)}>
                   {/* ⋮ メニュートリガー */}
-                  <button className="event-card-menu-btn"
+                  <button
+                    ref={el => { menuBtnRefs.current[ev.id] = el; }}
+                    className="event-card-menu-btn"
                     onPointerDown={e => e.stopPropagation()}
-                    onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === ev.id ? null : ev.id); }}>
+                    onClick={e => openMenu(ev.id, e)}>
                     ⋮
                   </button>
-                  {/* ⋮ ドロップダウン */}
-                  {openMenuId === ev.id && (
-                    <div className="event-card-menu-dropdown"
-                      onPointerDown={e => e.stopPropagation()}>
-                      <button onClick={e => { openEdit(ev, e); setOpenMenuId(null); }}>✏️ 編集</button>
-                      <button onClick={e => { dup(ev, e); setOpenMenuId(null); }}>📄 複製</button>
-                      <button className="menu-danger" onClick={e => { del(ev.id, e); setOpenMenuId(null); }}>🗑️ 削除</button>
-                    </div>
-                  )}
                   <div className="event-card-title">{ev.name}</div>
                   <div className="event-card-meta">
                     {ev.datetime ? `📅 ${ev.datetime}` : '日時未設定'}
@@ -152,6 +170,20 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
           })}
         </div>
       )}
+
+      {/* ⋮ ドロップダウン: portal で body 直下に fixed 配置 */}
+      {openMenuId && menuEvent && createPortal(
+        <div
+          className="event-card-menu-dropdown"
+          style={{ position:'fixed', top: menuPos.top, right: menuPos.right }}
+          onPointerDown={e => e.stopPropagation()}>
+          <button onClick={e => { openEdit(menuEvent, e); setOpenMenuId(null); }}>✏️ 編集</button>
+          <button onClick={e => { dup(menuEvent, e); setOpenMenuId(null); }}>📄 複製</button>
+          <button className="menu-danger" onClick={e => { del(menuEvent.id, e); setOpenMenuId(null); }}>🗑️ 削除</button>
+        </div>,
+        document.body
+      )}
+
       {showNew && (
         <Modal title="新規イベント" onClose={()=>setShowNew(false)}
           footer={<><button className="btn btn-outline" onClick={()=>setShowNew(false)}>キャンセル</button><button className="btn btn-accent" onClick={create}>作成</button></>}>

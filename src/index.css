@@ -1669,15 +1669,13 @@
     }
     .event-card-menu-btn:active { background: var(--paper-dark); }
 
-    /* ⋮ ドロップダウン（常に⋮ボタンの上に開く → 画面下端でも隠れない） */
+    /* ⋮ ドロップダウン（portal で body 直下に fixed 配置、位置は inline style で制御） */
     .event-card-menu-dropdown {
-      position: absolute; bottom: calc(100% + 0.3rem); right: 0.4rem;
-      top: auto;
       background: var(--paper); border: 1px solid var(--border);
-      border-radius: 10px; box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.18);
       z-index: 210; /* bottom-nav(200)より上 */
       min-width: 140px;
-      overflow: visible;
+      overflow: hidden;
     }
     .event-card-menu-dropdown button {
       display: block; width: 100%;
