@@ -1706,9 +1706,20 @@
     }
     .page-header {
       padding-bottom: 0.75rem;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
     }
-    .main { padding: 0.85rem !important; }
+    /* メインコンテンツ左右余白: 十分なゆとりを確保 */
+    .main { padding: 1.1rem 1.1rem !important; }
+    /* イベント一覧グリッド: カード間に隙間、上下余白 */
+    .events-grid { gap: 12px !important; margin-top: 0.5rem !important; }
+    /* カード内コンテンツ余白を広く */
+    .event-card.mobile-entry-card {
+      padding: 1.1rem 1.1rem 1.1rem !important;
+    }
+    /* カード進捗ラベルの余白 */
+    .event-card.mobile-entry-card .event-card-progress {
+      margin-top: 0.5rem;
+    }
   }
 
   /* ── 参加者管理 刷新 ── */
