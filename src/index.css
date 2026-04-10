@@ -1492,6 +1492,8 @@
       min-height: 0;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      /* スクロールコンテナ自身に padding-bottom を設定しないと最後まで見えない */
+      padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 1.1rem) !important;
     }
     /* EventsPage コンテンツが bottom nav に隠れないよう */
     .main {
