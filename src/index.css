@@ -1548,6 +1548,7 @@
       padding: 0 !important;
       display: flex !important;
       flex-direction: column !important;
+      align-items: stretch !important;  /* ← 追加: 子要素を全幅に伸ばす */
       grid-template-columns: unset !important;
       grid-template-areas: unset !important;
     }
@@ -1625,11 +1626,12 @@
     .event-card.mobile-entry-card {
       cursor: pointer;
       position: relative;
-      padding: 0.85rem 1rem 0.85rem;
+      padding: 1rem 1rem 1rem;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       overflow: visible !important; /* ⋮ ドロップダウンがカード外に出られるよう */
       text-align: left;
+      align-items: stretch !important; /* 子要素を全幅に */
     }
     .event-card.mobile-entry-card::before { display: none !important; }
     .event-card.mobile-entry-card:active { background: var(--paper-dark); }
