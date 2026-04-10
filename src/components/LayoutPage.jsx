@@ -156,7 +156,7 @@ export default function LayoutPage({ event, dispatch, notify }) {
       {/* ── モバイル専用グリッド表示 ── */}
       {isMobileLayout && (
         <div className="mobile-table-grid">
-          <button className="btn btn-accent mobile-add-table-btn" onClick={() => setShowAdd(true)}>
+          <button className="btn btn-outline mobile-add-table-btn" onClick={() => setShowAdd(true)}>
             ＋ 卓を追加
           </button>
           {reorderMode && (

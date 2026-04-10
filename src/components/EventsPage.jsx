@@ -1,7 +1,7 @@
 // src/components/EventsPage.jsx
 // CDN 版からのコピー (docs/index.html 行 1433-1525)
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { uid, now, fmtDate } from '../lib/uid.js';
 import Modal from './Modal.jsx';
 
@@ -10,6 +10,16 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState({ name: '', datetime: '' });
   const [editingEventId, setEditingEventId] = useState(null);
+  const [isMobile] = useState(() => window.innerWidth <= 768);
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  // メニュー外タップで閉じる
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = () => setOpenMenuId(null);
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [openMenuId]);
 
   const create = () => {
     if (!form.name.trim()) return;
@@ -66,38 +76,78 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
             const totalSeats = (ev.tables||[]).reduce((s,t)=>s+(t.seatCount||0),0);
             const assignedCount = Object.values(ev.assignments||{}).filter(Boolean).length;
             const pct = totalSeats > 0 ? Math.round(assignedCount/totalSeats*100) : 0;
+
+            // ── モバイル専用カード（カードタップ=席割遷移・⋮メニュー） ──
+            if (isMobile) {
+              return (
+                <div key={ev.id} className="event-card mobile-entry-card"
+                  onClick={() => onLayout(ev.id)}>
+                  {/* ⋮ メニュートリガー */}
+                  <button className="event-card-menu-btn"
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === ev.id ? null : ev.id); }}>
+                    ⋮
+                  </button>
+                  {/* ⋮ ドロップダウン */}
+                  {openMenuId === ev.id && (
+                    <div className="event-card-menu-dropdown"
+                      onPointerDown={e => e.stopPropagation()}>
+                      <button onClick={e => { openEdit(ev, e); setOpenMenuId(null); }}>✏️ 編集</button>
+                      <button onClick={e => { dup(ev, e); setOpenMenuId(null); }}>📄 複製</button>
+                      <button className="menu-danger" onClick={e => { del(ev.id, e); setOpenMenuId(null); }}>🗑️ 削除</button>
+                    </div>
+                  )}
+                  <div className="event-card-title">{ev.name}</div>
+                  <div className="event-card-meta">
+                    {ev.datetime ? `📅 ${ev.datetime}` : '日時未設定'}
+                    &nbsp;·&nbsp;更新: {fmtDate(ev.updatedAt)}
+                  </div>
+                  <div className="event-card-progress">
+                    <div className="event-card-progress-bar-outer">
+                      <div className="event-card-progress-fill" style={{width:`${pct}%`}}/>
+                    </div>
+                    <div className="event-card-progress-label">
+                      <span>割当進捗</span>
+                      <strong>{assignedCount}/{totalSeats}席</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // ── PC版カード（既存UI維持） ──
             return (
-            <div key={ev.id} className="event-card">
-              <div className="event-card-inner">
-                <div className="event-card-title">{ev.name}</div>
-                <div className="event-card-meta">
-                  {ev.datetime ? `📅 ${ev.datetime}` : '日時未設定'}
-                  &nbsp;·&nbsp;更新: {fmtDate(ev.updatedAt)}
-                </div>
-                <div className="event-card-progress">
-                  <div className="event-card-progress-bar-outer">
-                    <div className="event-card-progress-fill" style={{width:`${pct}%`}}/>
+              <div key={ev.id} className="event-card">
+                <div className="event-card-inner">
+                  <div className="event-card-title">{ev.name}</div>
+                  <div className="event-card-meta">
+                    {ev.datetime ? `📅 ${ev.datetime}` : '日時未設定'}
+                    &nbsp;·&nbsp;更新: {fmtDate(ev.updatedAt)}
                   </div>
-                  <div className="event-card-progress-label">
-                    <span>割当進捗</span>
-                    <strong>{assignedCount}/{totalSeats}席</strong>
+                  <div className="event-card-progress">
+                    <div className="event-card-progress-bar-outer">
+                      <div className="event-card-progress-fill" style={{width:`${pct}%`}}/>
+                    </div>
+                    <div className="event-card-progress-label">
+                      <span>割当進捗</span>
+                      <strong>{assignedCount}/{totalSeats}席</strong>
+                    </div>
                   </div>
-                </div>
-                <div className="event-action-btns">
-                  <button className="btn-main layout" onClick={()=>onLayout(ev.id)}>
-                    <span className="btn-icon">🪑</span>座席・席割
-                  </button>
-                  <button className="btn-main assign" onClick={()=>onAssign(ev.id)}>
-                    <span className="btn-icon">👥</span>参加者
-                  </button>
-                </div>
-                <div className="event-sub-btns">
-                  <button className="btn btn-outline btn-sm event-sub-btn" onClick={e=>openEdit(ev,e)}><span>✏️</span><span>編集</span></button>
-                  <button className="btn btn-outline btn-sm event-sub-btn" onClick={e=>dup(ev,e)}><span>📄</span><span>複製</span></button>
-                  <button className="btn btn-danger btn-sm event-sub-btn" onClick={e=>del(ev.id,e)}><span>🗑️</span><span>削除</span></button>
+                  <div className="event-action-btns">
+                    <button className="btn-main layout" onClick={()=>onLayout(ev.id)}>
+                      <span className="btn-icon">🪑</span>座席・席割
+                    </button>
+                    <button className="btn-main assign" onClick={()=>onAssign(ev.id)}>
+                      <span className="btn-icon">👥</span>参加者
+                    </button>
+                  </div>
+                  <div className="event-sub-btns">
+                    <button className="btn btn-outline btn-sm event-sub-btn" onClick={e=>openEdit(ev,e)}><span>✏️</span><span>編集</span></button>
+                    <button className="btn btn-outline btn-sm event-sub-btn" onClick={e=>dup(ev,e)}><span>📄</span><span>複製</span></button>
+                    <button className="btn btn-danger btn-sm event-sub-btn" onClick={e=>del(ev.id,e)}><span>🗑️</span><span>削除</span></button>
+                  </div>
                 </div>
               </div>
-            </div>
             );
           })}
         </div>
