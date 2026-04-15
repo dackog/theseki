@@ -261,6 +261,73 @@
   }
   .event-card-actions { display: flex; gap: 0.5rem; margin-top: 0; padding-left: 0; }
 
+  /* ── PC版エントリーカード ── */
+  .event-card.entry-card {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: unset;
+    grid-template-areas: unset;
+    cursor: pointer;
+    padding: 1rem 1.25rem;
+    user-select: none;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+  .event-card.entry-card:hover {
+    background: var(--paper-warm);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+  }
+  .event-card.entry-card .event-card-title {
+    display: block;
+    grid-area: unset;
+    padding-right: 2.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+  }
+  .event-card.entry-card .event-card-title::before { display: none; }
+  .event-card.entry-card .event-card-meta {
+    grid-area: unset;
+    margin-bottom: 0.55rem;
+  }
+
+  /* ⋮ メニューボタン（PC基本スタイル） */
+  .event-card-menu-btn {
+    position: absolute; top: 0.6rem; right: 0.5rem;
+    background: none; border: none;
+    font-size: 1.25rem; color: var(--ink-light);
+    min-height: 36px; min-width: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.15s, background 0.15s;
+  }
+  .event-card.entry-card:hover .event-card-menu-btn { opacity: 1; }
+  .event-card-menu-btn:hover { background: var(--paper-dark); }
+
+  /* ⋮ ドロップダウン（共通スタイル） */
+  .event-card-menu-dropdown {
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    z-index: 210; min-width: 160px; overflow: hidden;
+  }
+  .event-card-menu-dropdown button {
+    display: block; width: 100%;
+    padding: 0.6rem 1rem; text-align: left;
+    background: none; border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem; color: var(--ink); cursor: pointer;
+    min-height: 40px;
+    transition: background 0.12s;
+  }
+  .event-card-menu-dropdown button:hover { background: var(--paper-warm); }
+  .event-card-menu-dropdown button:last-child { border-bottom: none; }
+  .event-card-menu-dropdown button.menu-danger { color: var(--accent); font-weight: 600; }
+  .event-card-menu-dropdown .menu-divider {
+    margin: 0; border: none; border-top: 1px solid var(--border);
+  }
+
   /* Page: Layout */
   .layout-grid { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; }
   .tables-area { display: flex; flex-direction: column; gap: 1rem; }
@@ -1625,7 +1692,7 @@
     }
 
     /* ── モバイル専用エントリーカード ── */
-    .event-card.mobile-entry-card {
+    .event-card.entry-card {
       cursor: pointer;
       position: relative;
       padding: 1rem 1rem 1rem;
@@ -1635,10 +1702,10 @@
       text-align: left;
       align-items: stretch !important; /* 子要素を全幅に */
     }
-    .event-card.mobile-entry-card::before { display: none !important; }
-    .event-card.mobile-entry-card:active { background: var(--paper-dark); }
+    .event-card.entry-card::before { display: none !important; }
+    .event-card.entry-card:active { background: var(--paper-dark); }
     /* イベント名: flexを解除して左寄せブロックに */
-    .event-card.mobile-entry-card .event-card-title {
+    .event-card.entry-card .event-card-title {
       display: block !important;
       font-size: 1rem !important;
       font-weight: 700;
@@ -1647,16 +1714,16 @@
       padding-right: 2.5rem; /* ⋮ ボタン分の余白 */
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .event-card.mobile-entry-card .event-card-title::before { display: none !important; }
-    .event-card.mobile-entry-card .event-card-meta {
+    .event-card.entry-card .event-card-title::before { display: none !important; }
+    .event-card.entry-card .event-card-meta {
       font-size: 0.72rem; text-align: left;
       color: var(--ink-light);
       margin-bottom: 0.55rem;
     }
-    .event-card.mobile-entry-card .event-card-progress { margin-bottom: 0; }
-    .event-card.mobile-entry-card .event-card-progress-label { text-align: left; }
+    .event-card.entry-card .event-card-progress { margin-bottom: 0; }
+    .event-card.entry-card .event-card-progress-label { text-align: left; }
 
-    /* ⋮ メニュートリガーボタン */
+    /* ⋮ メニュートリガーボタン（スマホ：常時表示、タップしやすいサイズ） */
     .event-card-menu-btn {
       position: absolute; top: 0.6rem; right: 0.4rem;
       background: none; border: none;
@@ -1664,6 +1731,7 @@
       min-height: 40px; min-width: 40px;
       display: flex; align-items: center; justify-content: center;
       border-radius: 8px; cursor: pointer;
+      opacity: 1; /* スマホでは常時表示（PCの opacity:0.4 を上書き） */
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
@@ -1716,11 +1784,11 @@
     /* イベント一覧グリッド: カード間に隙間、上下余白 */
     .events-grid { gap: 12px !important; margin-top: 0.5rem !important; }
     /* カード内コンテンツ余白を広く */
-    .event-card.mobile-entry-card {
+    .event-card.entry-card {
       padding: 1.1rem 1.1rem 1.1rem !important;
     }
     /* カード進捗ラベルの余白 */
-    .event-card.mobile-entry-card .event-card-progress {
+    .event-card.entry-card .event-card-progress {
       margin-top: 0.5rem;
     }
   }
