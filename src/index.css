@@ -265,6 +265,7 @@
   .event-card.entry-card {
     display: flex;
     flex-direction: column;
+    align-items: stretch;   /* .event-card の align-items:center を上書き。flex-column の cross-axis=水平方向なので、これがないと子要素が中央寄せになる */
     grid-template-columns: unset;
     grid-template-areas: unset;
     cursor: pointer;
@@ -275,6 +276,7 @@
   }
   .event-card.entry-card::before {
     content: '';
+    display: block;         /* .event-card::before { display:none } を上書き */
     position: absolute;
     left: 0; top: 0; bottom: 0;
     width: 3px;
