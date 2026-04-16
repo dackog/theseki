@@ -41,6 +41,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
   const [newTableDraft, setNewTableDraft] = useState({ name:'', seatCount:6, shape:'rect' });
   const [newTableSeatInput, setNewTableSeatInput] = useState('6');
   const [expandedTableId, setExpandedTableId] = useState(null);
+  const [hoveredTableId, setHoveredTableId] = useState(null);
   const [editingSeatCounts, setEditingSeatCounts] = useState({});
   const [customRuleModalOpen, setCustomRuleModalOpen] = useState(false);
   const [customRuleDraft, setCustomRuleDraft] = useState(event.customRule || 'disperse');
@@ -527,7 +528,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
           <button className="btn btn-outline btn-sm" onClick={randomAssign} style={{flexShrink:0,whiteSpace:'nowrap'}}>🎲 ランダム配置</button>
           <button className="btn btn-green btn-sm" onClick={customAssign} style={{flexShrink:0,whiteSpace:'nowrap'}}>✨ カスタム配置</button>
           <button className="btn btn-outline btn-sm" onClick={()=>setCustomRuleModalOpen(true)} style={{flexShrink:0,whiteSpace:'nowrap'}}>⚙️ カスタム設定</button>
-          <button className="btn btn-danger btn-sm" onClick={clearAll} style={{flexShrink:0,whiteSpace:'nowrap'}}>全解除</button>
+          <button className="btn btn-danger btn-sm" onClick={clearAll} style={{flexShrink:0,whiteSpace:'nowrap',marginLeft:'auto'}}>全解除</button>
         </>,
         t
       ) : null; })()}
@@ -800,9 +801,11 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                 const tSeats = seats.filter(s=>s.tableId===t.id);
                 const occCount = tSeats.filter(s=>assignments[s.id]).length;
                 const hasViol = violations.some(v=>v.tableId===t.id);
+                const violCount = tSeats.filter(s=>violationSeatIds.has(s.id)).length;
+                const barPct = tSeats.length > 0 ? Math.round((occCount / tSeats.length) * 100) : 0;
                 const isExp = expandedTableId===t.id;
                 return (
-                  <div key={t.id} className={`floor-table-item ${isExp?'active':''}`} onClick={()=>setExpandedTableId(isExp?null:t.id)}>
+                  <div key={t.id} className={`floor-table-item ${isExp?'active':''}`} onClick={()=>setExpandedTableId(isExp?null:t.id)} onMouseEnter={()=>setHoveredTableId(t.id)} onMouseLeave={()=>setHoveredTableId(null)}>
                     <div className="floor-table-item-head">
                       <span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span>
                       <span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span>
@@ -813,7 +816,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                       </div>
                     </div>
                     <div className="floor-seat-bar">
-                      {tSeats.map(s=>{ const viol=violationSeatIds.has(s.id); const occ=!!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}
+                      <div className={`floor-seat-bar-fill${violCount > 0 ? ' viol' : ''}`} style={{width:`${barPct}%`}}/>
                     </div>
                     {isExp && (
                       <div onClick={e=>e.stopPropagation()}>
@@ -828,9 +831,10 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                   </div>
                 );
               })}
-              <div style={{marginTop:'0.75rem',padding:'0.45rem 0.75rem',background:'var(--paper-dark)',borderRadius:6,fontSize:'0.78rem',color:'var(--ink-light)'}}>
-                卓: {tables.length}　総席: {totalSeats}　割当: {assignedCount}/{totalSeats}
-                {violations.length>0 && <span style={{color:'var(--accent)',marginLeft:'0.5rem'}}>NG違反: {violations.length}件</span>}
+              <div className="assign-sidebar-summary">
+                <span className="summary-stat"><b>{tables.length}</b> 卓</span>
+                <span className="summary-stat"><b>{assignedCount}/{totalSeats}</b> 席割当</span>
+                {violations.length>0 && <span className="summary-stat viol">NG違反 <b>{violations.length}</b></span>}
               </div>
             </div>
           )}
@@ -923,8 +927,11 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
 
         <div ref={floorViewRef} className="assign-floor-view assign-floor-canvas"
         >
-          {/* 全画面トグルボタン（sticky で常時表示、スマホでは非表示） */}
-          <div className="assign-fullscreen-btn" style={{position:'sticky',top:'0.5rem',height:0,zIndex:20,display:'flex',justifyContent:'flex-end',paddingRight:'0.75rem',overflow:'visible'}}>
+          {/* 全画面トグル + 全体表示リセットボタン（sticky で常時表示、スマホでは非表示） */}
+          <div className="assign-fullscreen-btn" style={{position:'sticky',top:'0.5rem',height:0,zIndex:20,display:'flex',justifyContent:'flex-end',alignItems:'flex-start',gap:'0.4rem',paddingRight:'0.75rem',overflow:'visible'}}>
+            <button onClick={()=>floorViewRef.current?.scrollTo({top:0,left:0,behavior:'smooth'})} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.25)',borderRadius:6,color:'rgba(255,255,255,0.75)',padding:'4px 10px',cursor:'pointer',fontSize:'0.72rem',backdropFilter:'blur(4px)',whiteSpace:'nowrap'}}>
+              ↖ 全体表示
+            </button>
             <button onClick={toggleFullscreen} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',borderRadius:6,color:'#fff',padding:'4px 10px',cursor:'pointer',fontSize:'0.75rem',fontWeight:600,backdropFilter:'blur(4px)',whiteSpace:'nowrap'}}>
               {isFullscreen ? '✕ 全画面終了' : '⛶ 全画面'}
             </button>
@@ -960,7 +967,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
               return (
                 <div key={table.id}
                   id={`table-assign-${table.id}`}
-                  className="assign-table-drag-wrap"
+                  className={`assign-table-drag-wrap${hoveredTableId===table.id?' hovered':''}`}
                   style={{position:'absolute', left:posX, top:posY, cursor:'grab', userSelect:'none'}}
                   onMouseDown={e => startTableDrag(e, table.id)}
                 >
@@ -1057,6 +1064,8 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                   const tSeats = seats.filter(s=>s.tableId===t.id);
                   const occCount = tSeats.filter(s=>assignments[s.id]).length;
                   const hasViol = violations.some(v=>v.tableId===t.id);
+                  const violCount = tSeats.filter(s=>violationSeatIds.has(s.id)).length;
+                  const barPct = tSeats.length > 0 ? Math.round((occCount / tSeats.length) * 100) : 0;
                   const isExp = expandedTableId===t.id;
                   return (
                     <div key={t.id} className={`floor-table-item ${isExp?'active':''}`} onClick={()=>setExpandedTableId(isExp?null:t.id)}>
@@ -1069,7 +1078,7 @@ export default function AssignPage({ event, dispatch, notify, initialSideTab='se
                         </div>
                       </div>
                       <div className="floor-seat-bar">
-                        {tSeats.map(s=>{ const viol=violationSeatIds.has(s.id); const occ=!!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}
+                        <div className={`floor-seat-bar-fill${violCount > 0 ? ' viol' : ''}`} style={{width:`${barPct}%`}}/>
                       </div>
                       {isExp && (
                         <div onClick={e=>e.stopPropagation()}>

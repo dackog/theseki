@@ -229,11 +229,13 @@ export default function LayoutPage({ event, dispatch, notify }) {
               const tSeats = seats.filter(s=>s.tableId===t.id);
               const occCount = tSeats.filter(s=>assignments[s.id]).length;
               const hasViol = violations.some(v=>v.tableId===t.id);
+              const violCount = tSeats.filter(s=>violationSeatIds.has(s.id)).length;
+              const barPct = tSeats.length > 0 ? Math.round((occCount / tSeats.length) * 100) : 0;
               const isActive = selectedId===t.id;
               return (
                 <div key={t.id} className={`floor-table-item ${isActive?'active':''}`} onClick={()=>setSelectedId(t.id)}>
                   <div className="floor-table-item-head"><span className="floor-table-item-name">{hasViol?'⚠️ ':''}{t.name}</span><span style={{fontSize:'0.72rem',color:'var(--ink-light)'}}>{occCount}/{t.seatCount}席</span></div>
-                  <div className="floor-seat-bar">{tSeats.map(s => { const viol = violationSeatIds.has(s.id); const occ = !!assignments[s.id]; return <div key={s.id} className={`floor-seat-dot ${viol?'viol':occ?'occ':''}`}/>; })}</div>
+                  <div className="floor-seat-bar"><div className={`floor-seat-bar-fill${violCount > 0 ? ' viol' : ''}`} style={{width:`${barPct}%`}}/></div>
                   {isActive && (
                     <div onClick={e=>e.stopPropagation()}>
                       <div className="floor-edit-row" style={{marginTop:'0.6rem'}}><label>卓名</label><input type="text" value={t.name} onChange={e=>updateTable(t.id,'name',e.target.value)} style={{flex:1}}/></div>

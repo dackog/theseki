@@ -434,6 +434,14 @@
   /* Page: Assign */
   .assign-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; align-items: start; }
   .assign-sidebar { position: sticky; top: 72px; }
+  .assign-sidebar-summary {
+    display: flex; gap: 0.6rem; flex-wrap: wrap;
+    margin-top: 0.75rem; padding: 0.5rem 0.75rem;
+    background: var(--paper-dark); border-radius: 6px;
+    font-size: 0.8rem; color: var(--ink-light);
+  }
+  .assign-sidebar-summary b { color: var(--ink); }
+  .assign-sidebar-summary .viol { color: var(--accent); }
   .attendee-item {
     padding: 0.55rem 0.9rem;
     border-radius: 6px; cursor: pointer;
@@ -446,7 +454,7 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  .attendee-item:hover { background: var(--accent-light); border-color: var(--accent); }
+  .attendee-item:hover { background: var(--accent-light); border-color: var(--accent); cursor: grab; }
   .attendee-item.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
   .attendee-item.dragging { opacity: 0.4; outline: 2px dashed var(--accent); outline-offset: 2px; }
   .attendee-item .item-flags { display: flex; gap: 0.25rem; flex-wrap: wrap; }
@@ -753,8 +761,8 @@
   .assign-floor-canvas {
     background: #1a1f2e;
     background-image:
-      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
     background-size: 40px 40px;
     border-radius: var(--radius-md); overflow: auto; min-height: 0;
     padding: 0; position: relative;
@@ -765,8 +773,22 @@
   .assign-floor-canvas::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
   .assign-floor-canvas-inner {
     position: relative;
-    width: 1200px;
-    height: 800px;
+    width: 1400px;
+    height: 900px;
+  }
+  @media (min-width: 1600px) {
+    .assign-floor-canvas-inner {
+      width: 1600px;
+      height: 1000px;
+    }
+  }
+  /* サイドバーホバー時の対応卓をキャンバス上で強調 */
+  .assign-table-drag-wrap.hovered {
+    filter: brightness(1.18);
+    outline: 2px solid rgba(184,134,11,0.7);
+    outline-offset: 4px;
+    border-radius: 12px;
+    z-index: 5;
   }
 
   /* AssignPage — unassigned attendee scroll list */
@@ -1299,9 +1321,9 @@
   }
   .floor-table-item:hover { border-color: var(--ink-light); background: var(--paper-warm); }
   .floor-table-item.active {
-    border-color: var(--ink-light);
+    border-left: 3px solid var(--accent);
     background: var(--paper-warm);
-    box-shadow: 0 0 0 1px var(--border);
+    box-shadow: 0 1px 6px var(--shadow);
   }
   .floor-table-item-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
   .floor-table-item-name { font-family: 'Noto Serif JP', serif; font-weight: 600; font-size: 0.85rem; }
@@ -1313,19 +1335,19 @@
   }
   .floor-edit-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.45rem; }
   .floor-edit-row label { margin: 0; white-space: nowrap; font-size: 0.75rem; }
-  /* floor-seat-bar: ドット列をプログレスバーに変換 */
+  /* floor-seat-bar: 連続プログレスバー */
   .floor-seat-bar {
-    display: flex; gap: 0; flex-wrap: nowrap;
     height: 3px; margin-top: 5px;
     border-radius: 9999px; overflow: hidden;
     background: var(--paper-dark);
   }
-  .floor-seat-dot {
-    width: auto; height: 100%; flex: 1;
-    border-radius: 0; background: var(--paper-dark); margin: 0;
+  .floor-seat-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: var(--green);
+    transition: width 0.35s ease;
   }
-  .floor-seat-dot.occ { background: var(--green); }
-  .floor-seat-dot.viol { background: var(--accent); }
+  .floor-seat-bar-fill.viol { background: var(--accent); }
 
   @media (max-width: 1200px), (max-height: 820px) {
     .floor-panel-toggle { display: inline-flex; align-items:center; }
