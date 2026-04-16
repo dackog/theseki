@@ -114,17 +114,19 @@ export default function EventsPage({ state, dispatch, authUser, onLayout, onAssi
                   ⋮
                 </button>
                 <div className="event-card-title">{ev.name}</div>
-                <div className="event-card-meta">
-                  {ev.datetime ? `📅 ${ev.datetime}` : '日時未設定'}
-                  &nbsp;·&nbsp;更新: {fmtDate(ev.updatedAt)}
-                </div>
-                <div className="event-card-progress">
-                  <div className="event-card-progress-bar-outer">
-                    <div className="event-card-progress-fill" style={{width:`${pct}%`}}/>
+                <div className="event-card-footer">
+                  <div className="event-card-meta">
+                    {ev.datetime ? `📅 ${ev.datetime}` : '日時未設定'}
+                    &nbsp;·&nbsp;更新: {fmtDate(ev.updatedAt)}
                   </div>
-                  <div className="event-card-progress-label">
-                    <span>割当進捗</span>
-                    <strong>{assignedCount}/{totalSeats}席</strong>
+                  <div className="event-card-progress">
+                    <div className="event-card-progress-bar-outer">
+                      <div className="event-card-progress-fill" style={{width:`${pct}%`}}/>
+                    </div>
+                    <div className="event-card-progress-label">
+                      <span>割当進捗</span>
+                      <strong>{assignedCount}/{totalSeats}席</strong>
+                    </div>
                   </div>
                 </div>
               </div>

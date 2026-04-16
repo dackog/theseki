@@ -268,15 +268,21 @@
     grid-template-columns: unset;
     grid-template-areas: unset;
     cursor: pointer;
-    padding: 1rem 1.25rem;
+    padding: 0.65rem 1.25rem 0.65rem 1rem;
     user-select: none;
-    transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+    transition: background 0.12s;
     text-align: left;
+  }
+  .event-card.entry-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
   }
   .event-card.entry-card:hover {
     background: var(--paper-warm);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    transform: translateY(-1px);
+    box-shadow: inset 0 0 0 1px var(--border);
   }
   .event-card.entry-card .event-card-title {
     display: block;
@@ -285,24 +291,43 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
   }
   .event-card.entry-card .event-card-title::before { display: none; }
+  /* footer: meta + progress を横並び */
+  .event-card.entry-card .event-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
   .event-card.entry-card .event-card-meta {
     grid-area: unset;
-    margin-bottom: 0.55rem;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.73rem;
+    color: var(--ink-light);
     text-align: left;
+    margin-bottom: 0;
   }
-  /* PC版エントリーカード - 割当進捗 */
+  /* PC版エントリーカード - 割当進捗（footer右側・横並び） */
   .event-card.entry-card .event-card-progress {
-    margin-top: 0.45rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    margin-top: 0;
   }
   .event-card.entry-card .event-card-progress-bar-outer {
+    width: 80px;
     height: 4px;
     background: var(--paper-dark);
     border-radius: 3px;
     overflow: hidden;
-    margin-bottom: 4px;
+    margin-bottom: 0;
   }
   .event-card.entry-card .event-card-progress-fill {
     height: 100%;
@@ -312,11 +337,13 @@
   }
   .event-card.entry-card .event-card-progress-label {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 0.25rem;
     font-size: 0.7rem;
     color: var(--ink-light);
+    white-space: nowrap;
   }
+  .event-card.entry-card .event-card-progress-label span { display: none; }
   .event-card.entry-card .event-card-progress-label strong {
     color: var(--green);
     font-weight: 600;
@@ -1745,13 +1772,31 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .event-card.entry-card .event-card-title::before { display: none !important; }
+    /* footer を縦積みに戻す（PCでは横並び） */
+    .event-card.entry-card .event-card-footer {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+    }
     .event-card.entry-card .event-card-meta {
       font-size: 0.72rem; text-align: left;
       color: var(--ink-light);
+      flex: unset;
+      white-space: normal; overflow: visible; text-overflow: unset;
       margin-bottom: 0.55rem;
     }
-    .event-card.entry-card .event-card-progress { margin-bottom: 0; }
-    .event-card.entry-card .event-card-progress-label { text-align: left; }
+    .event-card.entry-card .event-card-progress {
+      display: block;
+      flex-shrink: unset;
+      margin-bottom: 0;
+    }
+    .event-card.entry-card .event-card-progress-bar-outer { width: auto; }
+    .event-card.entry-card .event-card-progress-label {
+      display: flex;
+      justify-content: space-between;
+      text-align: left;
+    }
+    .event-card.entry-card .event-card-progress-label span { display: inline; }
 
     /* ⋮ メニュートリガーボタン（スマホ：常時表示、タップしやすいサイズ） */
     .event-card-menu-btn {
