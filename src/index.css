@@ -51,20 +51,111 @@
     display: flex;
     flex-direction: column;
   }
-  #app-copyright {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: calc(8px + env(safe-area-inset-bottom));
+  /* ── AppFooter ── */
+  .app-footer {
+    padding: 1.25rem 1rem 1.5rem;
     text-align: center;
-    font-size: 12px;
-    opacity: 0.7;
-    pointer-events: none;
-    z-index: 10;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 0.72rem;
+    color: var(--ink-light);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45rem;
+    opacity: 0.75;
+  }
+  .app-footer-links {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .app-footer-links a {
+    color: var(--ink-light);
+    text-decoration: none;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .app-footer-links a:hover { text-decoration: underline; }
+  .app-footer-links span { color: var(--border); }
+  .app-footer-copy { letter-spacing: 0.02em; }
+
+  /* ── スティッキーフッター用ラッパー ── */
+  .page-with-footer {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--topbar-h));
+  }
+  .page-with-footer > *:first-child { flex: 1; }
+
+  /* ── 規約ページ共通 ── */
+  .policy-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 3rem;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  .policy-page h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
+  }
+  .policy-page .policy-meta {
+    font-size: 0.8rem;
+    color: var(--ink-light);
+    margin-bottom: 2rem;
+  }
+  .policy-page h2 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 2rem 0 0.6rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .policy-page p, .policy-page li {
+    font-size: 0.9rem;
+    line-height: 1.9;
+    color: var(--ink);
+  }
+  .policy-page ul {
+    padding-left: 1.4rem;
+    margin: 0.4rem 0;
+  }
+  .policy-page li { margin: 0.25rem 0; }
+  .policy-content { flex: 1; }
+  .policy-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    color: var(--ink-light);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .policy-back-btn:hover { background: var(--paper-warm); }
+
+  /* ── モバイル: フッター余白（BottomNav分）── */
+  @media (max-width: 768px) {
+    .app-footer {
+      padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 0.75rem);
+    }
+    .policy-page {
+      padding: 1.5rem 1.25rem 2rem;
+    }
+    .policy-page p, .policy-page li {
+      font-size: 0.92rem;
+    }
   }
 
   /* Focus styles */

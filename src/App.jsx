@@ -48,6 +48,9 @@ import LayoutPage from './components/LayoutPage.jsx';
 import AttendeesPage from './components/AttendeesPage.jsx';
 import ViewPage from './components/ViewPage.jsx';
 import AssignPage from './components/AssignPage.jsx';
+import AppFooter from './components/AppFooter.jsx';
+import TermsPage from './components/TermsPage.jsx';
+import PrivacyPage from './components/PrivacyPage.jsx';
 
 function useNotify() {
   const [note, setNote] = useState(null);
@@ -62,6 +65,22 @@ function useNotify() {
 
 export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // ---- ハッシュページ検出（#terms / #privacy）----
+  const [hashPage, setHashPage] = useState(() => {
+    const h = location.hash.replace('#', '');
+    return (h === 'terms' || h === 'privacy') ? h : '';
+  });
+
+  useEffect(() => {
+    const handler = () => {
+      const h = location.hash.replace('#', '');
+      setHashPage((h === 'terms' || h === 'privacy') ? h : '');
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
 
   // ---- 共有URL検出（hooks は全て早期 return より前に置く）----
 
@@ -389,6 +408,10 @@ export default function App() {
     );
   }
 
+  // #terms / #privacy ハッシュルーティング
+  if (hashPage === 'terms')   return <TermsPage />;
+  if (hashPage === 'privacy') return <PrivacyPage />;
+
   // #view= 後方互換（旧方式）
   if (legacySharedEvent) {
     return (
@@ -435,7 +458,12 @@ export default function App() {
         </div>
       </div>
 
-      {page==='events' && <EventsPage state={state} dispatch={dispatch} authUser={authUser} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>}
+      {page==='events' && (
+        <div className="page-with-footer">
+          <EventsPage state={state} dispatch={dispatch} authUser={authUser} onLayout={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setAssignInitTab('table');setAssignKey(k=>k+1);setPage('assign');}} onAssign={(id)=>{dispatch({type:'SET_CURRENT',payload:id});setPage('attendees');}}/>
+          <AppFooter />
+        </div>
+      )}
       {(page==='layout'||page==='assign'||page==='attendees') && currentEvent && (
         <>
           {/* ── モバイル専用イベントヘッダー（PCではCSS非表示） ── */}
