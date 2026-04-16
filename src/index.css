@@ -271,6 +271,7 @@
     padding: 1rem 1.25rem;
     user-select: none;
     transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+    text-align: left;
   }
   .event-card.entry-card:hover {
     background: var(--paper-warm);
@@ -290,6 +291,35 @@
   .event-card.entry-card .event-card-meta {
     grid-area: unset;
     margin-bottom: 0.55rem;
+    text-align: left;
+  }
+  /* PC版エントリーカード - 割当進捗 */
+  .event-card.entry-card .event-card-progress {
+    margin-top: 0.45rem;
+  }
+  .event-card.entry-card .event-card-progress-bar-outer {
+    height: 4px;
+    background: var(--paper-dark);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .event-card.entry-card .event-card-progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .event-card.entry-card .event-card-progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+    color: var(--ink-light);
+  }
+  .event-card.entry-card .event-card-progress-label strong {
+    color: var(--green);
+    font-weight: 600;
   }
 
   /* ⋮ メニューボタン（PC基本スタイル） */
@@ -811,7 +841,7 @@
     .mobile-bottom-nav        { display: none !important; }
     .assign-mobile-minimap    { display: none !important; }
     .assign-mobile-sheet      { display: none !important; }
-    .event-card-progress      { display: none !important; }
+    .event-card:not(.entry-card) .event-card-progress { display: none !important; }
     /* デスクトップではサイドバーの席タブを表示 */
     .assign-sidebar-seat-mobile-hide { display: block !important; }
   }

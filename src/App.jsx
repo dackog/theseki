@@ -431,7 +431,7 @@ export default function App() {
           {authUser && dbSyncStatus !== 'idle' && (
             <span style={{color:dbSyncColor,fontSize:'0.75rem'}}>{dbSyncLabel}</span>
           )}
-          {currentEvent && <button className="btn btn-ghost btn-sm" onClick={handleCreateShare} style={{color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>🔗 共有URL</button>}
+          {currentEvent && page !== 'events' && <button className="btn btn-ghost btn-sm" onClick={handleCreateShare} style={{color:'rgba(255,255,255,0.55)',fontSize:'0.75rem'}}>🔗 共有URL</button>}
         </div>
       </div>
 
