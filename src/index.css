@@ -145,9 +145,11 @@
   }
   .policy-back-btn:hover { background: var(--paper-warm); }
 
-  /* ── モバイル: フッター余白（BottomNav分）── */
+  /* ── モバイル: フッター余白 ── */
   @media (max-width: 768px) {
-    .app-footer {
+    /* .page-with-footer 内(イベント一覧)のフッターのみ BottomNav 分の padding を確保。
+       terms/privacy ページは BottomNav が存在しないため通常 padding のまま。 */
+    .page-with-footer .app-footer {
       padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 0.75rem);
     }
     .policy-page {
@@ -1724,6 +1726,15 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+    /* イベント一覧ページ: .page-with-footer をスクロールコンテナにして
+       EventsPage + AppFooter をまとめてスクロール可能にする。
+       これにより、イベント件数が増えてもフッターが消えず最下部に表示される。 */
+    .page-with-footer {
+      flex: 1 1 0;
+      min-height: 0 !important;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     /* EventsPage: #root の直接子 .main をスクロール可能なフレックス領域にする */
     #root > .main {

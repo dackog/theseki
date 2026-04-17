@@ -4,11 +4,28 @@ import AppFooter from './AppFooter.jsx';
 
 export default function PrivacyPage() {
   useEffect(() => {
-    // モバイルのoverflow:hidden設定を解除してスクロール可能にする
-    document.documentElement.style.overflow = '';
-    document.documentElement.style.height = '';
-    document.body.style.overflow = '';
-    document.body.style.height = '';
+    // モバイル用 CSS で html/body/#root に height:100% + overflow:hidden が設定されるため
+    // インラインスタイルで上書きし、通常フロー（ページスクロール）に戻す
+    const root = document.getElementById('root');
+    document.documentElement.style.height = 'auto';
+    document.documentElement.style.overflowY = 'auto';
+    document.body.style.height = 'auto';
+    document.body.style.overflowY = 'auto';
+    if (root) {
+      root.style.height = 'auto';
+      root.style.overflowY = 'auto';
+    }
+    window.scrollTo(0, 0);
+    return () => {
+      document.documentElement.style.height = '';
+      document.documentElement.style.overflowY = '';
+      document.body.style.height = '';
+      document.body.style.overflowY = '';
+      if (root) {
+        root.style.height = '';
+        root.style.overflowY = '';
+      }
+    };
   }, []);
 
   return (
